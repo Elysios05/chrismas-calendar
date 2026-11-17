@@ -1,7 +1,7 @@
 /**
  * Page de maquettes de l'équipe Interface (outil de travail, pas livrée au public).
  * `npm run dev` puis http://localhost:5173/maquettes.html?vue=connexion
- * Vues : connexion · connexion-erreur · case-intro · case-jeu · case-fini · pingou
+ * Vues : connexion · connexion-erreur · case-intro · case-jeu · case-fini · lettre · pingou
  */
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -70,11 +70,11 @@ function Maquettes() {
     );
   }
 
-  // la case préparée (12) pour l'intro, une case de jeu (1) pour le jeu et la fin
+  // la case préparée (12) pour l'intro et la lettre, une case de jeu (1) pour le jeu et la fin
   return (
     <div className="maq-monde">
       <DayWindow
-        day={vue === "case-intro" ? 12 : 1}
+        day={vue === "case-intro" || vue === "lettre" ? 12 : 1}
         me="alexandre"
         backend={backend}
         game={fauxJeu}
