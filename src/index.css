@@ -318,3 +318,7 @@ button { font-family: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* --- ajouts du chef de projet (intégration) : à reprendre par l'équipe Interface --- */
+.boot { position: fixed; inset: 0; display: grid; place-items: center; font-size: 48px; animation: waddle 1.6s ease-in-out infinite; }
+.who-badge { background: var(--c); color: #fff; font-weight: 700; font-size: 14px; padding: 9px 12px; border-radius: 14px; box-shadow: 0 5px 0 rgba(27,39,71,.18); }
