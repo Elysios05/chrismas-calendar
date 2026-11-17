@@ -127,7 +127,7 @@ function Quiz({ ctx }: { ctx: GameContext }) {
       ]);
     }
     ctx.backend.markCompleted(ctx.day).catch(() => { /* sans conséquence */ });
-    ctx.complete({ success: true, score: score ?? undefined, data: { devinettes: paris, reponses: miennes } });
+    // `ctx.complete` ferme le jeu : on attend que le joueur ait lu son résultat.
   }, [ctx, dejaRepondu, prenomAutre, sesReponses, total]);
 
   const repondre = (option: number) => {
@@ -204,7 +204,10 @@ function Quiz({ ctx }: { ctx: GameContext }) {
   }
 
   if (etape === "fin") {
-    const actions = [{ texte: "Fermer", onClic: () => ctx.complete({ success: true, score: monScore ?? undefined }) }];
+    const actions = [{
+      texte: "Fermer",
+      onClic: () => ctx.complete({ success: true, score: monScore ?? undefined, data: { devinettes, reponses: mesReponses } }),
+    }];
     return (
       <Cadre titre="Jour 1 · Quiz">
         <PanneauFin

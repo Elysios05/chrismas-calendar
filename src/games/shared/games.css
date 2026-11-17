@@ -1,5 +1,13 @@
 /* Styles communs à tous les jeux. Appartient à l'équipe Jeux (src/games/). */
 
+/* ---------- fenêtre plein écran ouverte par le lanceur ---------- */
+.jeu-fenetre { position: fixed; inset: 0; z-index: 40; background: #eef4fa; animation: jeuFenetreIn .3s ease-out; }
+@keyframes jeuFenetreIn { from { opacity: 0; transform: scale(.98); } }
+.jeu-hote { position: absolute; inset: 0; }
+/* la croix se range à gauche : la barre du jeu garde sa place pour le score et les vies */
+.jeu-fenetre-fermer { position: absolute; z-index: 5; left: 12px; top: calc(10px + env(safe-area-inset-top)); }
+.jeu-fenetre .jeu-barre { padding-left: 58px; }
+
 .jeu {
   position: absolute; inset: 0;
   display: flex; flex-direction: column;

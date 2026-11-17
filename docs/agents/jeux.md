@@ -43,9 +43,14 @@ Règles et difficulté de chaque jeu, contenu à mettre (souvenirs, private joke
 - `jeux.html` + `src/games/dev/` : atelier de test des jeux (hors site livré), avec un faux backend
   en localStorage en attendant `src/backend/`.
 
+**Branchement dans `src/App.tsx`** : décision d'Alexandre du 17 novembre — aucune session « chef de projet »
+n'existe, et écrire des bouchons de backend et d'audio dans le fichier d'assemblage serait du provisoire à jeter.
+On attend donc `src/backend/`. En attendant, le terrain est prêt côté jeux : `src/games/lanceur.tsx`
+(`<FenetreJeu … />`, une ligne à poser dans la carte d'une case, qui gère chargement, contexte, fenêtre et
+nettoyage) et la marche à suivre dans `src/games/README.md`. L'atelier de test passe par ce même lanceur.
+À noter : `ctx.complete()` signifie « le joueur quitte le jeu » (la fenêtre se ferme), pas « la partie est finie ».
+
 **Reste à faire :**
-- Brancher le registre dans `src/App.tsx` (fichier du chef de projet) : aujourd'hui la carte d'une case
-  n'ouvre pas encore le jeu.
 - Remplacer le faux backend d'atelier par le vrai mode démo quand `src/backend/` existe.
 - Alexandre : remplacer les 10 questions d'exemple par les vraies.
 - Suite : rébus (7), pendu (15), mots croisés (17), puis les scores à battre 10 et 22.

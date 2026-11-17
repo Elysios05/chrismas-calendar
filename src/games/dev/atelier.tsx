@@ -4,10 +4,11 @@
  * Ne fait pas partie du site livré (seul index.html est construit).
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { GameContext, GameResult, Sfx, SoundApi, Who, ZoneId } from "../../core/contracts";
-import { chargerJeu, contenuDuJour, joursAvecJeu } from "../registry";
+import type { GameResult, Sfx, SoundApi, Who, ZoneId } from "../../core/contracts";
+import { joursAvecJeu } from "../registry";
+import { FenetreJeu } from "../lanceur";
 import { creerBackendAtelier, viderAtelier } from "./backendDemo";
 import "../../index.css";
 import "./atelier.css";
@@ -25,29 +26,14 @@ function Atelier() {
   const [pingou, setPingou] = useState<string[]>([]);
   const [resultat, setResultat] = useState<GameResult | null>(null);
   const [cle, setCle] = useState(0);
-  const hote = useRef<HTMLDivElement>(null);
+  const [ouvert, setOuvert] = useState(true);
+  const backend = useMemo(() => creerBackendAtelier(qui), [qui]);
 
-  useEffect(() => {
-    let nettoyer: (() => void) | null = null;
-    let annule = false;
-    setPingou([]); setResultat(null);
-    (async () => {
-      const module = await chargerJeu(jour);
-      if (annule || !module || !hote.current) return;
-      const ctx: GameContext = {
-        day: jour,
-        me: qui,
-        partner: qui === "alexandre" ? "flavie" : "alexandre",
-        backend: creerBackendAtelier(qui),
-        sound: sonMuet,
-        say: (lignes) => setPingou(lignes),
-        content: contenuDuJour(jour),
-        complete: (r) => setResultat(r),
-      };
-      nettoyer = module.mount(hote.current, ctx);
-    })();
-    return () => { annule = true; nettoyer?.(); };
-  }, [jour, qui, cle]);
+  const relancer = (changer: () => void) => {
+    setOuvert(false); setPingou([]); setResultat(null);
+    changer();
+    requestAnimationFrame(() => setOuvert(true));
+  };
 
   return (
     <div className="atelier">
@@ -55,18 +41,31 @@ function Atelier() {
         <strong>Atelier jeux</strong>
         <span>Jour</span>
         {joursAvecJeu().map((j) => (
-          <button key={j} className={j === jour ? "on" : ""} onClick={() => setJour(j)}>{j}</button>
+          <button key={j} className={j === jour ? "on" : ""} onClick={() => relancer(() => setJour(j))}>{j}</button>
         ))}
         <span>Joueur</span>
         {(["alexandre", "flavie"] as Who[]).map((w) => (
-          <button key={w} className={w === qui ? "on" : ""} onClick={() => setQui(w)}>{w === "alexandre" ? "Alexandre" : "Flavie"}</button>
+          <button key={w} className={w === qui ? "on" : ""} onClick={() => relancer(() => setQui(w))}>{w === "alexandre" ? "Alexandre" : "Flavie"}</button>
         ))}
-        <button onClick={() => setCle((c) => c + 1)}>Relancer</button>
-        <button onClick={() => { viderAtelier(); setCle((c) => c + 1); }}>Effacer les scores</button>
+        <button onClick={() => relancer(() => setCle((c) => c + 1))}>Relancer</button>
+        <button onClick={() => relancer(() => { viderAtelier(); setCle((c) => c + 1); })}>Effacer les scores</button>
         {resultat && <em>terminé · score {resultat.score ?? "—"}</em>}
       </div>
       <div className="atelier-ecran">
-        <div className="atelier-jeu" ref={hote} />
+        <div className="atelier-jeu">
+          {ouvert && (
+            <FenetreJeu
+              key={`${jour}-${qui}-${cle}`}
+              jour={jour}
+              moi={qui}
+              backend={backend}
+              sound={sonMuet}
+              say={setPingou}
+              onTermine={setResultat}
+              onFermer={() => setOuvert(false)}
+            />
+          )}
+        </div>
       </div>
       {pingou.length > 0 && (
         <div className="atelier-pingou" onClick={() => setPingou([])}>
