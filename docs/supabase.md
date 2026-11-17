@@ -71,12 +71,10 @@ Le site peut envoyer un lien « choisir un nouveau mot de passe ». Pour que ce 
 - *Site URL* : `https://<ton-compte>.github.io/chrismas-calendar/`
 - *Redirect URLs* : ajoute la même adresse, et `http://localhost:5173/**` pour tester en local.
 
-⚠️ Sans configuration supplémentaire, l'envoi d'e-mails de Supabase est **très limité** (quelques
-e-mails par heure, et seulement vers les adresses des membres de ton organisation Supabase). Deux
-solutions simples :
-- inviter Flavie dans ton organisation Supabase (**Organization** → **Team** → **Invite**) ; ou
-- en cas d'oubli, change son mot de passe toi-même : **Authentication** → **Users** → clic sur son
-  compte → **Send password recovery** ou modifie-le directement.
+Sans configuration supplémentaire, l'envoi d'e-mails de Supabase est **très limité** (quelques e-mails
+par heure, et seulement vers les membres de ton organisation Supabase). On branche donc un service
+d'envoi gratuit : voir l'**étape 9 (Brevo)**. En attendant, en cas d'oubli, tu peux changer un mot de
+passe toi-même : **Authentication** → **Users** → clic sur le compte.
 
 ## 5. Temps réel
 
@@ -153,3 +151,96 @@ Si tu changes `open_hour`, change aussi `OPEN_HOUR` dans `src/backend/config.ts`
   il ou elle l'ouvre ; ensuite le serveur refuse toute modification.
 - Photos : le site les réduit (2000 px max, JPEG) avant l'envoi ; le serveur refuse au-delà de 10 Mo.
 - Vérifier les règles de sécurité sans Supabase (développeurs) : `bash supabase/tests/run_sql_tests.sh`.
+
+---
+
+## 9. Envoyer les e-mails « mot de passe oublié » avec Brevo (gratuit)
+
+**Pourquoi Brevo ?** C'est le seul des deux qui marche **sans nom de domaine à toi** : Resend, sans
+domaine vérifié, n'envoie qu'à l'adresse de ton propre compte Resend (donc pas à Flavie), alors que
+Brevo accepte comme expéditeur une simple adresse (Gmail, Hotmail…) vérifiée par un code. L'offre
+gratuite (environ 300 e-mails par jour) est très largement suffisante pour deux comptes.
+
+> À vérifier au moment de l'inscription : les conditions de Brevo changent de temps en temps
+> (voir « Si les e-mails n'arrivent pas » plus bas).
+
+### 9.1 Créer le compte Brevo
+1. Va sur <https://www.brevo.com> → **S'inscrire gratuitement** (avec ton adresse habituelle).
+2. Remplis le profil demandé (nom, « usage personnel » ; pas besoin de site web) et choisis l'offre **Gratuite**.
+3. Confirme ton adresse avec le lien reçu par e-mail.
+
+### 9.2 Ajouter l'expéditeur
+1. En haut à droite : ton nom → **Expéditeurs, domaines et IP dédiées** → **Expéditeurs** → **Ajouter un expéditeur**.
+2. *Nom* : `Pingou du calendrier` — *E-mail* : ton adresse (Hotmail/Gmail).
+3. Brevo t'envoie un **code** : colle-le pour valider l'expéditeur.
+
+### 9.3 Récupérer les identifiants SMTP
+1. Ton nom → **SMTP et API** → onglet **SMTP**.
+2. Note les 4 informations affichées :
+   - **Serveur SMTP** : `smtp-relay.brevo.com`
+   - **Port** : `587`
+   - **Identifiant** (login) : une adresse du genre `xxxxxx@smtp-brevo.com`
+   - **Clé SMTP** : clique **Générer une nouvelle clé SMTP**, nomme-la `supabase`, et **copie-la tout de suite**
+     (elle ne s'affiche qu'une fois). C'est le « mot de passe » SMTP.
+
+(Si l'écran de Brevo affiche d'autres valeurs que celles-ci, ce sont les siennes qui comptent.)
+
+### 9.4 Les saisir dans Supabase
+**Authentication** → **Emails** → onglet **SMTP Settings** → active **Enable Custom SMTP** :
+
+| Champ Supabase | Valeur |
+|---|---|
+| Sender email | l'adresse validée à l'étape 9.2 |
+| Sender name | `Pingou du calendrier` |
+| Host | `smtp-relay.brevo.com` |
+| Port number | `587` |
+| Username | l'identifiant `…@smtp-brevo.com` |
+| Password | la clé SMTP |
+| Minimum interval between emails | laisse la valeur par défaut |
+
+**Save**. (La clé SMTP reste dans Supabase : elle ne va ni dans le dépôt ni dans GitHub.)
+
+Ensuite **Authentication** → **Rate Limits** : vérifie que *Rate limit for sending emails* vaut au moins
+quelques e-mails par heure (par ex. 10).
+
+### 9.5 Mettre l'e-mail en français, signé Pingou
+**Authentication** → **Emails** → onglet **Templates** → **Reset Password** :
+- *Subject* : `🐧 Pingou t'aide à retrouver ton mot de passe`
+- *Message body* (onglet **Source**) : remplace tout par le contenu du fichier
+  [`supabase/templates/reset-password.html`](../supabase/templates/reset-password.html) du dépôt
+  (garde bien `{{ .ConfirmationURL }}`, c'est le lien).
+- **Save**.
+
+Aperçu du texte :
+> **Oups, la clé du calendrier s'est perdue dans la neige !**
+> C'est Pingou ! Quelqu'un (toi, j'espère 😉) a demandé un nouveau mot de passe pour ouvrir les cases du
+> calendrier de l'Avent. Pas de panique : j'ai retrouvé la clé sous un flocon.
+> [🔑 Choisir un nouveau mot de passe]
+> Le lien ne marche qu'une fois et pendant peu de temps, alors ne traîne pas trop dans la poudreuse !
+> Des bisous givrés, **Pingou** 🐧
+
+### 9.6 Adresse de retour du lien
+Déjà fait à l'étape 4 (« Mot de passe oublié ») ; vérifie dans **Authentication** → **URL Configuration** :
+- *Site URL* : `https://<ton-compte>.github.io/chrismas-calendar/`
+- *Redirect URLs* : cette même adresse **et** `http://localhost:5173/**`.
+
+Sans ça, le lien de l'e-mail renverrait vers une mauvaise page.
+
+### 9.7 Tester
+1. **Authentication** → **Users** → clic sur **ton** compte → **Send password recovery**.
+2. Tu dois recevoir l'e-mail de Pingou en quelques secondes (regarde aussi les **spams / courrier indésirable**).
+3. Clique le bouton : tu arrives sur le site, qui doit te proposer de choisir un nouveau mot de passe.
+4. Une fois que ça marche pour toi, fais pareil avec le compte de Flavie (préviens-la avant 😉).
+
+Dans Brevo, **Transactionnel** → **Logs** (ou **Statistiques**) montre chaque e-mail envoyé et s'il a été délivré.
+
+### Si les e-mails n'arrivent pas
+- **Dans les spams** : fréquent quand l'expéditeur est une adresse Gmail/Hotmail envoyée par un autre service.
+  Demande à Flavie de marquer le premier e-mail « Pas un spam » et d'ajouter l'expéditeur à ses contacts.
+- **Brevo remplace l'expéditeur** ou refuse l'adresse Gmail/Hotmail : certains fournisseurs (Gmail, Yahoo…)
+  imposent maintenant des règles anti-usurpation, et Brevo peut alors exiger un domaine. Dans ce cas, le
+  plus simple reste de changer le mot de passe depuis Supabase (**Authentication** → **Users**).
+- **Rien dans les logs Brevo** : revérifie l'identifiant et la clé SMTP dans Supabase (9.4).
+- **Compte Brevo en attente de validation** : à la création, Brevo peut vérifier le compte avant
+  d'autoriser l'envoi (quelques heures). Réessaie plus tard.
+
