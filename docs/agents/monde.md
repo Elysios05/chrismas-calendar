@@ -22,3 +22,11 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
 
 ## Journal
 - 17 nov : terrain continu retenu ; Alexandre veut « de vraies montagnes en pointe, des falaises, une neige plus lisse ».
+- 17 nov — direction artistique des montagnes (tâche 1), validée avec Alexandre sur captures :
+  - **crêtes** : arêtes nettes et pics élancés (chaînes de sommets reliés, pas de cônes isolés) ;
+  - **limite neige / roche** : franche et guidée par la pente, avec un liseré de poudreuse sur l'arête — plus de taches au hasard ;
+  - **palette** : roche bleu-gris froid (`0x6e789a`), ombres violettes, neige très peu modelée pour rester lisse ;
+  - **sapins** : 3 essences (épicéa, sapin, jeune pousse), 4 verts, neige variable ; au-dessus d'une certaine
+    altitude les sapins cèdent la place aux rochers.
+  - Rochers redessinés en blocs facettés coiffés de neige (`boulder()` dans `iso.ts`).
+  - Reste à faire : liseré blanc dessiné sur l'arête elle-même, et reprise des autres mondes avec la même méthode.

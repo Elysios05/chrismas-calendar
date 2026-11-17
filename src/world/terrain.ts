@@ -4,7 +4,8 @@ import type { PropKind } from "./props";
 
 export type PathCell = { x: number; y: number; z: number; zone: number };
 export type DayNode = { day: number; idx: number; x: number; y: number; z: number; zone: number };
-export type Cell = { x: number; y: number; h: number; zone: number; road: boolean; lake: boolean; d: number; front: boolean };
+/** `rz` = altitude de la route la plus proche : sert à mesurer la hauteur relative d'une cellule */
+export type Cell = { x: number; y: number; h: number; zone: number; road: boolean; lake: boolean; d: number; front: boolean; rz: number };
 export type PlacedProp = { kind: PropKind; x: number; y: number; z: number; zone: number; seed: number };
 export type Terrain = { path: PathCell[]; nodes: DayNode[]; cells: Map<string, Cell>; props: PlacedProp[]; V: Map<string, number> };
 
@@ -107,7 +108,7 @@ export function buildTerrain(seed = 2026): Terrain {
       } else {
         h += bd > 3 ? (n - 0.5) * 0.35 : 0;
       }
-      cells.set(key(cx, cy), { x: cx, y: cy, h: Math.max(0, h), zone: best.zone, road: onRoad.has(key(cx, cy)), lake: false, d: bd, front });
+      cells.set(key(cx, cy), { x: cx, y: cy, h: Math.max(0, h), zone: best.zone, road: onRoad.has(key(cx, cy)), lake: false, d: bd, front, rz: best.z });
     }
   }
   // lissage : pentes en terrasses plutôt qu'en piliers
@@ -152,20 +153,44 @@ export function buildTerrain(seed = 2026): Terrain {
   const verts = [...V.keys()].map((k) => { const [x, y] = k.split(",").map(Number); return { k, x, y }; });
   const shuffled = [...cells.values()].map((c) => ({ c, r: R() })).sort((a, b) => a.r - b.r).map((o) => o.c);
 
-  // pics : de vraies montagnes en pointe (et des aiguilles de glace dans la grotte)
-  const peaks: { x: number; y: number; h: number; r: number }[] = [];
+  // crêtes : des chaînes de sommets reliés par une arête vive (et des aiguilles dans la grotte)
+  type Seg = { ax: number; ay: number; ah: number; bx: number; by: number; bh: number; r: number };
+  const segs: Seg[] = [];
+  const starts: { x: number; y: number }[] = [];
   for (const c of shuffled) {
     const zid = ZONES[c.zone].id;
     const isM = zid === "montagnes", isG = zid === "grotte";
     if ((!isM && !isG) || c.front || c.d < (isM ? 5 : 3.2)) continue;
-    if (peaks.some((p) => Math.hypot(p.x - c.x, p.y - c.y) < (isM ? 6 : 3))) continue;
-    peaks.push({ x: c.x + 0.5, y: c.y + 0.5, h: isM ? 4.2 + R() * 2.5 : 2 + R() * 1.5, r: isM ? 4.4 + R() * 1.6 : 1.8 + R() * 0.8 });
+    if (starts.some((p) => Math.hypot(p.x - c.x, p.y - c.y) < (isM ? 7.5 : 3))) continue;
+    starts.push({ x: c.x, y: c.y });
+    let px = c.x + 0.5, py = c.y + 0.5;
+    let ph = isM ? 5 + R() * 3.4 : 2.2 + R() * 1.6;
+    // la crête s'éloigne de la route : elle part vers l'arrière du terrain
+    let ang = Math.atan2(c.y - 0.5, c.x - 0.5) + (R() - 0.5) * 2;
+    const rad = isM ? 2.9 + R() * 1.3 : 1.3 + R() * 0.5;
+    const links = isM ? 2 + Math.floor(R() * 3) : 1;
+    for (let i = 0; i < links; i++) {
+      const len = isM ? 2.6 + R() * 3.4 : 1.4 + R();
+      ang += (R() - 0.5) * 1.1;
+      const qx = px + Math.cos(ang) * len, qy = py + Math.sin(ang) * len;
+      // les sommets voisins sont nettement plus bas ou plus hauts : silhouette dentelée
+      const qh = Math.max(1.4, ph * (0.52 + R() * 0.62));
+      segs.push({ ax: px, ay: py, ah: ph, bx: qx, by: qy, bh: qh, r: rad });
+      px = qx; py = qy; ph = qh;
+    }
   }
   for (const v of verts) {
     let add = 0;
-    for (const p of peaks) {
-      const d = Math.hypot(v.x - p.x, v.y - p.y);
-      if (d < p.r) { const t = 1 - d / p.r; add = Math.max(add, p.h * Math.pow(t, 1.5) + (noise2(v.x * 1.7, v.y * 1.7) - 0.5) * 0.45 * t); }
+    for (const s of segs) {
+      const ux = s.bx - s.ax, uy = s.by - s.ay;
+      const L2 = ux * ux + uy * uy || 1;
+      const t = Math.max(0, Math.min(1, ((v.x - s.ax) * ux + (v.y - s.ay) * uy) / L2));
+      const d = Math.hypot(v.x - (s.ax + ux * t), v.y - (s.ay + uy * t));
+      if (d >= s.r) continue;
+      const h = s.ah + (s.bh - s.ah) * t;
+      // profil presque linéaire : arête nette au sommet, pied à peine adouci
+      const k = 1 - d / s.r;
+      add = Math.max(add, h * (k * 0.82 + k * k * 0.18) + (noise2(v.x * 1.1, v.y * 1.1) - 0.5) * 0.3 * k);
     }
     V.set(v.k, V.get(v.k)! + add);
   }
@@ -225,7 +250,9 @@ export function buildTerrain(seed = 2026): Terrain {
     if (c.lake) { if (z.id === "lac" && d > 1.2 && R() < 0.05) place("skater", c); continue; }
     switch (z.id) {
       case "montagnes": {
-        if (d > 1.2 && R() < (c.front ? 0.18 : 0.42)) place(R() < 0.85 ? "tree" : "rock", c);
+        // les sapins s'arrêtent en altitude : plus haut, il n'y a que des rochers
+        const high = Math.max(0, Math.min(1, (heightAt(T0, c.x + 0.5, c.y + 0.5) - c.rz - 1.6) / 2.6));
+        if (d > 1.2 && R() < (c.front ? 0.18 : 0.42)) place(R() < 0.82 - high * 0.75 ? "tree" : "rock", c);
         else if (d > 1.2 && d < 3 && R() < 0.02) place("deer", c);
         break;
       }

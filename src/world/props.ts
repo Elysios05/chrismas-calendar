@@ -1,6 +1,6 @@
 // Décors isométriques dessinés en vectoriel plat
 import { Graphics } from "pixi.js";
-import { P, box, onLeft, onRight, gableRoof, pyramid, tree, poly, shade, type Palette } from "./iso";
+import { P, box, onLeft, onRight, gableRoof, pyramid, tree, boulder, poly, shade, type Palette, type TreeKind } from "./iso";
 
 export type PropKind =
   | "tree" | "treeSmall" | "house" | "chalet" | "snowman" | "lamp" | "rock" | "mountain"
@@ -17,8 +17,11 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
   switch (kind) {
     case "tree":
     case "treeSmall": {
-      const s = kind === "tree" ? 0.85 + rnd(1) * 0.35 : 0.55 + rnd(1) * 0.15;
-      tree(g, P(cx, cy), s, pal);
+      // trois essences, chacune avec sa taille, son vert et sa charge de neige
+      const k = rnd(7);
+      const shape: TreeKind = kind === "treeSmall" ? (k < 0.6 ? "pousse" : "sapin") : k < 0.45 ? "epicea" : k < 0.9 ? "sapin" : "pousse";
+      const s = (kind === "tree" ? 0.8 + rnd(1) * 0.45 : 0.5 + rnd(1) * 0.22) * (shape === "epicea" ? 1.1 : 1);
+      tree(g, P(cx, cy), s, pal, { kind: shape, variant: Math.floor(rnd(8) * 4), snowAmount: rnd(9) });
       break;
     }
     case "house":
@@ -64,7 +67,10 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       break;
     }
     case "rock": {
-      box(g, cx - 0.25, cy - 0.2, 0, 0.5, 0.4, 0.22, { top: c(0xf7f5f0), left: c(0x9aa0ae), right: c(0x7c8293) });
+      // bloc facetté coiffé de neige, parfois accompagné d'un caillou
+      const r = 0.26 + rnd(11) * 0.22;
+      boulder(g, cx, cy, r, 0.3 + rnd(12) * 0.45, pal, rnd, rnd(13) > 0.25);
+      if (rnd(14) > 0.55) boulder(g, cx + 0.35, cy + 0.2, r * 0.45, 0.16, pal, (n) => rnd(n + 80), true);
       break;
     }
     case "mountain": {
