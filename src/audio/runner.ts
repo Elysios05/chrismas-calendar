@@ -52,7 +52,7 @@ export class PieceRunner {
 
     // Chaîne : instruments → bus → filtre de couleur → réglage → fondu → sortie
     this.fade = new T.Gain(0).connect(dest);
-    const trim = new T.Gain(T.dbToGain(def.gainDb + (night ? -2 : 0))).connect(this.fade);
+    const trim = new T.Gain(T.dbToGain(def.gainDb + (night ? (def.nightGainDb ?? -2) : 0))).connect(this.fade);
     const cutoff = def.tone ? (night ? def.tone.night : def.tone.day) : night ? 3200 : 14000;
     const color = new T.Filter({ type: "lowpass", frequency: cutoff, rolloff: -12 }).connect(trim);
     const bus = new T.Gain(1).connect(color);

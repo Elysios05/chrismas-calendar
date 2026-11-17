@@ -79,8 +79,12 @@ export function gridAt(grid: Grid, t: number): string {
   return grid[grid.length - 1][0];
 }
 
-/** Une grille "un accord par mesure" */
-export const bars = (chords: string[], beatsPerBar: number): Grid => chords.map((c) => [c, beatsPerBar]);
+/** Une grille « un accord par mesure » ; "C~G7" partage la mesure en parts égales */
+export const bars = (chords: string[], beatsPerBar: number): Grid =>
+  chords.flatMap((c) => {
+    const parts = c.split("~");
+    return parts.map((p) => [p, beatsPerBar / parts.length] as [string, number]);
+  });
 
 /** Parcourt la grille : (accord, début, durée) */
 export function eachChord(grid: Grid, fn: (chord: string, start: number, dur: number) => void) {
@@ -139,3 +143,9 @@ export function rng(seed: number) {
     return s / 4294967296;
   };
 }
+
+/** Transpose des évènements de `semis` demi-tons */
+export const tr = (evs: Ev[], semis: number): Ev[] => evs.map((e) => ({ ...e, n: e.n.map((x) => x + semis) }));
+
+/** Change d'instrument (et éventuellement de vélocité) */
+export const as = (evs: Ev[], i: string, vel?: number): Ev[] => evs.map((e) => ({ ...e, i, v: vel ?? e.v }));

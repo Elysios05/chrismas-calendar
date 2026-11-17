@@ -42,6 +42,8 @@ export type PieceDef = {
   beats: number;
   /** réglage de gain global (dB), calé pour viser ≈ -16 LUFS */
   gainDb: number;
+  /** réglage supplémentaire la nuit (dB, défaut -2), calé pour viser ≈ -19 LUFS */
+  nightGainDb?: number;
   reverb: { decay: number; wet: number };
   /** écho optionnel : durée en temps, réinjection */
   delay?: { beats: number; feedback: number };
