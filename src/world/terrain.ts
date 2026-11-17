@@ -6,7 +6,8 @@ export type PathCell = { x: number; y: number; z: number; zone: number };
 export type DayNode = { day: number; idx: number; x: number; y: number; z: number; zone: number };
 /** `rz` = altitude de la route la plus proche : sert à mesurer la hauteur relative d'une cellule */
 export type Cell = { x: number; y: number; h: number; zone: number; road: boolean; lake: boolean; d: number; front: boolean; rz: number };
-export type PlacedProp = { kind: PropKind; x: number; y: number; z: number; zone: number; seed: number };
+/** `drop` = dénivelé à combler sous un bâtiment, côté aval (hauteur du soubassement) */
+export type PlacedProp = { kind: PropKind; x: number; y: number; z: number; zone: number; seed: number; drop: number };
 export type Terrain = { path: PathCell[]; nodes: DayNode[]; cells: Map<string, Cell>; props: PlacedProp[]; V: Map<string, number> };
 
 /** Hauteur du terrain en un point quelconque (interpolation bilinéaire des sommets) */
@@ -232,8 +233,37 @@ export function buildTerrain(seed = 2026): Terrain {
     }
     return true;
   };
+  // demi-emprise des bâtiments : sous eux, on taille une terrasse plate dans la pente
+  const FOOTPRINT: Partial<Record<PropKind, number>> = { house: 0.8, chalet: 1, workshop: 1.2, stall: 0.75 };
   const place = (kind: PropKind, c: Cell, r = 0) => {
-    props.push({ kind, x: c.x, y: c.y, z: heightAt(T0, c.x + 0.5, c.y + 0.5), zone: c.zone, seed: Math.floor(R() * 1e6) });
+    let z = heightAt(T0, c.x + 0.5, c.y + 0.5);
+    let drop = 0;
+    const fp = FOOTPRINT[kind];
+    if (fp !== undefined) {
+      const mx = c.x + 0.5, my = c.y + 0.5;
+      const x0 = Math.floor(mx - fp), x1 = Math.ceil(mx + fp);
+      const y0 = Math.floor(my - fp), y1 = Math.ceil(my + fp);
+      const hs: number[] = [];
+      let ok = true;
+      for (let vx = x0; vx <= x1 && ok; vx++) for (let vy = y0; vy <= y1; vy++) {
+        const h = V.get(key(vx, vy));
+        if (h === undefined) continue;
+        // on ne touche jamais au maillage de la route
+        for (const [ex, ey] of [[-1, -1], [0, -1], [-1, 0], [0, 0]]) if (cells.get(key(vx + ex, vy + ey))?.road) { ok = false; break; }
+        if (!ok) break;
+        hs.push(h);
+      }
+      if (ok && hs.length) {
+        hs.sort((a, b) => a - b);
+        // un peu au-dessus de la médiane : on remblaie plutôt qu'on ne creuse
+        z = hs[Math.floor(hs.length * 0.6)];
+        for (let vx = x0; vx <= x1; vx++) for (let vy = y0; vy <= y1; vy++) if (V.has(key(vx, vy))) V.set(key(vx, vy), z);
+        // ce qui reste de vide en contrebas sera comblé par un soubassement de pierre
+        // on mesure la marche juste au pied du bâtiment, pas le fond de la vallée
+        drop = Math.min(0.85, Math.max(0, z - heightAt(T0, mx + fp + 0.45, my + fp + 0.45)));
+      }
+    }
+    props.push({ kind, x: c.x, y: c.y, z, zone: c.zone, seed: Math.floor(R() * 1e6), drop });
     for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) taken.add(key(c.x + dx, c.y + dy));
   };
   const all = shuffled;
@@ -264,7 +294,9 @@ export function buildTerrain(seed = 2026): Terrain {
         break;
       }
       case "lac":
-        if (d > 1.2 && R() < (c.front ? 0.25 : 0.55)) place(R() < 0.8 ? "tree" : "treeSmall", c);
+        // quelques cabanes de bois au bord de l'eau
+        if (d > 1.8 && d < 6 && R() < 0.05 && flatAround(0) && free(c.x, c.y, 1)) place("house", c, 1);
+        else if (d > 1.2 && R() < (c.front ? 0.25 : 0.55)) place(R() < 0.8 ? "tree" : "treeSmall", c);
         else if (d > 1.5 && R() < 0.01) place("deer", c);
         break;
       case "marche":
@@ -281,13 +313,19 @@ export function buildTerrain(seed = 2026): Terrain {
     }
   }
   // repères uniques
-  const landmark = (kind: PropKind, zid: string, pick: (c: Cell) => boolean, r = 1) => {
+  /** `prefer` : emplacement idéal si on en trouve un, sinon on se rabat sur le premier venu */
+  const landmark = (kind: PropKind, zid: string, pick: (c: Cell) => boolean, r = 1, prefer?: (c: Cell) => boolean) => {
     const z = ZONES.findIndex((zz) => zz.id === zid);
-    const c = all.find((c) => c.zone === z && !c.road && pick(c) && free(c.x, c.y, r));
+    const cands = all.filter((c) => c.zone === z && !c.road && pick(c) && free(c.x, c.y, r));
+    const c = (prefer && cands.find(prefer)) ?? cands[0];
     if (c) place(kind, c, r);
   };
-  landmark("chalet", "montagnes", (c) => !c.front && c.d > 2 && c.d < 3.5 && c.h > 2);
+  // le chalet s'installe sur un replat, pas au bord d'une falaise
+  landmark("chalet", "montagnes", (c) => !c.front && c.d > 2 && c.d < 3.5 && c.h > 2, 1, (c) => slopeOf(c) < 0.55);
   landmark("snowman", "saint-nicolas", (c) => c.d > 1.2 && c.d < 2, 0);
+  // deux cabanes de pêcheur, au bord de la glace
+  const nearLake = (c: Cell) => !c.lake && [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [0, 2]].some(([dx, dy]) => cells.get(key(c.x + dx, c.y + dy))?.lake);
+  for (let i = 0; i < 2; i++) landmark("house", "lac", (c) => c.d > 1.6 && nearLake(c));
   landmark("bigTree", "marche", (c) => !c.front && c.d > 2.5 && c.d < 4);
   landmark("wheel", "marche", (c) => !c.front && c.d > 4 && c.d < 7);
   landmark("workshop", "pole-nord", (c) => !c.front && c.d > 2.5 && c.d < 4.5);

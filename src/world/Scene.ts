@@ -192,7 +192,7 @@ export class Scene {
     this.ground.addChild(g);
 
     for (const p of props) {
-      const o = drawProp(p.kind, p.x, p.y, this.pal, p.seed);
+      const o = drawProp(p.kind, p.x, p.y, this.pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop });
       o.y = -p.z * ZH;
       o.zIndex = p.x + p.y + (p.kind === "mountain" ? -1.4 : p.kind === "wheel" || p.kind === "workshop" ? -0.6 : 0.5);
       this.objects.addChild(o);
