@@ -62,3 +62,13 @@ dans les deux backends (pas d'appel immédiat : seulement aux changements).
 `updatePassword(pw)`), avec le garde-type `hasPasswordRecovery(backend)`. Sans effet en démo.
 
 **Tests** : 38 vérifications SQL, 31 vérifications navigateur sur le DemoBackend.
+
+### 17 novembre 2026 (soir) — e-mails « mot de passe oublié » (branche `backend/emails`)
+- Décision d'Alexandre : brancher un service d'e-mails gratuit. **Choix : Brevo**, le seul qui marche sans nom de domaine :
+  Resend, sans domaine vérifié, n'envoie qu'à l'adresse du compte Resend. Brevo accepte un expéditeur Gmail/Hotmail vérifié par code.
+- `docs/supabase.md` § 9 : compte Brevo, expéditeur, identifiants SMTP, saisie dans Supabase, modèle en français, adresse de retour, test, dépannage.
+- `supabase/templates/reset-password.html` : e-mail « Reset password » signé Pingou, à coller dans le tableau de bord.
+- Pas de `supabase/config.toml` : il ne sert qu'avec la CLI Supabase (`supabase config push`), que le projet n'utilise pas ;
+  tout se règle dans le tableau de bord.
+- À confirmer à l'inscription : les conditions actuelles de Brevo (expéditeur Gmail/Hotmail accepté ou non, délivrabilité).
+  La vérification en ligne n'a pas pu être faite (limite d'outil atteinte).
