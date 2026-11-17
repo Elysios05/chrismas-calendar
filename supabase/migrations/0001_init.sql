@@ -10,7 +10,7 @@
 create table if not exists public.app_settings (
   id           int primary key default 1 check (id = 1),     -- une seule ligne
   timezone     text not null default 'Europe/Paris',          -- fuseau de référence
-  open_hour    int  not null default 0 check (open_hour between 0 and 23), -- heure d'ouverture (0 = minuit)
+  open_hour    int  not null default 7 check (open_hour between 0 and 23), -- heure d'ouverture (7 = 7 h du matin)
   day_override int  check (day_override between 0 and 24)    -- pour tester : force « aujourd'hui » (null = vraie date)
 );
 insert into public.app_settings (id) values (1) on conflict (id) do nothing;
@@ -36,24 +36,28 @@ $$;
 
 -- ---------------------------------------------------------------------
 -- 3. « Aujourd'hui » calculé CÔTÉ SERVEUR
+--    On recule de open_hour heures (avant 7 h, c'est encore la veille), puis :
 --    décembre → jour du mois (max 24) ; janvier–juin → 24 (tout reste ouvert) ; sinon 0.
 -- ---------------------------------------------------------------------
-create or replace function public.advent_today() returns int
+create or replace function public.advent_day_at(at_time timestamptz) returns int
 language sql stable security definer set search_path = public as $$
   with cfg as (
-    select coalesce(s.timezone, 'Europe/Paris') as tz, coalesce(s.open_hour, 0) as h, s.day_override
+    select coalesce(s.timezone, 'Europe/Paris') as tz, coalesce(s.open_hour, 7) as h
     from (select 1) one left join public.app_settings s on s.id = 1
   ), t as (
-    select (now() at time zone cfg.tz) - make_interval(hours => cfg.h) as local, cfg.day_override from cfg
+    select (at_time at time zone cfg.tz) - make_interval(hours => cfg.h) as local from cfg
   )
-  select coalesce(
-    t.day_override,
-    case
+  select case
       when extract(month from t.local) = 12 then least(extract(day from t.local)::int, 24)
       when extract(month from t.local) <= 6 then 24
       else 0
-    end)
+    end
   from t
+$$;
+
+create or replace function public.advent_today() returns int
+language sql stable security definer set search_path = public as $$
+  select coalesce((select day_override from public.app_settings where id = 1), public.advent_day_at(now()))
 $$;
 
 -- ---------------------------------------------------------------------
@@ -107,6 +111,30 @@ end $$;
 drop trigger if exists prepared_touch on public.prepared_content;
 create trigger prepared_touch before insert or update on public.prepared_content
   for each row execute function public.touch_row();
+-- Case préparée FIGÉE dès que le destinataire l'a ouverte (ligne dans progress) :
+-- plus aucune création, modification ni suppression par l'auteur. Erreur explicite « CASE_FIGEE ».
+create or replace function public.prepared_frozen(p_day int, p_to text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.progress where who = p_to and day = p_day)
+$$;
+
+create or replace function public.prepared_guard() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare r record;
+begin
+  r := case when tg_op = 'DELETE' then old else new end;
+  if public.prepared_frozen(r.day, r.to_who)
+     or (tg_op = 'UPDATE' and public.prepared_frozen(old.day, old.to_who)) then
+    raise exception 'CASE_FIGEE : la case % a déjà été ouverte par %, elle ne peut plus être modifiée', r.day, r.to_who
+      using errcode = 'P0001';
+  end if;
+  return case when tg_op = 'DELETE' then old else new end;
+end $$;
+
+drop trigger if exists prepared_guard on public.prepared_content;
+create trigger prepared_guard before insert or update or delete on public.prepared_content
+  for each row execute function public.prepared_guard();
+
 drop trigger if exists game_state_touch on public.game_state;
 create trigger game_state_touch before insert or update on public.game_state
   for each row execute function public.touch_row();
@@ -149,7 +177,7 @@ create policy progress_update on public.progress for update to authenticated
   with check (who = public.my_who() and day <= public.advent_today());
 
 -- prepared_content : POINT CRUCIAL
---   - l'auteur lit et modifie toujours la sienne ;
+--   - l'auteur lit toujours la sienne, et la modifie tant que le destinataire ne l'a pas ouverte ;
 --   - le destinataire ne la lit qu'à partir du jour J (date serveur), et ne peut jamais la modifier.
 drop policy if exists prepared_read on public.prepared_content;
 create policy prepared_read on public.prepared_content for select to authenticated
@@ -159,14 +187,15 @@ create policy prepared_read on public.prepared_content for select to authenticat
   );
 drop policy if exists prepared_insert on public.prepared_content;
 create policy prepared_insert on public.prepared_content for insert to authenticated
-  with check (from_who = public.my_who() and to_who = public.partner_of(public.my_who()));
+  with check (from_who = public.my_who() and to_who = public.partner_of(public.my_who())
+              and not public.prepared_frozen(day, to_who));
 drop policy if exists prepared_update on public.prepared_content;
 create policy prepared_update on public.prepared_content for update to authenticated
-  using (from_who = public.my_who())
+  using (from_who = public.my_who() and not public.prepared_frozen(day, to_who))
   with check (from_who = public.my_who() and to_who = public.partner_of(public.my_who()));
 drop policy if exists prepared_delete on public.prepared_content;
 create policy prepared_delete on public.prepared_content for delete to authenticated
-  using (from_who = public.my_who());
+  using (from_who = public.my_who() and not public.prepared_frozen(day, to_who));
 
 -- game_state : partagé entre les deux comptes
 drop policy if exists game_read on public.game_state;
