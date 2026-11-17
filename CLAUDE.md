@@ -38,6 +38,19 @@ On code contre ces interfaces. Besoin d'un changement de contrat → le demander
 5. **Pull request** vers `main` avec : ce qui change, captures, ce qui reste à faire. Le chef de projet relit et fusionne.
 6. Messages de commit en français, à l'impératif présent.
 7. Tenir à jour la section « Journal » de ton brief (`docs/agents/<equipe>.md`) : décisions prises avec Alexandre, et où tu en es.
+8. **Parler au chef de projet = ouvrir une issue GitHub.** C'est le seul canal : les équipes ne se voient pas entre elles.
+
+## Parler au chef de projet
+Pour tout ce qui sort de ton dossier — changement de contrat dans `src/core/contracts.ts`, besoin qu'une autre
+équipe livre quelque chose, fichier à modifier qui ne t'appartient pas, arbitrage, ordre des priorités —
+**ouvre une issue GitHub** sur le dépôt. Le chef y répond, dit qui fait quoi et à qui il confie le fichier ;
+la discussion continue en commentaires sous la même issue. Avant de demander, **va d'abord relire les issues
+ouvertes** : la réponse qui te concerne est peut-être déjà là, y compris dans l'issue d'une autre équipe.
+
+Une issue utile tient en trois points : où tu en es, ce qui te bloque précisément, et 2–3 options avec ta
+recommandation. N'attends pas la réponse les bras croisés : fais tout ce qui ne dépend pas de l'arbitrage,
+et reviens lire l'issue ensuite. Ne touche jamais au dossier d'une autre équipe avant que le chef te l'ait
+confié par écrit dans l'issue.
 
 ## Lancer et tester
 ```bash

@@ -19,6 +19,13 @@
 ## Questions à poser à Alexandre
 Règles et difficulté de chaque jeu, contenu à mettre (souvenirs, private jokes), durée des parties.
 
+## Parler au chef de projet
+**Par une issue GitHub, jamais autrement.** Tout ce qui sort de `src/games/` et `src/data/` passe par là :
+contrat à changer, fichier d'une autre équipe à modifier, arbitrage, priorités. Le chef répond dans l'issue,
+dit qui fait quoi et confie les fichiers par écrit ; la suite se discute en commentaires sous la même issue.
+Avant de poser une question, relire les issues ouvertes (y compris celles des autres équipes : les réponses
+du chef y annoncent souvent des changements de contrat qui nous concernent).
+
 ## Journal
 
 ### 17 novembre 2026 — cadre commun + jours 1 et 2 (branche `jeux/cadre-et-jours-1-2`)
@@ -43,9 +50,10 @@ Règles et difficulté de chaque jeu, contenu à mettre (souvenirs, private joke
 - `jeux.html` + `src/games/dev/` : atelier de test des jeux (hors site livré), avec un faux backend
   en localStorage en attendant `src/backend/`.
 
-**Branchement dans `src/App.tsx`** : décision d'Alexandre du 17 novembre — aucune session « chef de projet »
-n'existe, et écrire des bouchons de backend et d'audio dans le fichier d'assemblage serait du provisoire à jeter.
-On attend donc `src/backend/`. En attendant, le terrain est prêt côté jeux : `src/games/lanceur.tsx`
+**Branchement du lanceur** : d'abord mis en attente (le 17 novembre, `src/backend/` et `src/audio/` n'existaient
+pas et les bouchons auraient été du provisoire à jeter). Ces deux dossiers sont maintenant livrés, donc la
+question est posée au chef dans l'issue #7 : qui appelle `<FenetreJeu />` et où (plutôt `src/ui/DayWindow.tsx`
+que `src/App.tsx`), et qui fournit `backend` et `sound` à cet endroit. Le terrain est prêt côté jeux : `src/games/lanceur.tsx`
 (`<FenetreJeu … />`, une ligne à poser dans la carte d'une case, qui gère chargement, contexte, fenêtre et
 nettoyage) et la marche à suivre dans `src/games/README.md`. L'atelier de test passe par ce même lanceur.
 À noter : `ctx.complete()` signifie « le joueur quitte le jeu » (la fenêtre se ferme), pas « la partie est finie ».
