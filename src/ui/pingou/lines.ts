@@ -60,6 +60,10 @@ export const PINGOU_LOGIN = {
       { text: `Pile à l'heure, ${prenom}. Enfin, à peu près.`, face: "clin" } as const,
     ]),
   ],
+  /** Bouton « Voir la démo » de la version publique */
+  demo: (): PingouLine[] => [
+    { text: "Visite guidée ! Tout est inventé ici, mais la route est la vraie.", face: "clin" },
+  ],
   deconnexion: (): PingouLine[] => [{ text: "Je garde ta place au chaud. À demain !", face: "content" }],
 } as const;
 

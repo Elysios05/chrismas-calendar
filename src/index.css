@@ -153,10 +153,27 @@ button { font-family: inherit; cursor: pointer; }
 .login-input:focus-visible { outline: 0; border-color: #2f6fd0; box-shadow: 0 0 0 4px rgba(47,111,208,.18); }
 .login-input.erreur { border-color: var(--red); animation: secoue .3s; }
 @keyframes secoue { 25% { translate: -6px 0; } 75% { translate: 6px 0; } }
-.login-erreur { min-height: 20px; margin: 6px 0 10px; font-size: 13px; font-weight: 600; color: var(--red); }
+.login-champ { position: relative; }
+.login-champ .login-input { padding-right: 52px; }
+.login-oeil {
+  position: absolute; right: 6px; top: 50%; translate: 0 -50%;
+  display: grid; place-items: center;
+  width: 40px; height: 40px; border: 0; border-radius: 12px; background: transparent; color: var(--ink-soft);
+}
+.login-oeil:hover { background: #f1ece2; }
+.login-erreur { min-height: 20px; margin: 6px 0 4px; font-size: 13px; font-weight: 600; color: var(--red); }
+.login-rester {
+  display: flex; align-items: center; gap: 9px; margin: 0 0 14px;
+  font-size: 14px; color: var(--ink-soft); cursor: pointer;
+}
+.login-rester input { width: 20px; height: 20px; accent-color: var(--red); cursor: pointer; }
 .login-btn { width: 100%; }
 .login-btn:disabled { opacity: .45; box-shadow: 0 5px 0 var(--red-d); cursor: default; }
-.login-demo { margin: 14px 0 0; font-size: 12px; color: var(--ink-soft); }
+.login-lien {
+  margin: 14px 0 0; border: 0; background: transparent; padding: 6px;
+  font-size: 14px; font-weight: 600; color: var(--ink-soft); text-decoration: underline;
+}
+.login-lien:hover { color: var(--red); }
 .login .mascot { position: relative; z-index: 1; width: min(420px, 100%); }
 
 /* ---------- fenêtre d'une case ---------- */
