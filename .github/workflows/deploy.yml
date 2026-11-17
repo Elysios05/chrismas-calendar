@@ -24,7 +24,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build
+      # Version privée (racine du site) : branchée sur Supabase si les secrets existent,
+      # sinon elle retombe sur le mode démo. Voir docs/supabase.md.
+      - name: Build version privée
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_EMAIL_ALEXANDRE: ${{ secrets.VITE_EMAIL_ALEXANDRE }}
+          VITE_EMAIL_FLAVIE: ${{ secrets.VITE_EMAIL_FLAVIE }}
+      # Version démo publique, sans backend, dans le sous-dossier /demo/
+      - name: Build version démo
+        run: npx vite build --outDir dist/demo --emptyOutDir
+        env:
+          VITE_SUPABASE_URL: ""
+          VITE_SUPABASE_ANON_KEY: ""
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
