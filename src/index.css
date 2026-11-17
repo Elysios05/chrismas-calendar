@@ -58,20 +58,28 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ---------- mascotte ---------- */
 .mascot {
+  display: flex; align-items: flex-end; gap: 4px; text-align: left;
+  border: 0; background: transparent; padding: 0; cursor: pointer; user-select: none;
+  font: inherit; color: inherit;
+}
+.mascot--flottant {
   position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 20;
   transform: translateX(-50%); width: min(560px, calc(100% - 20px));
-  display: flex; align-items: flex-end; gap: 4px; cursor: pointer; user-select: none;
   animation: mascotIn .5s cubic-bezier(.2,1.4,.4,1);
 }
+.mascot--inline { width: 100%; animation: mascotInlineIn .4s cubic-bezier(.2,1.4,.4,1); }
 @keyframes mascotIn { from { transform: translate(-50%, 120%); } }
+@keyframes mascotInlineIn { from { transform: translateY(16px); opacity: 0; } }
 .mascot-portrait { flex: none; animation: waddle 1.6s ease-in-out infinite; transform-origin: bottom center; margin-bottom: -4px; }
 @keyframes waddle { 0%,100% { rotate: -5deg; } 50% { rotate: 5deg; } }
 .mascot-bubble {
-  position: relative; flex: 1; background: var(--cream); border-radius: 20px 20px 20px 6px;
+  position: relative; flex: 1; min-width: 0; display: block;
+  background: var(--cream); border-radius: 20px 20px 20px 6px;
   padding: 12px 16px 14px; box-shadow: 0 6px 0 rgba(27,39,71,.2), 0 14px 30px rgba(27,39,71,.15);
 }
-.mascot-name { font-size: 12px; font-weight: 700; color: var(--red); text-transform: uppercase; letter-spacing: 1px; }
-.mascot-bubble p { margin: 4px 0 0; font-size: 16px; line-height: 1.35; min-height: 44px; }
+.mascot-name { display: block; font-size: 12px; font-weight: 700; color: var(--red); text-transform: uppercase; letter-spacing: 1px; }
+.mascot-text { display: block; margin-top: 4px; font-size: 16px; line-height: 1.35; min-height: 44px; }
+.mascot:focus-visible .mascot-bubble { outline: 3px solid var(--red); outline-offset: 3px; }
 .mascot-next { position: absolute; right: 12px; bottom: 8px; font-size: 13px; color: var(--red); animation: blinkNext 1s infinite; }
 @keyframes blinkNext { 50% { opacity: .3; } }
 .caret { display: inline-block; width: 2px; height: 16px; margin-left: 2px; vertical-align: -2px; background: var(--ink); }
@@ -99,8 +107,116 @@ button { font-family: inherit; cursor: pointer; }
 }
 .btn.ghost { background: #fff; color: var(--ink); box-shadow: 0 5px 0 rgba(27,39,71,.15); }
 
+/* ---------- écran de connexion ---------- */
+.login {
+  position: fixed; inset: 0; z-index: 40; overflow: auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(120% 80% at 50% 110%, #fff 0, #dbeafd 45%, transparent 70%),
+    linear-gradient(180deg, #16224c 0, #2a3f77 55%, #5e86bd 100%);
+}
+.login-flakes {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  display: flex; flex-wrap: wrap; justify-content: space-around; align-content: space-around;
+  font-size: 18px; color: #fff; opacity: .3;
+}
+.login-flakes span { flex: 0 0 18%; text-align: center; padding: 22px 0; }
+.login-flakes span:nth-child(odd) { font-size: 13px; opacity: .7; }
+.login-card {
+  position: relative; z-index: 1; width: min(420px, 100%);
+  background: var(--cream); border-radius: 30px; padding: 0 24px 24px; text-align: center;
+  box-shadow: 0 12px 0 rgba(12,20,48,.3), 0 36px 70px rgba(0,0,0,.35);
+  animation: pop .5s cubic-bezier(.2,1.5,.4,1);
+}
+.login-portrait { margin-top: -54px; }
+.login-kicker { margin: 2px 0 0; font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--red); }
+.login-title { margin: 4px 0 20px; font-size: 27px; line-height: 1.1; }
+.login-question { margin: 0 0 8px; text-align: left; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.login-who { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.login-who-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 2px solid #e6e0d6; border-radius: 18px; background: #fff; padding: 14px 10px;
+  font-size: 17px; font-weight: 600; color: var(--ink); transition: transform .1s, border-color .15s;
+  box-shadow: 0 4px 0 rgba(27,39,71,.12);
+}
+.login-who-btn .login-who-dot { width: 13px; height: 13px; border-radius: 50%; background: var(--c); }
+.login-who-btn.on { border-color: var(--c); color: var(--c); }
+.login-who-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(27,39,71,.12); }
+.login-form { margin-top: 18px; text-align: left; }
+.login-label { display: block; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+.login-input {
+  width: 100%; border: 2px solid #e6e0d6; border-radius: 16px; padding: 14px 16px;
+  font-family: inherit; font-size: 18px; color: var(--ink); background: #fff;
+  letter-spacing: 2px;
+}
+.login-input:focus-visible { outline: 0; border-color: #2f6fd0; box-shadow: 0 0 0 4px rgba(47,111,208,.18); }
+.login-input.erreur { border-color: var(--red); animation: secoue .3s; }
+@keyframes secoue { 25% { translate: -6px 0; } 75% { translate: 6px 0; } }
+.login-erreur { min-height: 20px; margin: 6px 0 10px; font-size: 13px; font-weight: 600; color: var(--red); }
+.login-btn { width: 100%; }
+.login-btn:disabled { opacity: .45; box-shadow: 0 5px 0 var(--red-d); cursor: default; }
+.login-demo { margin: 14px 0 0; font-size: 12px; color: var(--ink-soft); }
+.login .mascot { position: relative; z-index: 1; width: min(420px, 100%); }
+
+/* ---------- fenêtre d'une case ---------- */
+.sheet {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: end center;
+  padding: 0; background: rgba(16, 26, 58, .5); backdrop-filter: blur(3px); animation: fade .25s;
+}
+.sheet-panel {
+  width: min(520px, 100%); max-height: min(92dvh, 760px); overflow: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  background: var(--cream); border-radius: 30px 30px 0 0;
+  padding: 20px 20px calc(18px + env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 40px rgba(0,0,0,.3);
+  animation: monte .4s cubic-bezier(.2,1.2,.4,1);
+}
+@keyframes monte { from { transform: translateY(100%); } }
+.sheet-head { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 12px; }
+.sheet-emoji { font-size: 40px; line-height: 1; }
+.sheet-day { margin: 2px 0 0; font-size: 12px; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 1px; }
+.sheet-title { margin: 4px 0 0; font-size: 22px; line-height: 1.15; }
+.sheet-close {
+  width: 36px; height: 36px; flex: none; border: 0; border-radius: 12px;
+  background: #fff; color: var(--ink-soft); font-size: 15px; box-shadow: 0 3px 0 rgba(27,39,71,.14);
+}
+.sheet-body { display: flex; flex-direction: column; gap: 14px; }
+.sheet-intro, .sheet-fini { text-align: center; padding: 10px 4px; }
+.sheet-intro-text { margin: 0 0 16px; color: var(--ink-soft); font-size: 15px; line-height: 1.4; }
+.sheet-cta { width: 100%; max-width: 280px; }
+.sheet-game { min-height: 180px; }
+.sheet-vide { text-align: center; color: var(--ink-soft); }
+.sheet-sceau { font-size: 46px; }
+.sheet-fini-text { margin: 6px 0 16px; font-size: 18px; font-weight: 600; }
+.sheet-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* contenu du faux jeu des maquettes */
+.demo-q { margin: 0 0 14px; font-size: 19px; font-weight: 600; text-align: center; }
+.demo-reponses { display: grid; gap: 8px; }
+.demo-reponses .btn { width: 100%; }
+.demo-pas { margin: 14px 0 0; text-align: center; font-size: 12px; color: var(--ink-soft); }
+
+/* ---------- planche des expressions (maquettes) ---------- */
+.maq-pingou { min-height: 100dvh; padding: 28px 16px; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.maq-pingou h1 { margin: 0; font-size: 22px; }
+.maq-faces { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.maq-faces figure { margin: 0; background: var(--cream); border-radius: 22px; padding: 10px 6px 8px; box-shadow: 0 5px 0 rgba(27,39,71,.15); }
+.maq-faces figcaption { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+.maq-pingou .mascot { width: min(520px, 100%); }
+.maq-monde { min-height: 100dvh; background: linear-gradient(180deg, #7fb2dc 0, #bcd8ee 220px, #eef4fa 460px); }
+
 @media (max-width: 560px) {
   .brand-title { font-size: 16px; }
   .who button { padding: 6px 8px; font-size: 13px; }
   .round { width: 38px; height: 38px; }
+  .login-title { font-size: 23px; }
+  .sheet-title { font-size: 19px; }
+}
+@media (min-width: 700px) {
+  .sheet { place-items: center; padding: 20px; }
+  .sheet-panel { border-radius: 30px; animation: pop .45s cubic-bezier(.2,1.5,.4,1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
