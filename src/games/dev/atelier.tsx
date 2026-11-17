@@ -4,23 +4,17 @@
  * Ne fait pas partie du site livré (seul index.html est construit).
  */
 
+import { silentSound } from "../../core/silent";
 import { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { GameResult, Sfx, SoundApi, Who, ZoneId } from "../../core/contracts";
+import type { GameResult, SoundApi, Who } from "../../core/contracts";
 import { joursAvecJeu } from "../registry";
 import { FenetreJeu } from "../lanceur";
 import { creerBackendAtelier, viderAtelier } from "./backendDemo";
 import "../../index.css";
 import "./atelier.css";
 
-const sonMuet: SoundApi = {
-  setEnabled: () => { /* atelier silencieux */ },
-  setVolume: () => { /* rien */ },
-  unlock: async () => { /* rien */ },
-  setZone: (_z: ZoneId, _n: boolean) => { /* rien */ },
-  setGameMusic: () => { /* rien */ },
-  play: (_s: Sfx) => { /* rien */ },
-};
+const sonMuet: SoundApi = silentSound;
 
 function Atelier() {
   const [jour, setJour] = useState(1);

@@ -4,6 +4,10 @@ import type { SoundApi } from "./contracts";
 export const silentSound: SoundApi = {
   setEnabled() {},
   setVolume() {},
+  setMusicVolume() {},
+  setSfxVolume() {},
+  setWeather() {},
+  setWind() {},
   unlock: async () => {},
   setZone() {},
   setGameMusic() {},

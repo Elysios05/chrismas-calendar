@@ -1,3 +1,4 @@
+import { silentSound } from "../core/silent";
 import { useEffect, useRef, useState } from "react";
 import type { BackendApi, GameModule, GameResult, PreparedResult, SoundApi, Who } from "../core/contracts";
 import { PLANNING, KIND_LABEL } from "../data/planning";
@@ -8,7 +9,7 @@ import { PINGOU_CASE, type PingouLine } from "./pingou/lines";
 const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
 /** Son silencieux : utilisé tant que l'équipe Audio n'est pas branchée. */
-const MUET: SoundApi = { setEnabled() {}, setVolume() {}, unlock: async () => {}, setZone() {}, setGameMusic() {}, play() {} };
+const MUET: SoundApi = silentSound;
 
 type Etape = "intro" | "jeu" | "fini";
 
