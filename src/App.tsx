@@ -1,44 +1,79 @@
+// Assemblage : backend → connexion → monde, fenêtres des cases, jeux, son, Pingou
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Application } from "pixi.js";
+import type { BackendApi, GameModule, Progress, Who, ZoneId } from "./core/contracts";
+import { createBackend } from "./backend";
+import { sound } from "./audio";
 import { Scene, type NodeState } from "./world/Scene";
 import { ZONES } from "./world/zones";
-import { PLAYERS, type Who } from "./world/actors";
-import { PLANNING, KIND_LABEL } from "./data/planning";
+import { PLAYERS } from "./world/actors";
 import { MascotDialog } from "./ui/Mascot";
+import { LoginScreen } from "./ui/LoginScreen";
+import { DayWindow } from "./ui/DayWindow";
+import { PINGOU_ROUTE, type PingouLine } from "./ui/pingou/lines";
+import { aUnJeu, chargerJeu } from "./games/registry";
 
-const store = {
-  get<T>(k: string, d: T): T { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; } },
-  set(k: string, v: unknown) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* stockage indisponible */ } },
-};
-
-/** Jour courant : ?jour=N pour tester, sinon la vraie date en décembre (démo = 9 hors décembre) */
-function computeToday() {
-  const q = new URLSearchParams(location.search).get("jour");
-  if (q) return Math.max(0, Math.min(24, +q));
-  const d = new Date();
-  return d.getMonth() === 11 ? Math.min(24, d.getDate()) : 9;
-}
 const isNightNow = () => { const h = new Date().getHours(); return h >= 17 || h < 7; };
+const other = (w: Who): Who => (w === "alexandre" ? "flavie" : "alexandre");
+const EMPTY: Progress = { opened: [], completed: [] };
 
 export default function App() {
+  const [backend, setBackend] = useState<BackendApi | null>(null);
+  const [me, setMe] = useState<Who | null | undefined>(undefined); // undefined = on ne sait pas encore
+
+  useEffect(() => {
+    let off = () => {};
+    (async () => {
+      const b = await createBackend();
+      setBackend(b);
+      setMe(await b.me().catch(() => null));
+      off = b.onAuthChange((w) => setMe(w));
+    })();
+    return () => off();
+  }, []);
+
+  // le son ne peut démarrer qu'après un geste de l'utilisateur
+  useEffect(() => {
+    const go = () => { void sound.unlock(); removeEventListener("pointerdown", go); };
+    addEventListener("pointerdown", go);
+    return () => removeEventListener("pointerdown", go);
+  }, []);
+
+  if (!backend || me === undefined) return <div className="boot">❄️</div>;
+  if (!me) return <LoginScreen backend={backend} onSignedIn={setMe} />;
+  return <Calendar backend={backend} me={me} />;
+}
+
+function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
   const host = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<Scene | null>(null);
+  const [ready, setReady] = useState(false);
   const [height, setHeight] = useState(3000);
   const [zone, setZone] = useState(0);
   const [night, setNight] = useState(isNightNow());
-  const [who, setWho] = useState<Who>(() => store.get("who", "alexandre"));
-  const [opened, setOpened] = useState<Record<Who, number[]>>(() => store.get("opened", { alexandre: [1, 2, 3, 4, 5, 6], flavie: [1, 2, 3, 4, 5, 6, 7] }));
-  const [modal, setModal] = useState<number | null>(null);
-  const [lines, setLines] = useState<string[]>([]);
-  const today = useMemo(computeToday, []);
+  const [today, setToday] = useState(0);
+  const [progress, setProgress] = useState<Record<Who, Progress>>({ alexandre: EMPTY, flavie: EMPTY });
+  const [open, setOpen] = useState<{ day: number; game?: GameModule } | null>(null);
+  const [lines, setLines] = useState<PingouLine[]>([]);
+  const [soundOn, setSoundOn] = useState(true);
+  const partner = other(me);
+
+  const loadProgress = useCallback(async () => {
+    const [a, f] = await Promise.all((["alexandre", "flavie"] as Who[]).map((w) => backend.getProgress(w).catch(() => EMPTY)));
+    const next = { alexandre: a, flavie: f };
+    setProgress(next);
+    return next;
+  }, [backend]);
+
+  useEffect(() => { void backend.today().then(setToday); void loadProgress(); }, [backend, loadProgress]);
 
   const states = useMemo(() => {
     const m = new Map<number, NodeState>();
-    for (let d = 1; d <= 24; d++) m.set(d, d > today ? "locked" : opened[who].includes(d) ? "opened" : "available");
+    for (let d = 1; d <= 24; d++) m.set(d, d > today ? "locked" : progress[me].opened.includes(d) ? "opened" : "available");
     return m;
-  }, [today, opened, who]);
+  }, [today, progress, me]);
 
-  // --- création de la scène Pixi ---
+  // --- scène Pixi ---
   useEffect(() => {
     let cancelled = false;
     const app = new Application();
@@ -47,49 +82,52 @@ export default function App() {
       try { await document.fonts.load("700 20px Fredoka"); } catch { /* police non chargée */ }
       if (cancelled) { app.destroy(true); return; }
       host.current!.appendChild(app.canvas);
-      const scene = new Scene(app, {
-        onNodeTap: (day) => window.dispatchEvent(new CustomEvent("node-tap", { detail: day })),
+      sceneRef.current = new Scene(app, {
+        onNodeTap: (day) => dispatchEvent(new CustomEvent("node-tap", { detail: day })),
         onZone: setZone,
       }, isNightNow());
-      sceneRef.current = scene;
-      window.dispatchEvent(new Event("scene-ready"));
+      setReady(true);
     })();
     return () => { cancelled = true; sceneRef.current = null; try { app.destroy(true, { children: true }); } catch { /* pas encore initialisée */ } };
   }, []);
 
-  // synchronise états, nuit, positions
-  const sync = useCallback(() => {
-    const s = sceneRef.current; if (!s) return;
+  // états des cases et positions des personnages
+  useEffect(() => {
+    const s = sceneRef.current; if (!ready || !s) return;
     s.setStates(states);
     for (const w of ["alexandre", "flavie"] as Who[]) {
-      const last = Math.max(0, ...opened[w]);
-      if (!s.people[w]?.walking) s.setPosition(w, last);
+      if (!s.people[w]?.walking) s.setPosition(w, Math.max(0, ...progress[w].opened));
     }
-    s.leader = who;
-    s.penguinPos = s.pos[who] - 1.1;
+    s.leader = me;
+    s.penguinPos = s.pos[me] - 1.1;
     setHeight(s.worldHeight);
-  }, [states, opened, who]);
+  }, [ready, states, progress, me]);
 
+  // accueil : on descend jusqu'à la case du jour
   useEffect(() => {
-    const ready = () => {
-      sync();
-      const s = sceneRef.current!;
-      const target = Math.max(0, s.scrollForDay(Math.max(1, today)));
-      setTimeout(() => window.scrollTo({ top: target, behavior: "smooth" }), 600);
-      setLines([
-        `Coucou ${PLAYERS[who].name} ! Moi c'est Pingou, je vais vous guider tout le long du chemin jusqu'à Noël 🐧`,
-        "Chaque jour, une nouvelle case s'ouvre sur la route. Toi et Flavie avancez chacun de votre côté… on verra qui arrive en premier au traîneau !",
-        `Aujourd'hui c'est la case ${today}. Clique sur le cadeau qui brille ✨`,
-      ]);
-    };
-    window.addEventListener("scene-ready", ready);
-    return () => window.removeEventListener("scene-ready", ready);
-  }, [sync, today, who]);
+    const s = sceneRef.current; if (!ready || !s || !today) return;
+    setTimeout(() => scrollTo({ top: Math.max(0, s.scrollForDay(Math.min(24, today))), behavior: "smooth" }), 600);
+    const waiting = Array.from({ length: today }, (_, i) => i + 1).filter((d) => !progress[me].opened.includes(d));
+    setLines([
+      `Coucou ${PLAYERS[me].name} ! C'est moi, Pingou 🐧`,
+      ...(waiting.length > 1 ? PINGOU_ROUTE.caseEnRetard(waiting[0]) : []),
+      `Aujourd'hui c'est la case ${Math.min(24, today)}. Touche le cadeau qui brille ✨`,
+    ]);
+    // une seule fois au chargement
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, today]);
 
-  useEffect(() => { sync(); }, [sync]);
-  useEffect(() => { sceneRef.current?.setNight(night); sync(); }, [night]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (ready) { sceneRef.current?.setNight(night); } }, [ready, night]);
 
-  // défilement -> caméra
+  // ambiance sonore selon le monde traversé
+  useEffect(() => {
+    const id = (ZONES[zone]?.id ?? "montagnes") as ZoneId;
+    sound.setZone(id, night);
+    sound.setWeather(id === "lac" && today >= 10 && today <= 11);
+    sound.setWind(id === "montagnes" ? 0.7 : id === "pole-nord" ? 0.4 : 0.1);
+  }, [zone, night, today]);
+
+  // défilement → caméra
   useEffect(() => {
     const on = () => sceneRef.current?.setScroll(scrollY);
     const rs = () => { const s = sceneRef.current; if (s) { s.resize(); setHeight(s.worldHeight); } };
@@ -98,36 +136,37 @@ export default function App() {
     return () => { removeEventListener("scroll", on); removeEventListener("resize", rs); };
   }, []);
 
-  // clic sur une case
+  // toucher une case
   useEffect(() => {
-    const onTap = (e: Event) => {
+    const onTap = async (e: Event) => {
       const day = (e as CustomEvent<number>).detail;
-      if (day > today) {
-        setLines([`Hé, pas si vite ! La case ${day} s'ouvrira le ${day} décembre. Patience… ❄️`]);
-        return;
-      }
-      setModal(day);
+      if (day > today) { sound.play("locked"); setLines(PINGOU_ROUTE.caseVerrouillee(day)); return; }
+      sound.play("select");
+      const game = aUnJeu(day) ? (await chargerJeu(day)) ?? undefined : undefined;
+      setLines([]);
+      setOpen({ day, game });
     };
     addEventListener("node-tap", onTap);
     return () => removeEventListener("node-tap", onTap);
   }, [today]);
 
-  const openDay = async (day: number) => {
-    setModal(null);
-    const s = sceneRef.current;
-    const next = { ...opened, [who]: [...new Set([...opened[who], day])] };
-    if (s) await s.walkTo(who, day);
-    setOpened(next); store.set("opened", next);
-    const other: Who = who === "alexandre" ? "flavie" : "alexandre";
-    const diff = Math.max(0, ...next[who]) - Math.max(0, ...next[other]);
-    setLines([
-      `Bravo ! Case ${day} ouverte 🎉`,
-      diff > 0 ? `Tu as ${diff} case${diff > 1 ? "s" : ""} d'avance sur ${PLAYERS[other].name} 😏` : diff < 0 ? `${PLAYERS[other].name} a encore ${-diff} case${diff < -1 ? "s" : ""} d'avance… on accélère ?` : `Vous êtes à égalité avec ${PLAYERS[other].name} 💞`,
-    ]);
+  const closeDay = async () => {
+    const day = open?.day;
+    setOpen(null);
+    if (!day) return;
+    const wasOpened = progress[me].opened.includes(day);
+    const next = await loadProgress();
+    if (wasOpened || !next[me].opened.includes(day)) return;
+    sound.play("open");
+    await sceneRef.current?.walkTo(me, day);
+    const diff = Math.max(0, ...next[me].opened) - Math.max(0, ...next[partner].opened);
+    const name = PLAYERS[partner].name;
+    setLines([...PINGOU_ROUTE.ouverture(day), ...(diff > 0 ? PINGOU_ROUTE.avance(diff, name) : diff < 0 ? PINGOU_ROUTE.retard(-diff, name) : PINGOU_ROUTE.egalite(name))]);
   };
 
-  const switchWho = (w: Who) => { setWho(w); store.set("who", w); };
-  const info = modal ? PLANNING[modal - 1] : null;
+  const toggleSound = () => { const on = !soundOn; setSoundOn(on); sound.setEnabled(on); if (on) sound.play("tap"); };
+  const toggleNight = () => { sound.play(night ? "day" : "night"); setNight(!night); };
+  const goToday = () => { sound.play("tap"); const s = sceneRef.current; if (s && today) scrollTo({ top: s.scrollForDay(Math.min(24, today)), behavior: "smooth" }); };
 
   return (
     <>
@@ -136,38 +175,31 @@ export default function App() {
 
       <header className="hud">
         <div className="brand">
-          <span className="brand-kicker">Calendrier de l'Avent</span>
+          <span className="brand-kicker">Calendrier de l'Avent{backend.mode === "demo" ? " · démo" : ""}</span>
           <span className="brand-title">Alexandre & Flavie</span>
         </div>
         <div className="zone-pill" key={zone}>{ZONES[zone]?.name}</div>
         <div className="hud-actions">
-          <div className="who">
-            {(["alexandre", "flavie"] as Who[]).map((w) => (
-              <button key={w} className={w === who ? "on" : ""} onClick={() => switchWho(w)} style={{ ["--c" as string]: "#" + PLAYERS[w].coat.toString(16) }}>
-                {PLAYERS[w].name}
-              </button>
-            ))}
-          </div>
-          <button className="round" onClick={() => setNight(!night)} title="Jour / nuit">{night ? "🌙" : "☀️"}</button>
-          <button className="round" onClick={() => { const s = sceneRef.current; if (s) scrollTo({ top: s.scrollForDay(Math.max(1, today)), behavior: "smooth" }); }} title="Aller à aujourd'hui">📍</button>
+          <span className="who-badge" style={{ ["--c" as string]: "#" + PLAYERS[me].coat.toString(16).padStart(6, "0") }}>{PLAYERS[me].name}</span>
+          <button className="round" onClick={toggleSound} title="Son" aria-label="Couper ou remettre le son">{soundOn ? "🔔" : "🔕"}</button>
+          <button className="round" onClick={toggleNight} title="Jour / nuit" aria-label="Basculer jour / nuit">{night ? "🌙" : "☀️"}</button>
+          <button className="round" onClick={goToday} title="Aller à aujourd'hui" aria-label="Aller à la case du jour">📍</button>
+          <button className="round" onClick={() => void backend.signOut()} title="Se déconnecter" aria-label="Se déconnecter">⏏️</button>
         </div>
       </header>
 
-      <MascotDialog lines={lines} onDone={() => setLines([])} />
+      {!open && <MascotDialog lines={lines} onDone={() => setLines([])} />}
 
-      {info && (
-        <div className="modal" onClick={() => setModal(null)}>
-          <div className="card" onClick={(e) => e.stopPropagation()}>
-            <div className="card-emoji">{info.emoji}</div>
-            <div className="card-day">{info.day} décembre · {KIND_LABEL[info.kind]}</div>
-            <h2>{info.title}</h2>
-            <p className="card-note">Prototype : le contenu de la case arrivera ici.</p>
-            <div className="card-actions">
-              <button className="btn ghost" onClick={() => setModal(null)}>Plus tard</button>
-              <button className="btn" onClick={() => openDay(info.day)}>{opened[who].includes(info.day) ? "Revoir la case" : "Ouvrir la case"}</button>
-            </div>
-          </div>
-        </div>
+      {open && (
+        <DayWindow
+          day={open.day}
+          me={me}
+          backend={backend}
+          sound={sound}
+          game={open.game}
+          dejaTerminee={progress[me].completed.includes(open.day)}
+          onClose={() => void closeDay()}
+        />
       )}
     </>
   );
