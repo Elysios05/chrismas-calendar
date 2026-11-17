@@ -10,9 +10,10 @@
  * permet d'avoir Alexandre dans un onglet et Flavie dans un autre ; les données (progression,
  * cases préparées, état des jeux) sont partagées entre onglets via localStorage.
  */
-import type { BackendApi, DayNumber, PreparedContent, Progress, RealtimeRoom, Who } from "../core/contracts";
+import type { BackendApi, DayNumber, PreparedContent, PreparedResult, Progress, RealtimeRoom, Who } from "../core/contracts";
+import type { PasswordRecovery } from "./index";
 import {
-  DEMO_DAY_OUTSIDE_DECEMBER, DEMO_PHOTO_MAX_DIMENSION, PREPARED_DAYS,
+  DEMO_DAY_OUTSIDE_DECEMBER, DEMO_PHOTO_MAX_DIMENSION, FROZEN_MESSAGE, PREPARED_DAYS,
   adventDayFor, checkPhotoSize, compressImage, isWho, partnerOf,
 } from "./config";
 
@@ -101,8 +102,9 @@ const delay = <T>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 0));
 
 /* ---------- backend ---------- */
 
-export class DemoBackend implements BackendApi {
+export class DemoBackend implements BackendApi, PasswordRecovery {
   readonly mode = "demo" as const;
+  private authListeners = new Set<(who: Who | null) => void>();
   private params = new URLSearchParams(typeof location !== "undefined" ? location.search : "");
 
   constructor() {
@@ -127,11 +129,29 @@ export class DemoBackend implements BackendApi {
   async signIn(who: Who, _password: string) {
     void _password; // n'importe quel mot de passe est accepté en démo
     if (!isWho(who)) throw new Error("Utilisateur inconnu.");
+    const before = this.current();
     safe.sset(SESSION_KEY, who);
     safe.set(SESSION_KEY, who); // mémorisé aussi pour les nouveaux onglets
+    if (before !== who) this.emitAuth(who);
   }
 
-  async signOut() { safe.sset(SESSION_KEY, null); safe.del(SESSION_KEY); }
+  async signOut() {
+    const before = this.current();
+    safe.sset(SESSION_KEY, null);
+    safe.del(SESSION_KEY);
+    if (before !== null) this.emitAuth(null);
+  }
+
+  onAuthChange(cb: (who: Who | null) => void) {
+    this.authListeners.add(cb);
+    return () => { this.authListeners.delete(cb); };
+  }
+  private emitAuth(who: Who | null) { this.authListeners.forEach((cb) => cb(who)); }
+
+  /* « Mot de passe oublié » : rien à faire en démo (tout mot de passe est accepté). */
+  async resetPassword(who: Who) { if (!isWho(who)) throw new Error("Utilisateur inconnu."); }
+  inPasswordRecovery() { return false; }
+  async updatePassword(_newPassword: string) { void _newPassword; }
 
   private todaySync(): DayNumber {
     const q = this.params.get("jour");
@@ -159,19 +179,21 @@ export class DemoBackend implements BackendApi {
   async markOpened(day: DayNumber) { this.mark(day, false); }
   async markCompleted(day: DayNumber) { this.mark(day, true); }
 
-  async getPrepared(day: DayNumber, to: Who): Promise<PreparedContent | null> {
+  async getPrepared(day: DayNumber, to: Who): Promise<PreparedResult> {
     const me = this.requireMe();
     const from = partnerOf(to);
     // Même règle que le serveur : le destinataire ne lit qu'à partir du jour J, l'auteur toujours.
-    if (me !== from && day > this.todaySync()) return null;
+    if (me !== from && day > this.todaySync()) return delay({ status: "locked" });
     const c = load().prepared.find((x) => x.day === day && x.from === from);
-    return delay(c ? { ...c, photos: [...c.photos] } : null);
+    return delay(c ? { status: "ready", content: { ...c, photos: [...c.photos] } } : { status: "empty" });
   }
 
   async savePrepared(day: DayNumber, content: Pick<PreparedContent, "message" | "photos">) {
     const me = this.requireMe();
     if (!PREPARED_DAYS.includes(day)) throw new Error(`Le jour ${day} n'est pas une case préparée.`);
     const d = load();
+    // Figée dès que le destinataire l'a ouverte (même règle que le serveur)
+    if (d.progress[partnerOf(me)]?.opened.includes(day)) throw new Error(FROZEN_MESSAGE);
     const item: PreparedContent = {
       day, from: me, to: partnerOf(me), message: content.message, photos: [...content.photos],
       updatedAt: new Date().toISOString(),

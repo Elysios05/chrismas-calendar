@@ -82,11 +82,15 @@ def main():
             check(len(a.evaluate("backend.getProgress('flavie')")["opened"]) == 7, "progression d'exemple de Flavie")
 
             print("Cases préparées")
-            check(a.evaluate("backend.getPrepared(8, 'alexandre')") is not None, "case 8 (de Flavie) lisible le 10")
-            check(a.evaluate("backend.getPrepared(12, 'alexandre')") is None, "case 12 illisible avant le jour J")
+            r8 = a.evaluate("backend.getPrepared(8, 'alexandre')")
+            check(r8["status"] == "ready" and r8["content"]["from"] == "flavie", "case 8 (de Flavie) lisible le 10")
+            check(a.evaluate("backend.getPrepared(12, 'alexandre')") == {"status": "locked"}, "case 12 « locked » avant le jour J")
+            check(a.evaluate("backend.getPrepared(20, 'flavie')") == {"status": "empty"}, "case 20 pas encore écrite → « empty »")
             a.evaluate("backend.savePrepared(16, { message: 'Surprise du 16', photos: [] })")
             mine = a.evaluate("backend.getPrepared(16, 'flavie')")
-            check(mine and mine["message"] == "Surprise du 16" and mine["from"] == "alexandre", "l'auteur relit sa case future")
+            check(mine["status"] == "ready" and mine["content"]["message"] == "Surprise du 16", "l'auteur relit sa case future")
+            err = a.evaluate("backend.savePrepared(4, { message: 'retouche', photos: [] }).then(() => null, e => e.message)")
+            check(err is not None and "déjà été ouverte" in err, f"case 4 figée car déjà ouverte par Flavie ({err})")
             err = a.evaluate("backend.savePrepared(5, { message: 'x', photos: [] }).then(() => null, e => e.message)")
             check(err is not None, "jour 5 n'est pas une case préparée")
 
@@ -104,15 +108,25 @@ def main():
             b = open_page(ctx, "moi=flavie&jour=10")
             check(b.evaluate("backend.me()") == "flavie", "onglet 2 = Flavie")
             check(a.evaluate("backend.me()") == "alexandre", "onglet 1 reste Alexandre")
-            check(b.evaluate("backend.getPrepared(16, 'flavie')") is None, "Flavie ne lit pas la case 16 le 10")
+            check(b.evaluate("backend.getPrepared(16, 'flavie')") == {"status": "locked"}, "Flavie ne lit pas la case 16 le 10")
             b16 = open_page(ctx, "moi=flavie&jour=16")
+            b16.wait_for_function("backend.getPrepared(16, 'flavie').then(r => r.status === 'ready' && r.content.photos.length === 1)", timeout=5000)
             got = b16.evaluate("backend.getPrepared(16, 'flavie')")
-            check(got and got["message"] == "Surprise du 16" and len(got["photos"]) == 1, "Flavie lit la case 16 le 16, avec la photo")
+            check(got["status"] == "ready" and got["content"]["message"] == "Surprise du 16" and len(got["content"]["photos"]) == 1,
+                  "Flavie lit la case 16 le 16, avec la photo")
+            a.evaluate("backend.savePrepared(16, { message: 'Surprise du 16 (v2)', photos: [] })")
+            check(True, "l'auteur peut encore modifier tant que ce n'est pas ouvert")
+            b16.evaluate("backend.markOpened(16)")
+            # localStorage se propage entre onglets de façon asynchrone : on attend que l'onglet 1 le voie
+            a.wait_for_function("backend.getProgress('flavie').then(p => p.opened.includes(16))", timeout=5000)
+            err = a.evaluate("backend.savePrepared(16, { message: 'v3', photos: [] }).then(() => null, e => e.message)")
+            check(err is not None and "déjà été ouverte" in err, "case 16 figée dès que Flavie l'a ouverte")
             b16.close()
 
             print("État des jeux")
             b.evaluate("backend.setGameState(10, 'score:flavie', { points: 42 })")
-            check(a.evaluate("backend.getGameState(10, 'score:flavie')") == {"points": 42}, "état partagé entre onglets")
+            a.wait_for_function("backend.getGameState(10, 'score:flavie').then(v => v && v.points === 42)", timeout=5000)
+            check(True, "état partagé entre onglets")
             check(a.evaluate("backend.getGameState(10, 'inconnu')") is None, "clé absente → null")
 
             print("Salle temps réel")
@@ -139,10 +153,24 @@ def main():
             a.evaluate("room.leave()")
 
             print("Connexion")
+            a.evaluate("window.auth = []; backend.onAuthChange(w => auth.push(w)); 0")
             a.evaluate("backend.signOut()")
             check(a.evaluate("backend.me()") is None, "déconnexion")
             a.evaluate("backend.signIn('flavie', 'nimportequoi')")
             check(a.evaluate("backend.me()") == "flavie", "connexion avec n'importe quel mot de passe")
+            check(a.evaluate("auth") == [None, "flavie"], "onAuthChange prévient de la déconnexion puis de la connexion")
+            check(a.evaluate("backend.resetPassword('flavie').then(() => backend.inPasswordRecovery())") is False,
+                  "resetPassword sans effet en démo")
+
+            print("Ouverture à 7 h (heure de Paris)")
+            cases = a.evaluate("""import('/src/backend/config.ts').then(c => [
+                c.adventDayFor(new Date('2026-12-10T05:59:00Z')),   // 6 h 59 à Paris
+                c.adventDayFor(new Date('2026-12-10T06:00:00Z')),   // 7 h 00 à Paris
+                c.adventDayFor(new Date('2026-12-01T05:30:00Z')),   // 1er déc. 6 h 30
+                c.adventDayFor(new Date('2026-12-01T05:30:00Z'), 9),
+                c.adventDayFor(new Date('2027-01-01T02:00:00Z')),
+            ])""")
+            check(cases == [9, 10, 0, 9, 24], f"avant 7 h = la veille ({cases})")
 
             print("Jour réel")
             c = open_page(ctx, "moi=alexandre")

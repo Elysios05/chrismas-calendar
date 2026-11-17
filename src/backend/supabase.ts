@@ -4,9 +4,10 @@
  * Chargé en import dynamique (voir index.ts) pour ne pas alourdir le mode démo.
  */
 import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
-import type { BackendApi, DayNumber, PreparedContent, Progress, RealtimeRoom, Who } from "../core/contracts";
+import type { BackendApi, DayNumber, PreparedContent, PreparedResult, Progress, RealtimeRoom, Who } from "../core/contracts";
+import type { PasswordRecovery } from "./index";
 import {
-  ACCOUNT_EMAILS, PHOTO_MAX_DIMENSION, PREPARED_DAYS, READ_URL_TTL_SECONDS, UPLOAD_URL_TTL_SECONDS,
+  FROZEN_MESSAGE, PHOTO_MAX_DIMENSION, emailOf, PREPARED_DAYS, READ_URL_TTL_SECONDS, UPLOAD_URL_TTL_SECONDS,
   checkPhotoSize, compressImage, isWho, partnerOf,
 } from "./config";
 
@@ -22,20 +23,50 @@ const isUrl = (s: string) => /^(https?:|data:|blob:)/.test(s);
 type ProgressRow = { day: number; completed_at: string | null };
 type PreparedRow = { day: number; from_who: Who; to_who: Who; message: string; photos: string[]; updated_at: string };
 
-export class SupabaseBackend implements BackendApi {
+/** Traduit les erreurs Postgres/RLS utiles en messages français. */
+function friendly(message: string): string {
+  if (message.includes("CASE_FIGEE")) return FROZEN_MESSAGE;
+  if (message.includes("row-level security")) return "Action refusée par le serveur.";
+  return message;
+}
+
+export class SupabaseBackend implements BackendApi, PasswordRecovery {
   readonly mode = "supabase" as const;
   private sb: SupabaseClient;
   private who: Who | null = null;
   private whoReady: Promise<Who | null>;
+  private authListeners = new Set<(who: Who | null) => void>();
+  private lastEmitted: Who | null | undefined = undefined;
+  private recovery: boolean;
 
   constructor(url: string, anonKey: string) {
+    // À lire AVANT createClient, qui consomme le #access_token…&type=recovery de l'URL
+    this.recovery = typeof location !== "undefined" && /type=recovery/.test(location.hash);
     this.sb = createClient(url, anonKey, {
-      auth: { persistSession: true, autoRefreshToken: true, storageKey: "cc-auth" },
+      auth: { persistSession: true, autoRefreshToken: true, storageKey: "cc-auth", detectSessionInUrl: true },
     });
     this.whoReady = this.loadWho();
+    void this.whoReady.then((w) => { this.lastEmitted = w; }, () => { this.lastEmitted = null; });
     this.sb.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") this.who = null;
+      if (event === "PASSWORD_RECOVERY") this.recovery = true;
+      if (event === "INITIAL_SESSION") return;
+      // Pas d'appel Supabase directement dans ce rappel (risque de blocage) : on diffère.
+      setTimeout(() => {
+        if (event === "SIGNED_OUT") { this.who = null; this.whoReady = Promise.resolve(null); this.emitAuth(null); return; }
+        this.whoReady = this.loadWho();
+        this.whoReady.then((w) => this.emitAuth(w), () => this.emitAuth(null));
+      }, 0);
     });
+  }
+
+  onAuthChange(cb: (who: Who | null) => void) {
+    this.authListeners.add(cb);
+    return () => { this.authListeners.delete(cb); };
+  }
+  private emitAuth(who: Who | null) {
+    if (who === this.lastEmitted) return;
+    this.lastEmitted = who;
+    this.authListeners.forEach((cb) => cb(who));
   }
 
   /** Lit l'identité (alexandre/flavie) de l'utilisateur connecté dans la table profiles. */
@@ -59,7 +90,7 @@ export class SupabaseBackend implements BackendApi {
   }
 
   async signIn(who: Who, password: string) {
-    const { error } = await this.sb.auth.signInWithPassword({ email: ACCOUNT_EMAILS[who], password });
+    const { error } = await this.sb.auth.signInWithPassword({ email: emailOf(who), password });
     if (error) throw new Error(error.message === "Invalid login credentials" ? "Mot de passe incorrect." : error.message);
     this.whoReady = this.loadWho();
     const got = await this.whoReady;
@@ -69,12 +100,31 @@ export class SupabaseBackend implements BackendApi {
       this.whoReady = Promise.resolve(null);
       throw new Error("Ce compte n'est pas relié à " + who + " (table profiles).");
     }
+    this.emitAuth(got);
   }
 
   async signOut() {
     await this.sb.auth.signOut();
     this.who = null;
     this.whoReady = Promise.resolve(null);
+    this.emitAuth(null);
+  }
+
+  /* ----- mot de passe oublié (méthodes en plus du contrat) ----- */
+
+  async resetPassword(who: Who) {
+    const back = typeof location !== "undefined" ? location.origin + location.pathname : undefined;
+    const { error } = await this.sb.auth.resetPasswordForEmail(emailOf(who), { redirectTo: back });
+    if (error) throw new Error("Envoi de l'e-mail impossible : " + error.message);
+  }
+
+  inPasswordRecovery() { return this.recovery; }
+
+  async updatePassword(newPassword: string) {
+    if (newPassword.length < 6) throw new Error("Mot de passe trop court (6 caractères minimum).");
+    const { error } = await this.sb.auth.updateUser({ password: newPassword });
+    if (error) throw new Error(error.message);
+    this.recovery = false;
   }
 
   /** Jour calculé par le serveur (fonction SQL advent_today, fuseau Europe/Paris). */
@@ -95,7 +145,7 @@ export class SupabaseBackend implements BackendApi {
     const me = await this.requireMe();
     // ignoreDuplicates : ne touche pas à completed_at si la ligne existe déjà
     const { error } = await this.sb.from("progress").upsert({ who: me, day }, { onConflict: "who,day", ignoreDuplicates: true });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(friendly(error.message));
   }
 
   async markCompleted(day: DayNumber) {
@@ -105,18 +155,23 @@ export class SupabaseBackend implements BackendApi {
     if (error) throw new Error(error.message);
   }
 
-  async getPrepared(day: DayNumber, to: Who): Promise<PreparedContent | null> {
-    await this.requireMe();
-    // Si le destinataire demande avant le jour J, la RLS ne renvoie aucune ligne → null.
+  async getPrepared(day: DayNumber, to: Who): Promise<PreparedResult> {
+    const me = await this.requireMe();
+    if (!PREPARED_DAYS.includes(day)) return { status: "empty" };
+    // Le destinataire avant le jour J : « locked ». (La RLS refuserait de toute façon la lecture.)
+    if (me === to && day > (await this.today())) return { status: "locked" };
     const { data, error } = await this.sb.from("prepared_content")
       .select("day, from_who, to_who, message, photos, updated_at")
       .eq("day", day).eq("to_who", to).maybeSingle();
     if (error) throw new Error(error.message);
-    if (!data) return null;
+    if (!data) return { status: "empty" };
     const row = data as PreparedRow;
     return {
-      day: row.day, from: row.from_who, to: row.to_who, message: row.message,
-      photos: await this.signPaths(row.photos ?? []), updatedAt: row.updated_at,
+      status: "ready",
+      content: {
+        day: row.day, from: row.from_who, to: row.to_who, message: row.message,
+        photos: await this.signPaths(row.photos ?? []), updatedAt: row.updated_at,
+      },
     };
   }
 
@@ -138,7 +193,8 @@ export class SupabaseBackend implements BackendApi {
       { day, from_who: me, to_who: partnerOf(me), message: content.message, photos },
       { onConflict: "day,from_who" },
     );
-    if (error) throw new Error(error.message);
+    // Le serveur refuse (CASE_FIGEE) si le destinataire a déjà ouvert la case
+    if (error) throw new Error(friendly(error.message));
   }
 
   /** Envoie une photo dans <moi>/<uuid>.jpg et renvoie une URL signée valable 60 jours. */
