@@ -8,7 +8,30 @@ import { makeImpulse } from "./runner";
 import { hz, midi } from "./theory";
 import type { AudioIn, Tone } from "./types";
 
-export const SFX_LIST: Sfx[] = ["open", "good", "bad", "pop", "win", "locked", "step", "whoosh"];
+/**
+ * Effets en plus du contrat (à ajouter au type `Sfx`) :
+ * - tap     : bouton de l'interface
+ * - select  : clic sur une case du calendrier
+ * - hover   : approche / survol d'un cadeau (scintillement très discret)
+ * - talk    : « blip » de Pingou, par réplique ou par lettre (hauteur variable, très discret)
+ * - pingou  : petit cri mignon quand Pingou apparaît
+ * - day / night : passage au jour / à la nuit
+ * - unlock  : une nouvelle case est disponible
+ * - photo   : déclic d'appareil photo
+ * - send    : message, photo ou dessin envoyé
+ * - notify  : l'autre est connecté / a répondu
+ * - jingle  : petit coup de grelots
+ * - snow    : « pouf » de neige (boule de neige, chute)
+ */
+export type ExtraSfx = "tap" | "select" | "hover" | "talk" | "pingou" | "day" | "night" | "unlock" | "photo" | "send" | "notify" | "jingle" | "snow";
+export type SfxName = Sfx | ExtraSfx;
+
+export const SFX_LIST: SfxName[] = [
+  "open", "good", "bad", "pop", "win", "locked", "step", "whoosh",
+  "tap", "select", "hover", "talk", "pingou", "day", "night", "unlock", "photo", "send", "notify", "jingle", "snow",
+];
+
+const TALK_NOTES = [76, 79, 81, 84, 86, 88]; // pentatonique : la voix de Pingou reste toujours jolie
 
 export class SfxBank {
   private nodes: ToneNS.ToneAudioNode[] = [];
@@ -20,6 +43,10 @@ export class SfxBank {
   private wind: ToneNS.NoiseSynth;
   private windFilter: ToneNS.Filter;
   private stepCount = 0;
+  private talkCount = 0;
+  private chirp: ToneNS.Synth;
+  private jingleNoise: ToneNS.NoiseSynth;
+  private jingleFilter: ToneNS.Filter;
 
   constructor(T: Tone, out: AudioIn) {
     // volumes calés pour un pic momentané de -12 à -24 LUFS selon l'effet
@@ -62,10 +89,22 @@ export class SfxBank {
     this.wind.connect(this.windFilter);
     this.windFilter.connect(bus);
 
+    this.chirp = new T.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.003, decay: 0.05, sustain: 0.3, release: 0.04 } });
+    this.chirp.volume.value = -6;
+    this.chirp.connect(bus);
+
+    this.jingleFilter = new T.Filter({ type: "bandpass", frequency: 8500, Q: 1.4 });
+    this.jingleNoise = new T.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.002, decay: 0.12, sustain: 0, release: 0.04 } });
+    this.jingleNoise.volume.value = 4;
+    this.jingleNoise.connect(this.jingleFilter);
+    this.jingleFilter.connect(bus);
+    this.jingleFilter.connect(rev);
+
+    this.nodes.push(this.chirp, this.jingleNoise, this.jingleFilter);
     this.nodes.push(bus, rev, revGain, this.bell, this.blip, this.noise, this.noiseFilter, this.knock, this.wind, this.windFilter);
   }
 
-  play(name: Sfx, t: number) {
+  play(name: SfxName, t: number) {
     const n = (s: string) => hz(midi(s));
     switch (name) {
       case "open": {
@@ -111,6 +150,78 @@ export class SfxBank {
         const f = 1500 + ((this.stepCount * 523) % 900);
         this.noiseFilter.frequency.setValueAtTime(f, t);
         this.noise.triggerAttackRelease(0.04, t, 0.6);
+        break;
+      }
+      case "tap": {
+        this.knock.triggerAttackRelease(420, 0.03, t, 0.35);
+        break;
+      }
+      case "select": {
+        this.knock.triggerAttackRelease(300, 0.04, t, 0.4);
+        this.bell.triggerAttackRelease(n("G6"), 0.12, t + 0.02, 0.35);
+        break;
+      }
+      case "hover": {
+        this.bell.triggerAttackRelease(n("E7"), 0.1, t, 0.14);
+        this.bell.triggerAttackRelease(n("B7"), 0.1, t + 0.06, 0.1);
+        break;
+      }
+      case "talk": {
+        const m = TALK_NOTES[(this.talkCount++ * 7 + 3) % TALK_NOTES.length];
+        this.chirp.triggerAttackRelease(hz(m), 0.035, t, 0.22);
+        break;
+      }
+      case "pingou": {
+        // « pouic ! » qui monte puis redescend un peu
+        this.chirp.triggerAttackRelease(700, 0.16, t, 0.5);
+        this.chirp.frequency.exponentialRampToValueAtTime(1500, t + 0.08);
+        this.chirp.frequency.exponentialRampToValueAtTime(1200, t + 0.16);
+        this.chirp.triggerAttackRelease(1100, 0.08, t + 0.2, 0.4);
+        this.chirp.frequency.exponentialRampToValueAtTime(1600, t + 0.27);
+        break;
+      }
+      case "day": {
+        ["C6", "D6", "G6", "C7"].forEach((s, k) => this.bell.triggerAttackRelease(n(s), 0.3, t + k * 0.09, 0.35));
+        break;
+      }
+      case "night": {
+        ["C7", "G6", "E6", "C6"].forEach((s, k) => this.bell.triggerAttackRelease(n(s), 0.4, t + k * 0.12, 0.28));
+        break;
+      }
+      case "unlock": {
+        ["G5", "B5", "D6", "G6", "B6", "D7", "G7"].forEach((s, k) => this.bell.triggerAttackRelease(n(s), 0.2, t + k * 0.04, 0.25 + k * 0.03));
+        this.jingleNoise.triggerAttackRelease(0.05, t + 0.3, 0.5);
+        break;
+      }
+      case "photo": {
+        this.noiseFilter.frequency.setValueAtTime(3500, t);
+        this.noise.triggerAttackRelease(0.02, t, 0.9);
+        this.knock.triggerAttackRelease(600, 0.02, t + 0.01, 0.4);
+        this.noise.triggerAttackRelease(0.02, t + 0.09, 0.6);
+        break;
+      }
+      case "send": {
+        const fq = this.windFilter.frequency;
+        fq.cancelScheduledValues(t);
+        fq.setValueAtTime(500, t);
+        fq.exponentialRampToValueAtTime(4000, t + 0.3);
+        this.wind.triggerAttackRelease(0.15, t, 0.6);
+        this.bell.triggerAttackRelease(n("A6"), 0.3, t + 0.3, 0.4);
+        break;
+      }
+      case "notify": {
+        this.bell.triggerAttackRelease(n("A5"), 0.2, t, 0.35);
+        this.bell.triggerAttackRelease(n("E6"), 0.4, t + 0.14, 0.35);
+        break;
+      }
+      case "jingle": {
+        for (let k = 0; k < 6; k++) this.jingleNoise.triggerAttackRelease(0.03, t + k * 0.07, 0.7 - k * 0.08);
+        break;
+      }
+      case "snow": {
+        this.noiseFilter.frequency.setValueAtTime(900, t);
+        this.noise.triggerAttackRelease(0.12, t, 0.8);
+        this.knock.triggerAttackRelease(90, 0.1, t, 0.3);
         break;
       }
       case "whoosh": {
