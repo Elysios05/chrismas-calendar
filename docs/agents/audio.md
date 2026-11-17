@@ -52,3 +52,38 @@ Si un téléphone peine : raccourcir les extinctions des notes FM ou passer l'ar
 **En attente d'Alexandre** : validation des ambiances (voir questions dans le rapport du 17/11).
 **Reste à faire** : brancher `sound` dans l'app (chef/interface : `sound.setZone(...)` selon la position, bouton son),
 ajuster selon les retours, tester sur un vrai téléphone.
+
+### 2026-11-17 (soir) — Airs de Noël, volumes, effets et bruitages (branche `audio/airs-de-noel`)
+**Retour d'Alexandre** : l'énergie est très bien, mais il faut que ce soit beaucoup plus Noël, avec des airs reconnaissables.
+Musique à 50 %, effets à 60 %. Garder le bruit de pas, sonoriser un maximum d'interactions, ajouter des bruitages d'ambiance.
+
+**Airs (tous du domaine public, mélodies seules)** — écrits dans `pieces/carols.ts`
+| Monde / jeu | Air | Arrangement |
+|---|---|---|
+| montagnes | « Mon beau sapin » (1824) | boîte à musique, 2e passage avec célesta et chœur « ooh », grelots |
+| saint-nicolas | « Il est né le divin enfant » (refrain–couplet–refrain) | marimba, accordéon en polka, clochettes, cloche du village |
+| lac | « Douce nuit » (Gruber, 1818) | célesta, puis chœur, nappes, cristaux en écho |
+| marche | « Vive le vent » / Jingle Bells (Pierpont, 1857), refrain puis couplet, 4/4 | flûte puis fanfare de cuivres, glockenspiel, tuba, grelots |
+| grotte | « God Rest Ye Merry Gentlemen » (mi mineur) | verre réverbéré, bourdon, chœur sur le refrain, gouttes |
+| pole-nord | « We Wish You a Merry Christmas » + rappels de « Mon beau sapin », « Douce nuit », « Vive le vent » | cuivres, boîte à musique, célesta, chœur, cloches, timbales |
+| calm | « Mon beau sapin » en berceuse | célesta, marimba |
+| action | refrain de « Vive le vent » à 168 | boîte à musique, batterie, grelots |
+| victory | dernière phrase de « We Wish You… » | cuivres, glockenspiel en écho, chœur |
+Sources des notes : « Il est né » et « God Rest Ye » vérifiés sur le code LilyPond des articles Wikipédia ; les autres de mémoire
+(airs très connus), avec contrôle automatique des mesures et de l'harmonie.
+**Non fait** : « Saint Nicolas, patron des écoliers ». Aucune source fiable de la mélodie trouvée : question posée à Alexandre.
+
+**Moteur**
+- Bus séparés : musique (défaut 0,5), effets (défaut 0,6), ambiance (branché sur les effets, à moitié pendant un jeu).
+  Nouvelles méthodes : `setMusicVolume`, `setSfxVolume`, `setWeather(storm)`, `setWind(0..1)` (+ getters).
+- 13 effets en plus (`ExtraSfx` dans `sfx.ts`) : tap, select, hover, talk (voix de Pingou, notes pentatoniques), pingou, day, night,
+  unlock, photo, send, notify, jingle, snow. `play()` accepte `Sfx | ExtraSfx`.
+- `ambience.ts` : bruitages par monde (vent et sifflement des crêtes, forêt et oiseaux / chouette la nuit, eau sous la glace et
+  craquements de glace, brouhaha, cloches, traîneaux qui passent, verres qui tintent, gouttes en écho), tempête partout.
+  Fondu de 2,5 s avec le monde.
+
+**À demander au chef (contrat)** : ajouter à `SoundApi` `setMusicVolume`, `setSfxVolume`, `setWeather`, `setWind` ;
+étendre `Sfx` avec les 13 effets ; l'appli doit appeler `setWind` en montagne (1 près du col) et `setWeather(true)` le jour 10.
+Niveaux mesurés : mondes de jour ≈ -16 LUFS, nuits ≈ -19, ambiances ≈ -24 (tempête ≈ -18,5), aucun clic aux raccords.
+Dans l'appli, avec les volumes par défaut : musique ≈ -22 LUFS, ambiance ≈ -28, effets au-dessus de la musique.
+Extraits renouvelés dans `/home/claude/previews-audio/` (+ `ambiance-<monde>.mp3`, `ambiance-tempete.mp3`).
