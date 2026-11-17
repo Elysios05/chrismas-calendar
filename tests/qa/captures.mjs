@@ -27,6 +27,7 @@ const t0 = Date.now();
 
 try {
   for (const app of APP) for (const mode of MODES) for (const jour of JOURS) {
+    await srv.assurer();
     const ctx = await navigateur.newContext({ ...C.APPAREILS[app], timezoneId: C.FUSEAU, locale: "fr-FR" });
     await C.preparerContexte(ctx, { heure: C.HEURES[mode] });
     const page = await ctx.newPage();
