@@ -42,7 +42,8 @@ export interface BackendApi {
   readonly mode: "demo" | "supabase";
   /** Utilisateur connecté (null si personne) */
   me(): Promise<Who | null>;
-  signIn(who: Who, password: string): Promise<void>;
+  /** rester = garder la session après fermeture du navigateur (par défaut : oui) */
+  signIn(who: Who, password: string, options?: { rester?: boolean }): Promise<void>;
   signOut(): Promise<void>;
   /** Prévient quand la session change (connexion, déconnexion, expiration) */
   onAuthChange(cb: (who: Who | null) => void): () => void;
