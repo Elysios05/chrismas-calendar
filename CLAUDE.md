@@ -1,0 +1,50 @@
+# Chrismas Calendar — règles du projet
+
+Calendrier de l'Avent web pour **Alexandre et Flavie** (couple à distance), vécu comme un **jeu mobile** :
+une route traverse un monde isométrique continu (montagnes, village de Saint-Nicolas, forêt et lac gelé,
+marché de Noël, grotte de glace, pôle Nord). 24 cases, dont 6 préparées par chacun pour l'autre.
+Mascotte : **Pingou**, un pingouin qui guide et parle dans une bulle.
+
+**Échéance : tout doit être prêt et en ligne le 30 novembre 2026 au soir.**
+
+## Langue
+- On parle à Alexandre en **français**. Textes de l'interface en français. Code et noms de variables en anglais ou français, mais commentaires en français.
+
+## Stack
+React 19 + TypeScript (strict) + Vite · PixiJS 8 (monde et jeux d'adresse) · GSAP · Tone.js (audio) ·
+Supabase (comptes, règles d'accès, photos, temps réel) avec **mode démo sans backend** · GitHub Pages.
+
+## Équipes et dossiers
+Chaque équipe ne modifie **que son dossier**. Toucher au dossier d'une autre équipe = demander d'abord.
+
+| Équipe | Dossiers | Brief |
+|---|---|---|
+| Chef de projet | `src/core/`, `src/App.tsx`, `CLAUDE.md`, `docs/` | `docs/agents/chef.md` |
+| Monde & design | `src/world/` | `docs/agents/monde.md` |
+| Interface | `src/ui/`, `src/index.css` | `docs/agents/interface.md` |
+| Backend | `src/backend/`, `supabase/`, `.github/` | `docs/agents/backend.md` |
+| Jeux | `src/games/`, `src/data/` (contenu des jeux) | `docs/agents/jeux.md` |
+| Audio | `src/audio/` | `docs/agents/audio.md` |
+| Qualité | `tests/`, `docs/qa/` | `docs/agents/qualite.md` |
+
+Les **contrats partagés** sont dans `src/core/contracts.ts` (BackendApi, SoundApi, GameModule…).
+On code contre ces interfaces. Besoin d'un changement de contrat → le demander au chef de projet.
+
+## Façon de travailler
+1. **Une branche par tâche** : `<equipe>/<tache>` (ex. `monde/pics-montagne`). Jamais de commit direct sur `main`.
+2. **Demander l'avis d'Alexandre** avant toute décision de goût ou de contenu (style, couleurs, textes, règles d'un jeu, comportement de Pingou) et dès qu'un choix est ambigu. Proposer 2–3 options concrètes avec une recommandation, plutôt qu'une question ouverte. Montrer des captures d'écran.
+3. Les décisions techniques internes à ton dossier, tu les prends seul.
+4. Avant de livrer : `npm run build` passe sans erreur, et tu as **regardé le résultat** (captures mobile 390×844 et ordinateur 1280×800).
+5. **Pull request** vers `main` avec : ce qui change, captures, ce qui reste à faire. Le chef de projet relit et fusionne.
+6. Messages de commit en français, à l'impératif présent.
+7. Tenir à jour la section « Journal » de ton brief (`docs/agents/<equipe>.md`) : décisions prises avec Alexandre, et où tu en es.
+
+## Lancer et tester
+```bash
+npm install
+npm run dev            # http://localhost:5173/?jour=12 pour simuler un jour
+npm run build
+```
+
+## Le planning des 24 jours
+Voir `src/data/planning.ts` et `docs/cahier-des-charges.md`.
