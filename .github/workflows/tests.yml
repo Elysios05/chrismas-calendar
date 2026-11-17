@@ -18,6 +18,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Texte des notifications de rappel
+        run: node --experimental-strip-types supabase/tests/message_test.ts
 
   rls:
     # Teste la migration SQL et les règles d'accès sur un Postgres local jetable
