@@ -1,13 +1,15 @@
 /**
  * Page de maquettes de l'équipe Interface (outil de travail, pas livrée au public).
  * `npm run dev` puis http://localhost:5173/maquettes.html?vue=connexion
- * Vues : connexion · connexion-erreur · case-intro · case-jeu · case-fini · lettre · pingou
+ * Vues : connexion · connexion-erreur · case-intro · case-jeu · case-fini · lettre
+ *         editeur · editeur-vide · rappel · pingou
  */
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { GameModule } from "../../core/contracts";
 import { LoginScreen } from "../LoginScreen";
 import { DayWindow } from "../DayWindow";
+import { PreparedEditor, RappelVeille } from "../PreparedEditor";
 import { MascotDialog, PenguinPortrait } from "../Mascot";
 import type { Expression } from "../pingou/lines";
 import { fakeBackend } from "./fakeBackend";
@@ -51,6 +53,27 @@ function Maquettes() {
 
   if (vue === "connexion" || vue === "connexion-erreur") {
     return <LoginScreen backend={backend} />;
+  }
+
+  if (vue === "editeur" || vue === "editeur-vide") {
+    const b = vue === "editeur-vide" ? fakeBackend({ prepared: "empty" }) : backend;
+    return (
+      <div className="maq-monde maq-centre">
+        <div className="maq-feuille">
+          <PreparedEditor day={16} me="alexandre" backend={b} onClose={() => {}} />
+        </div>
+      </div>
+    );
+  }
+
+  if (vue === "rappel") {
+    return (
+      <div className="maq-monde maq-centre">
+        <div className="maq-rappel">
+          <RappelVeille jour={16} partenaire="flavie" onOuvrir={() => {}} />
+        </div>
+      </div>
+    );
   }
 
   if (vue === "pingou") {

@@ -148,6 +148,18 @@ export const PINGOU_CASE = {
     { text: `Demain c'est la case ${jour}, et elle est encore vide.`, face: "surpris" },
     { text: `${autre} l'ouvrira à 7 h. Deux lignes et une photo, ça suffit, promis.`, face: "content" },
   ],
+  /** Éditeur ouvert, rien d'écrit encore */
+  editeurVide: (jour: number, autre: string): PingouLine[] => [
+    { text: `La case ${jour}, c'est toi qui l'écris. ${autre} l'ouvrira sans que je puisse rien y changer.`, face: "content" },
+  ],
+  /** Brouillon déjà enregistré, on revient le modifier */
+  editeurRepris: (): PingouLine[] => [
+    { text: "Tu peux encore tout changer. Jusqu'à ce qu'elle l'ouvre, c'est à toi.", face: "clin" },
+  ],
+  /** La case est figée : l'autre l'a déjà lue */
+  editeurFige: (autre: string): PingouLine[] => [
+    { text: `Trop tard, ${autre} l'a déjà lue. Ce qui est dit est dit 🤍`, face: "surpris" },
+  ],
   prepareeEnvoyee: (autre: string): PingouLine[] => [
     { text: `C'est dans la boîte. ${autre} ne verra rien avant le jour J, parole de pingouin 🤐`, face: "clin" },
   ],

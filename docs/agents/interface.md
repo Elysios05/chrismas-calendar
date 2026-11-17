@@ -50,3 +50,18 @@ un par un, agrandissables. Les trois états du contrat sont traités (`locked`, 
 l'interface ne devine jamais ce qui est lisible, c'est le serveur qui tranche.
 `DayWindow` appelle `getPrepared` à l'ouverture de l'enveloppe, et remplace le titre du planning
 par « Une lettre de X » (le titre générique faisait doublon avec l'étiquette du jour).
+
+### Éditeur de case préparée (branche `interface/editeur-case-preparee`)
+`src/ui/PreparedEditor.tsx` : mot doux (zone de texte manuscrite qui grandit toute seule, 700 caractères),
+**trois photos maximum** — décidé avec Alexandre : au-delà les polaroïds ne tiennent plus sur un téléphone —
+puis « Voir ce qu'elle verra », qui réutilise `PreparedCase` tel quel : l'aperçu **est** l'écran de lecture,
+enveloppe comprise. Le brouillon se reprend tant que le destinataire n'a pas ouvert la case ;
+si `savePrepared` échoue, c'est que la case est figée, et Pingou le dit.
+
+`RappelVeille` : le bandeau à poser sur la route quand la case du lendemain est vide.
+Alexandre voulait un rappel qui arrive tout seul : impossible depuis GitHub Pages, remonté au chef de
+projet dans l'issue https://github.com/Elysios05/chrismas-calendar/issues/5 (mail via Supabase).
+
+**Question en suspens pour le chef de projet** : `getPrepared` est documenté comme refusé par le serveur
+avant le jour J. L'auteur doit pourtant pouvoir relire **son propre brouillon** avant cette date.
+En attendant, l'éditeur traite l'échec comme une page blanche — à confirmer côté backend.

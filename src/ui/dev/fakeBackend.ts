@@ -21,7 +21,10 @@ const FAUSSES_PHOTOS = [
   photo("#f3c9b0", "#fff", '<rect x="34" y="34" width="52" height="52" rx="6" fill="#fff" stroke="#d9354b" stroke-width="5"/><path d="M60 46v28M46 60h28" stroke="#d9354b" stroke-width="5"/>'),
 ];
 
-export function fakeBackend(opts: { me?: Who | null; motDePasse?: string } = {}): BackendApi {
+export function fakeBackend(
+  opts: { me?: Who | null; motDePasse?: string; prepared?: "ready" | "empty" } = {},
+): BackendApi {
+  let depose = 0;
   let moi: Who | null = opts.me ?? null;
   const attendu = opts.motDePasse ?? "noel";
   const abonnes = new Set<(w: Who | null) => void>();
@@ -48,6 +51,7 @@ export function fakeBackend(opts: { me?: Who | null; motDePasse?: string } = {})
     async markCompleted(day) { if (moi) progress[moi].completed = [...new Set([...progress[moi].completed, day])]; },
     async getPrepared(day, to): Promise<PreparedResult> {
       await new Promise((r) => setTimeout(r, 200));
+      if (opts.prepared === "empty") return { status: "empty" };
       return {
         status: "ready",
         content: {
@@ -61,7 +65,10 @@ export function fakeBackend(opts: { me?: Who | null; motDePasse?: string } = {})
       };
     },
     async savePrepared() {},
-    async uploadPhoto() { return "data:image/gif;base64,R0lGODlhAQABAAAAACw="; },
+    async uploadPhoto() {
+      await new Promise((r) => setTimeout(r, 300));
+      return FAUSSES_PHOTOS[depose++ % FAUSSES_PHOTOS.length]!;
+    },
     async getGameState<T>(day: DayNumber, key: string) { return (etats.get(`${day}/${key}`) as T) ?? null; },
     async setGameState<T>(day: DayNumber, key: string, value: T) { etats.set(`${day}/${key}`, value); },
     joinRoom(): RealtimeRoom {
