@@ -91,3 +91,16 @@ dans les deux backends (pas d'appel immédiat : seulement aux changements).
   `/chrismas-calendar/`, push simulé par CDP, statuts off / needs-install), et `message_test.ts` (Node).
 - À faire côté Interface : lire `?case=N` pour ouvrir la case depuis la notification ; bouton « Activer les rappels ».
 - `.github/workflows/main.yml` (ajouté directement sur main) fait doublon avec `deploy.yml` : à trancher par le chef de projet.
+
+### 18 novembre 2026 — relance de 22 h 30 (branche `backend/relance`)
+- Décisions d'Alexandre : texte du rappel de 20 h **tel quel** ; **relance à 22 h 30** si la case est toujours vide ;
+  icône Pingou demandée à l'équipe Monde (le sapin reste en attendant).
+- `0003_relance.sql` :
+  - `app_settings.reminder_minute` (0) et `followup_time` (22:30, `NULL` = pas de relance) ;
+  - `reminder_log.kind` (`rappel` / `relance`), avec la clé `(day, who, kind)` ;
+  - `reminder_kind_at(ts)` (tolérance ±10 min) ;
+  - `reminder_targets(p_day, p_force, p_kind)`.
+- `cron_rappel.sql` : deux tâches (`0 18,19` et `30 20,21` UTC) qui appellent `call_rappel_veille()` ; la base choisit le type.
+- Texte de la relance (signé Pingou) : « 🐧 Toc toc… Pingou insiste (gentiment) — La case N est toujours vide, et X l'ouvre demain à 7 h !
+  Il te reste ce soir : deux lignes et une photo, et je file me coucher 💤💌 » (variante pour le 24).
+- Tests : 68 vérifications SQL (été/hiver, tolérance, journal distinct, case remplie entre-temps) + `message_test.ts`.
