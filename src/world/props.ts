@@ -4,7 +4,8 @@ import { P, box, onLeft, onRight, gableRoof, pyramid, tree, boulder, poly, shade
 
 export type PropKind =
   | "tree" | "treeSmall" | "house" | "chalet" | "snowman" | "lamp" | "rock" | "mountain"
-  | "stall" | "bigTree" | "wheel" | "crystal" | "presents" | "cane" | "sleigh" | "workshop" | "deer" | "skater";
+  | "stall" | "bigTree" | "wheel" | "crystal" | "presents" | "cane" | "sleigh" | "workshop" | "deer" | "skater"
+  | "bush" | "visitor" | "brazier" | "garland";
 
 const SNOW = { top: 0xf7f5f0, left: 0xe4e1dc, right: 0xcfccd0 };
 const STONE = { top: 0x9a9286, left: 0xa7a093, right: 0x7d7667 };
@@ -88,7 +89,7 @@ function drawHouse(g: Graphics, cx: number, cy: number, pal: Palette, rnd: Rnd, 
   } else if (style === "colombages") {
     const walls = 0xf4ead7;
     const beam = 0x6b4328;
-    const roofCol = [0xc8362f, 0x3f6fa5, 0x2f7f5c, 0xd98a2b][Math.floor(rnd(2) * 4)];
+    const roofCol = [0xc8362f, 0x3f6fa5, 0x2f7f5c, 0xd98a2b, 0x8a4fa0, 0xb5763f][Math.floor(rnd(23) * 6)];
     box(g, x0, y0, 0, w, d, h, { top: c(walls), left: c(walls), right: c(shade(walls, -0.14)) });
     // colombages : poteaux verticaux et deux sablières
     for (let i = 0; i <= 4; i++) {
@@ -229,18 +230,21 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       break;
     }
     case "stall": {
-      const x0 = cx - 0.6, y0 = cy - 0.4;
-      socle(g, x0, y0, 1.2, 0.8, drop, pal, rnd);
-      box(g, x0, y0, 0, 1.2, 0.8, 0.5, { top: c(0xc8a06a), left: c(0xb5763f), right: c(0x8f5a2e) });
-      onLeft(g, y0 + 0.8, x0 + 0.1, x0 + 1.1, 0.3, 0.5, c(0xf2d7a8));
-      for (const px of [x0 + 0.05, x0 + 1.1]) box(g, px, y0 + 0.65, 0.5, 0.06, 0.06, 0.45, { top: c(0x6b3b22), left: c(0x6b3b22), right: c(0x4e2a18) });
-      // toit rayé
-      const z = 0.95;
-      for (let i = 0; i < 6; i++) {
-        const a = x0 - 0.1 + i * 0.233, b = a + 0.233;
-        poly(g, [P(a, y0 + 1, z - 0.2), P(b, y0 + 1, z - 0.2), P(b, y0 + 0.35, z + 0.2), P(a, y0 + 0.35, z + 0.2)], c(i % 2 ? 0xffffff : 0xd9354b));
+      // un peu moins large qu'une case : deux échoppes voisines se touchent sans se chevaucher
+      const x0 = cx - 0.49, y0 = cy - 0.36;
+      socle(g, x0, y0, 0.98, 0.72, drop, pal, rnd);
+      const W = 0.98, D = 0.72;
+      box(g, x0, y0, 0, W, D, 0.5, { top: c(0xc8a06a), left: c(0xb5763f), right: c(0x8f5a2e) });
+      onLeft(g, y0 + D, x0 + 0.08, x0 + W - 0.08, 0.3, 0.5, c(0xf2d7a8));
+      for (const px of [x0 + 0.04, x0 + W - 0.1]) box(g, px, y0 + D * 0.82, 0.5, 0.06, 0.06, 0.45, { top: c(0x6b3b22), left: c(0x6b3b22), right: c(0x4e2a18) });
+      // toit rayé, débordant un peu sur l'allée
+      const z = 0.95, ox = 0.08, oy = 0.18;
+      const stripes = 5, sw = (W + 2 * ox) / stripes;
+      for (let i = 0; i < stripes; i++) {
+        const a = x0 - ox + i * sw, b = a + sw;
+        poly(g, [P(a, y0 + D + oy, z - 0.2), P(b, y0 + D + oy, z - 0.2), P(b, y0 + D * 0.45, z + 0.2), P(a, y0 + D * 0.45, z + 0.2)], c(i % 2 ? 0xffffff : 0xd9354b));
       }
-      poly(g, [P(x0 - 0.1, y0 + 1, z - 0.2), P(x0 + 1.3, y0 + 1, z - 0.2), P(x0 + 1.3, y0 + 1, z - 0.32), P(x0 - 0.1, y0 + 1, z - 0.32)], c(0xb02a3c));
+      poly(g, [P(x0 - ox, y0 + D + oy, z - 0.2), P(x0 + W + ox, y0 + D + oy, z - 0.2), P(x0 + W + ox, y0 + D + oy, z - 0.32), P(x0 - ox, y0 + D + oy, z - 0.32)], c(0xb02a3c));
       break;
     }
     case "bigTree": {
@@ -329,6 +333,69 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       g.roundRect(p.x + 12, p.y - 46, 14, 9, 4).fill(b);
       g.circle(p.x + 26, p.y - 42, 3).fill(c(0xd9354b));
       g.moveTo(p.x + 14, p.y - 46).lineTo(p.x + 8, p.y - 58).lineTo(p.x + 2, p.y - 60).moveTo(p.x + 10, p.y - 53).lineTo(p.x + 16, p.y - 60).stroke({ width: 2.5, color: d });
+      break;
+    }
+    case "bush": {
+      // buisson enneigé : trois touffes basses coiffées de neige
+      const p = P(cx, cy);
+      const s = 0.55 + rnd(1) * 0.4;
+      for (const [dx, dy, r] of [[-7, 0, 11], [7, -2, 10], [0, -6, 12]] as const) {
+        const bx = p.x + dx * s, by = p.y + dy * s, br = r * s;
+        g.ellipse(bx, by - br * 0.4, br, br * 0.75).fill(c(rnd(2) > 0.5 ? 0x2b6f52 : 0x225c45));
+        g.ellipse(bx - br * 0.2, by - br * 0.85, br * 0.6, br * 0.3).fill(c(0xf7f5f0));
+      }
+      break;
+    }
+    case "visitor": {
+      // promeneur emmitouflé
+      const p = P(cx, cy);
+      const coat = [0xd9354b, 0x3f7fb5, 0x2fa37a, 0x8e4fb5, 0xe0a63a, 0xc8463b][Math.floor(rnd(3) * 6)];
+      const hat = [0xd9354b, 0xffffff, 0x2b2f45][Math.floor(rnd(4) * 3)];
+      g.ellipse(p.x, p.y, 10, 4).fill({ color: c(0x9aa3b8), alpha: 0.3 });
+      g.rect(p.x - 5, p.y - 12, 4, 12).fill(c(0x2b2f45));
+      g.rect(p.x + 1, p.y - 12, 4, 12).fill(c(0x2b2f45));
+      g.roundRect(p.x - 8, p.y - 30, 16, 20, 6).fill(c(coat));
+      g.rect(p.x - 8, p.y - 32, 16, 5).fill(c(rnd(5) > 0.5 ? 0xf2e6d2 : 0xd9354b)); // écharpe
+      g.circle(p.x, p.y - 37, 6.5).fill(c(0xf2c9a6));
+      g.circle(p.x, p.y - 41, 6.5).fill(c(hat));
+      g.circle(p.x, p.y - 47, 2.6).fill(c(0xffffff));
+      break;
+    }
+    case "brazier": {
+      // brasero : un feu autour duquel on se réchauffe
+      const p = P(cx, cy);
+      for (const dx of [-7, 0, 7]) g.rect(p.x + dx - 1, p.y - 16, 2.5, 16).fill(c(0x3d4152));
+      g.ellipse(p.x, p.y - 18, 13, 6).fill(c(0x4d5265));
+      g.ellipse(p.x, p.y - 20, 11, 5).fill(c(0x2b2f45));
+      for (let i = 0; i < 3; i++) {
+        const fx = p.x + (rnd(6 + i) - 0.5) * 9, fh = 10 + rnd(9 + i) * 12;
+        poly(g, [{ x: fx, y: p.y - 20 - fh }, { x: fx - 5, y: p.y - 19 }, { x: fx + 5, y: p.y - 19 }], i === 0 ? 0xffb03a : i === 1 ? 0xff7a2f : 0xffd96b);
+      }
+      g.circle(p.x, p.y - 26, pal.night ? 40 : 24).fill({ color: 0xffa83a, alpha: pal.night ? 0.22 : 0.1 });
+      break;
+    }
+    case "garland": {
+      // guirlande lumineuse tendue entre deux mâts
+      const a = P(cx - 0.75, cy - 0.75), b = P(cx + 0.75, cy + 0.75);
+      const top = 1.55; // au-dessus des toits d'échoppes
+      const pa = P(cx - 0.75, cy - 0.75, top), pb = P(cx + 0.75, cy + 0.75, top);
+      g.rect(a.x - 1.6, pa.y, 3.2, a.y - pa.y).fill(c(0x3d4152));
+      g.rect(b.x - 1.6, pb.y, 3.2, b.y - pb.y).fill(c(0x3d4152));
+      const sag = 16, cols = [0xffd46b, 0xd9354b, 0x7fe3ff, 0x9af2b0];
+      for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        const x = pa.x + (pb.x - pa.x) * t;
+        const y = pa.y + (pb.y - pa.y) * t + Math.sin(t * Math.PI) * sag;
+        if (i > 0) {
+          const t0 = (i - 1) / 10;
+          const x0 = pa.x + (pb.x - pa.x) * t0;
+          const y0 = pa.y + (pb.y - pa.y) * t0 + Math.sin(t0 * Math.PI) * sag;
+          g.moveTo(x0, y0).lineTo(x, y).stroke({ width: 1.6, color: c(0x4a4f63) });
+        }
+        const col = cols[i % 4];
+        g.circle(x, y + 3, 3.8).fill(pal.night ? col : c(col));
+        if (pal.night) g.circle(x, y + 3, 10).fill({ color: col, alpha: 0.18 });
+      }
       break;
     }
     case "skater": {

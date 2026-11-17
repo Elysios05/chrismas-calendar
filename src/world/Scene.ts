@@ -135,8 +135,14 @@ export class Scene {
       const steep = 1 - nz;
       const zdef = ZONES[cell.zone];
       let col: number;
-      if (cell.lake) col = 0xbfe4f0;
-      else if (steep > ROCK_T) {
+      if (cell.lake) {
+        // glace : un bleu franc, avec des plaques plus claires et un bord givré
+        const ice = zdef.ice ?? 0x6fb9df;
+        // plaques larges et irrégulières plutôt qu'un damier
+        const s = Math.sin(cell.x * 0.31 + cell.y * 0.17) + Math.sin(cell.x * 0.11 - cell.y * 0.27) * 0.8;
+        const border = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !cells.get(key(cell.x + dx, cell.y + dy))?.lake);
+        col = border ? mix(ice, 0xffffff, 0.6) : mix(ice, 0xffffff, 0.1 + Math.max(0, s) * 0.16);
+      } else if (steep > ROCK_T) {
         // roche : seuil franc sur la pente, sans tache au hasard.
         // juste au-dessus du seuil, un liseré de neige poudreuse accroche l'arête
         const dust = Math.max(0, 1 - (steep - ROCK_T) / 0.09);
@@ -170,7 +176,7 @@ export class Scene {
     for (let i = 0; i < path.length; i++) {
       const a = path[i], b = path[i + 1];
       const onLake = cells.get(key(a.x, a.y))?.lake;
-      const col = onLake ? 0x9fd0e2 : ROAD;
+      const col = onLake ? 0x8fcde6 : ROAD;
       const ax = a.x + 0.5, ay = a.y + 0.5;
       quad([[ax - hw, ay - hw], [ax + hw, ay - hw], [ax + hw, ay + hw], [ax - hw, ay + hw]], col);
       if (!b) continue;

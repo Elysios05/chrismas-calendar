@@ -13,6 +13,7 @@ export type Zone = {
   props: { kind: PropKind; weight: number }[];
   landmarks: PropKind[]; // éléments placés en priorité (1 de chaque)
   lake?: boolean;
+  ice?: number; // couleur de la glace du lac
   weather: Weather;
   atmo: Atmo;
 };
@@ -36,7 +37,7 @@ export const ZONES: Zone[] = [
     id: "lac", name: "La Forêt et le Lac gelé", bgDay: 0x9fd6c6, bgNight: 0x0f2230, ground: 0xf3f7f6,
     props: [{ kind: "tree", weight: 8 }, { kind: "treeSmall", weight: 4 }, { kind: "deer", weight: 1 }, { kind: "rock", weight: 1 }],
     landmarks: ["skater", "skater", "skater", "deer"],
-    lake: true,
+    lake: true, ice: 0x6fb9df,
     weather: { snow: 1.6, wind: 1.4, speed: 1.8 }, // tempête
     atmo: { fog: 0.6, fogColor: 0xf2f7f8, clouds: 0.5, tint: 0xbfd8e0, tintAlpha: 0.1, rock: 0x8aa0a8 },
   },
