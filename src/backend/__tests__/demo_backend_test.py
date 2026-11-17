@@ -162,6 +162,25 @@ def main():
             check(a.evaluate("backend.resetPassword('flavie').then(() => backend.inPasswordRecovery())") is False,
                   "resetPassword sans effet en démo")
 
+            print("Rester connecté·e (ticket #4)")
+            a.evaluate("backend.signIn('alexandre', 'x', { rester: false })")
+            check(a.evaluate("backend.me()") == "alexandre", "connexion sans « rester »")
+            n = open_page(ctx, "jour=10")  # nouvel onglet = navigateur rouvert, sans ?moi
+            check(n.evaluate("backend.me()") is None, "rester: false → session oubliée dans un nouvel onglet")
+            n.close()
+            a.evaluate("backend.signIn('alexandre', 'x')")
+            n = open_page(ctx, "jour=10")
+            check(n.evaluate("backend.me()") == "alexandre", "rester par défaut → session retrouvée")
+            n.close()
+
+            print("Rappels (ticket #5)")
+            check(a.evaluate("backend.reminderStatus()") == "unsupported", "démo : rappels « unsupported » par défaut")
+            r = open_page(ctx, "moi=flavie&rappels=off")
+            check(r.evaluate("backend.reminderStatus()") == "off", "?rappels=off simulé")
+            check(r.evaluate("backend.enableReminders()") == "active", "enableReminders → active (simulé)")
+            check(r.evaluate("backend.reminderStatus()") == "active", "état gardé pour l'onglet")
+            r.close()
+
             print("Ouverture à 7 h (heure de Paris)")
             cases = a.evaluate("""import('/src/backend/config.ts').then(c => [
                 c.adventDayFor(new Date('2026-12-10T05:59:00Z')),   // 6 h 59 à Paris

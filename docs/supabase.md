@@ -95,6 +95,8 @@ VITE_SUPABASE_URL=https://abcdefgh.supabase.co
 VITE_SUPABASE_ANON_KEY=colle-la-clé-anon-ici
 VITE_EMAIL_ALEXANDRE=ton-adresse
 VITE_EMAIL_FLAVIE=son-adresse
+# Rappels (étape 10) :
+VITE_VAPID_PUBLIC_KEY=
 ```
 
 Puis `npm run dev` : le site passe automatiquement en mode Supabase (il demande le mot de passe).
@@ -111,6 +113,7 @@ Sur GitHub, dépôt `chrismas-calendar` → **Settings** → **Secrets and varia
 | `VITE_SUPABASE_ANON_KEY` | la clé anon / publishable |
 | `VITE_EMAIL_ALEXANDRE` | ton adresse (celle du compte) |
 | `VITE_EMAIL_FLAVIE` | celle de Flavie |
+| `VITE_VAPID_PUBLIC_KEY` | clé publique des rappels (étape 10) |
 
 Puis **Actions** → **Déploiement GitHub Pages** → **Run workflow** (ou pousse sur `main`).
 Résultat :
@@ -139,6 +142,7 @@ Les photos de test se suppriment dans **Storage** → `photos`.
 | `timezone` | `Europe/Paris` | fuseau de référence (Ljubljana est dans le même) |
 | `open_hour` | `7` | heure d'ouverture de la case du jour (7 = 7 h du matin, 0 = minuit…) |
 | `day_override` | `NULL` | force « aujourd'hui » pour tester |
+| `reminder_hour` | `20` | heure du rappel de la veille (étape 10 ; ajoutée par `0002_rappels.sql`) |
 
 Si tu changes `open_hour`, change aussi `OPEN_HOUR` dans `src/backend/config.ts` (utilisé par la démo).
 
@@ -244,3 +248,98 @@ Dans Brevo, **Transactionnel** → **Logs** (ou **Statistiques**) montre chaque 
 - **Compte Brevo en attente de validation** : à la création, Brevo peut vérifier le compte avant
   d'autoriser l'envoi (quelques heures). Réessaie plus tard.
 
+
+---
+
+## 10. Rappels la veille au soir (notifications sur le téléphone)
+
+**Ce que ça fait** : la veille d'une case préparée (3, 7, 11, 15, 19 et 23 décembre), **à 20 h, heure de
+Paris**, si ta case pour l'autre est encore vide, ton téléphone reçoit :
+> 🐧 Psst… petit rappel de Pingou — *Psst… demain c'est la case 16, et elle est encore vide ! Flavie l'ouvrira à 7 h.*
+
+Un toucher sur la notification ouvre le site sur la case. Pièces en jeu : le site (abonnement de
+l'appareil), une **Edge Function** Supabase `rappel-veille` (envoi) et une **tâche planifiée** (`pg_cron`).
+
+### 10.1 Créer les tables
+**SQL Editor** → colle **tout** [`supabase/migrations/0002_rappels.sql`](../supabase/migrations/0002_rappels.sql) → **Run**.
+
+### 10.2 Générer les clés VAPID (une fois)
+Dans un terminal, à la racine du dépôt :
+```bash
+npx web-push generate-vapid-keys
+```
+Tu obtiens une **Public Key** et une **Private Key**. Garde-les dans ton gestionnaire de mots de passe.
+- La **publique** va dans le site (ce n'est pas un secret) ;
+- la **privée** ne va **que** dans les secrets de la fonction (jamais dans le dépôt ni dans GitHub).
+
+Invente aussi un **CRON_SECRET** : une longue phrase au hasard (ex. `openssl rand -hex 24`).
+
+### 10.3 Déclarer les secrets de la fonction
+Supabase → **Edge Functions** → **Secrets** (ou *Manage secrets*) → ajoute :
+
+| Nom | Valeur |
+|---|---|
+| `VAPID_PUBLIC_KEY` | la clé publique |
+| `VAPID_PRIVATE_KEY` | la clé privée |
+| `VAPID_SUBJECT` | `https://<ton-compte>.github.io/chrismas-calendar/` |
+| `CRON_SECRET` | ta phrase secrète |
+
+### 10.4 Déployer la fonction
+Dans un terminal, à la racine du dépôt (la 1re commande ouvre le navigateur pour te connecter) :
+```bash
+npx supabase login
+npx supabase functions deploy rappel-veille --project-ref <ID-du-projet> --no-verify-jwt --use-api
+```
+L'ID du projet est le morceau `abcdefgh` de `https://abcdefgh.supabase.co`.
+`--no-verify-jwt` est voulu : la fonction vérifie elle-même le `CRON_SECRET`.
+(Dans le tableau de bord, **Edge Functions** → `rappel-veille` → *Details* : « Verify JWT » doit être **désactivé**.)
+
+### 10.5 Planifier l'envoi de 20 h
+1. **Database** → **Extensions** : active **pg_cron** et **pg_net** (ou laisse le script le faire).
+2. **SQL Editor** → colle [`supabase/cron_rappel.sql`](../supabase/cron_rappel.sql), **remplace les deux valeurs
+   entre chevrons** (l'URL du projet et ton `CRON_SECRET`, sans les `< >`) → **Run**.
+
+La tâche tourne à 18 h et 19 h UTC ; la base ne répond qu'à 20 h heure de Paris, ce qui gère tout seul
+l'heure d'hiver et l'heure d'été. (Si tu changes `app_settings.reminder_hour`, change aussi ces deux heures.)
+
+### 10.6 Brancher la clé publique sur le site
+- En local, dans `.env.local` : `VITE_VAPID_PUBLIC_KEY=la-clé-publique`
+- Sur GitHub : nouveau secret `VITE_VAPID_PUBLIC_KEY` (même endroit qu'à l'étape 7), puis relance le déploiement.
+
+### 10.7 Tester
+1. Sur ton téléphone, active les rappels sur le site (voir ci-dessous).
+2. Vérifie l'abonnement : **Table Editor** → `push_subscriptions` → une ligne avec `who = alexandre`.
+3. **SQL Editor** → simulation à blanc (personne ne reçoit rien, la réponse dit qui serait prévenu) :
+   ```sql
+   select net.http_post(
+     url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/rappel-veille',
+     headers := jsonb_build_object('Content-Type', 'application/json',
+       'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'rappel_cron_secret')),
+     body := '{"day": 16, "force": true, "dry": true}'::jsonb);
+   -- puis, quelques secondes après :
+   select status_code, content from net._http_response order by created desc limit 1;
+   ```
+4. Même requête **sans** `"dry": true` → la notification arrive sur ton téléphone (si ta case 16 est vide).
+5. Le 3 décembre à 20 h, ça partira tout seul. Historique : `select * from public.reminder_log;` et
+   `select * from cron.job_run_details order by start_time desc limit 5;`
+
+### Pour Alexandre et Flavie : activer les rappels sur son téléphone
+
+**iPhone / iPad** (iOS **16.4 minimum** : *Réglages → Général → Informations → Version d'iOS*)
+1. Ouvre le site dans **Safari** (pas Chrome ni Instagram).
+2. Bouton **Partager** (carré avec une flèche) → **Sur l'écran d'accueil** → **Ajouter**.
+3. Ouvre le calendrier **depuis la nouvelle icône du sapin** sur l'écran d'accueil, et connecte-toi.
+4. Touche **« Activer les rappels »** → **Autoriser**.
+   Sans les étapes 2–3, l'iPhone ne propose pas les notifications : c'est une règle d'Apple.
+
+**Android** (Chrome)
+1. Ouvre le site dans **Chrome** et connecte-toi.
+2. Touche **« Activer les rappels »** → **Autoriser**.
+3. (Conseillé) Menu **⋮** → **Ajouter à l'écran d'accueil** / **Installer l'application**.
+
+**Ça ne marche pas ?**
+- Tu as touché « Ne pas autoriser » : *iPhone* → Réglages → Notifications → Calendrier → Autoriser ;
+  *Android* → appui long sur l'icône (ou cadenas 🔒 dans la barre d'adresse) → Notifications → Autoriser.
+- Mode « Ne pas déranger » / Concentration actif à 20 h : la notification arrive en silence.
+- Changement de téléphone ou réinstallation : réactive simplement les rappels.
+- Se déconnecter du site désactive les rappels sur cet appareil.

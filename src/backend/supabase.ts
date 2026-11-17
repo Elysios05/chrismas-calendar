@@ -4,7 +4,8 @@
  * Chargé en import dynamique (voir index.ts) pour ne pas alourdir le mode démo.
  */
 import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
-import type { BackendApi, DayNumber, PreparedContent, PreparedResult, Progress, RealtimeRoom, Who } from "../core/contracts";
+import type { BackendApi, DayNumber, PreparedContent, PreparedResult, Progress, RealtimeRoom, ReminderStatus, Who } from "../core/contracts";
+import { browserStatus, currentSubscription, subscribe, subscriptionKeys } from "./push";
 import type { PasswordRecovery } from "./index";
 import {
   FROZEN_MESSAGE, PHOTO_MAX_DIMENSION, emailOf, PREPARED_DAYS, READ_URL_TTL_SECONDS, UPLOAD_URL_TTL_SECONDS,
@@ -12,6 +13,30 @@ import {
 } from "./config";
 
 const BUCKET = "photos";
+
+/**
+ * Stockage de la session : localStorage (« rester connecté·e », survit à la fermeture du navigateur)
+ * ou sessionStorage (disparaît à la fermeture de l'onglet). Le choix se fait au signIn ; au
+ * rechargement, on le retrouve selon l'endroit où la session est rangée.
+ */
+class SwitchableStorage {
+  persist: boolean;
+  constructor(probeKey: string) {
+    let inSession = false;
+    try { inSession = sessionStorage.getItem(probeKey) !== null; } catch { /* indisponible */ }
+    this.persist = !inSession;
+  }
+  private pick(): Storage | null {
+    try { return this.persist ? localStorage : sessionStorage; } catch { return null; }
+  }
+  private other(): Storage | null {
+    try { return this.persist ? sessionStorage : localStorage; } catch { return null; }
+  }
+  getItem = (k: string) => this.pick()?.getItem(k) ?? this.other()?.getItem(k) ?? null;
+  setItem = (k: string, v: string) => { this.pick()?.setItem(k, v); this.other()?.removeItem(k); };
+  removeItem = (k: string) => { this.pick()?.removeItem(k); this.other()?.removeItem(k); };
+}
+const AUTH_KEY = "cc-auth";
 
 /** Extrait le chemin Storage d'une URL signée (…/object/sign/photos/<chemin>?token=…), ou renvoie la chaîne telle quelle. */
 export function toStoragePath(urlOrPath: string): string {
@@ -39,11 +64,13 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
   private lastEmitted: Who | null | undefined = undefined;
   private recovery: boolean;
 
+  private storage = new SwitchableStorage(AUTH_KEY);
+
   constructor(url: string, anonKey: string) {
     // À lire AVANT createClient, qui consomme le #access_token…&type=recovery de l'URL
     this.recovery = typeof location !== "undefined" && /type=recovery/.test(location.hash);
     this.sb = createClient(url, anonKey, {
-      auth: { persistSession: true, autoRefreshToken: true, storageKey: "cc-auth", detectSessionInUrl: true },
+      auth: { persistSession: true, autoRefreshToken: true, storageKey: AUTH_KEY, detectSessionInUrl: true, storage: this.storage },
     });
     this.whoReady = this.loadWho();
     void this.whoReady.then((w) => { this.lastEmitted = w; }, () => { this.lastEmitted = null; });
@@ -89,7 +116,8 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
     try { return this.who ?? (await this.whoReady); } catch { return null; }
   }
 
-  async signIn(who: Who, password: string) {
+  async signIn(who: Who, password: string, options?: { rester?: boolean }) {
+    this.storage.persist = options?.rester !== false; // à régler AVANT que Supabase n'écrive la session
     const { error } = await this.sb.auth.signInWithPassword({ email: emailOf(who), password });
     if (error) throw new Error(error.message === "Invalid login credentials" ? "Mot de passe incorrect." : error.message);
     this.whoReady = this.loadWho();
@@ -104,6 +132,11 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
   }
 
   async signOut() {
+    // L'appareil ne doit plus recevoir les rappels de la personne qui se déconnecte
+    try {
+      const sub = await currentSubscription();
+      if (sub) { await this.sb.rpc("delete_push_subscription", { p_endpoint: sub.endpoint }); await sub.unsubscribe(); }
+    } catch { /* sans gravité */ }
     await this.sb.auth.signOut();
     this.who = null;
     this.whoReady = Promise.resolve(null);
@@ -226,6 +259,35 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
 
   joinRoom(roomId: string): RealtimeRoom {
     return new SupabaseRoom(this.sb, roomId, this.who, () => this.requireMe());
+  }
+
+  /* ----- rappels par notification ----- */
+
+  private async saveSubscription(sub: PushSubscription) {
+    const k = subscriptionKeys(sub);
+    const { error } = await this.sb.rpc("save_push_subscription", {
+      p_endpoint: k.endpoint, p_p256dh: k.p256dh, p_auth: k.auth, p_user_agent: navigator.userAgent.slice(0, 300),
+    });
+    if (error) throw new Error("Enregistrement des rappels impossible : " + error.message);
+  }
+
+  async reminderStatus(): Promise<ReminderStatus> {
+    const pre = browserStatus();
+    if (pre) return pre;
+    if (Notification.permission !== "granted") return "off";
+    const sub = await currentSubscription();
+    if (!sub) return "off";
+    // Re-synchronise l'abonnement avec le serveur (il peut changer ou avoir été effacé)
+    if (this.who ?? (await this.whoReady)) { try { await this.saveSubscription(sub); } catch { /* réessayé plus tard */ } }
+    return "active";
+  }
+
+  async enableReminders(): Promise<ReminderStatus> {
+    const res = await subscribe(); // demande l'autorisation en premier, dans le geste utilisateur
+    if (typeof res === "string") return res;
+    await this.requireMe();
+    await this.saveSubscription(res);
+    return "active";
   }
 }
 

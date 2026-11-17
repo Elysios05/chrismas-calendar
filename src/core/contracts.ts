@@ -37,6 +37,14 @@ export type RealtimeRoom = {
   leave: () => void;
 };
 
+/**
+ * État des rappels par notification (la veille d'une case préparée encore vide, à 20 h, Paris) :
+ * active = abonné sur cet appareil ; off = possible mais pas activé ; denied = notifications refusées
+ * dans le navigateur ; unsupported = navigateur incompatible ; needs-install = iPhone/iPad : il faut
+ * d'abord ajouter le site à l'écran d'accueil (iOS 16.4 minimum).
+ */
+export type ReminderStatus = "active" | "off" | "denied" | "unsupported" | "needs-install";
+
 /** Obtenu via `await createBackend()` (src/backend/index.ts) : asynchrone car Supabase est chargé à la demande */
 export interface BackendApi {
   readonly mode: "demo" | "supabase";
@@ -68,6 +76,15 @@ export interface BackendApi {
 
   /** Salle temps réel pour les jeux en direct */
   joinRoom(roomId: string): RealtimeRoom;
+
+  /**
+   * Rappels par notification sur CET appareil (voir ReminderStatus).
+   * Facultatives pour l'instant, le temps que les faux backends d'atelier (src/games/dev, src/ui/dev)
+   * les ajoutent : DemoBackend et SupabaseBackend les fournissent. Usage : `backend.reminderStatus?.() ?? "unsupported"`.
+   */
+  reminderStatus?(): Promise<ReminderStatus>;
+  /** Demande l'autorisation et abonne l'appareil. À appeler DANS un geste de l'utilisateur (clic). */
+  enableReminders?(): Promise<ReminderStatus>;
 }
 
 /* ------------------------------------------------------------------ */
