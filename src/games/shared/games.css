@@ -1,0 +1,139 @@
+/* Styles communs à tous les jeux. Appartient à l'équipe Jeux (src/games/). */
+
+.jeu {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  font-family: var(--font, "Fredoka", system-ui, sans-serif);
+  color: var(--ink, #1b2747);
+  background: linear-gradient(180deg, #cfe4f4 0, #eef4fa 55%, #ffffff 100%);
+  overflow: hidden;
+}
+
+/* ---------- barre du haut : titre, score, vies ---------- */
+.jeu-barre {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+}
+.jeu-barre .jeu-titre { font-size: 14px; font-weight: 700; color: var(--red, #d9354b); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+.jeu-barre .jeu-spacer { flex: 1; }
+.jeu-chip {
+  background: var(--cream, #fffaf2); border-radius: 12px; padding: 6px 12px;
+  font-weight: 700; font-size: 15px; box-shadow: 0 4px 0 rgba(27, 39, 71, .15);
+  font-variant-numeric: tabular-nums;
+}
+.jeu-chip.pale { color: var(--ink-soft, #5b6680); font-weight: 600; font-size: 13px; }
+.jeu-vies { letter-spacing: 2px; font-size: 16px; }
+.jeu-fermer {
+  width: 36px; height: 36px; border: 0; border-radius: 12px; background: var(--cream, #fffaf2);
+  font-size: 15px; box-shadow: 0 4px 0 rgba(27, 39, 71, .15);
+}
+
+/* ---------- corps ---------- */
+.jeu-corps { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+.jeu-centre {
+  flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  gap: 14px; padding: 10px 16px calc(18px + env(safe-area-inset-bottom));
+  text-align: center;
+}
+.jeu-canvas { flex: 1; min-height: 0; position: relative; touch-action: none; }
+.jeu-canvas canvas { display: block; position: absolute; inset: 0; }
+
+/* ---------- panneau (règles, résultat) ---------- */
+.jeu-panneau {
+  width: min(460px, 100%); background: var(--cream, #fffaf2); border-radius: 26px;
+  padding: 22px 20px 18px; text-align: center;
+  box-shadow: 0 9px 0 rgba(27, 39, 71, .2), 0 24px 50px rgba(27, 39, 71, .18);
+  animation: jeuPop .4s cubic-bezier(.2, 1.5, .4, 1);
+}
+@keyframes jeuPop { from { transform: scale(.8) translateY(24px); opacity: 0; } }
+.jeu-panneau .emoji { font-size: 50px; line-height: 1; }
+.jeu-panneau h2 { margin: 8px 0 10px; font-size: 24px; line-height: 1.15; }
+.jeu-panneau ul { margin: 0 0 16px; padding: 0; list-style: none; text-align: left; }
+.jeu-panneau li { display: flex; gap: 8px; margin: 8px 0; font-size: 15px; line-height: 1.35; color: var(--ink-soft, #5b6680); }
+.jeu-panneau li::before { content: "•"; color: var(--red, #d9354b); font-weight: 700; }
+.jeu-panneau p { margin: 0 0 14px; font-size: 15px; line-height: 1.4; color: var(--ink-soft, #5b6680); }
+
+.jeu-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.jeu-btn {
+  border: 0; border-radius: 16px; padding: 12px 20px; font: inherit; font-weight: 700; font-size: 16px;
+  background: var(--red, #d9354b); color: #fff; box-shadow: 0 5px 0 var(--red-d, #a3192f);
+  transition: transform .1s; cursor: pointer;
+}
+.jeu-btn.clair { background: #fff; color: var(--ink, #1b2747); box-shadow: 0 5px 0 rgba(27, 39, 71, .15); }
+.jeu-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(27, 39, 71, .18); }
+.jeu-btn:disabled { opacity: .5; cursor: default; transform: none; }
+
+/* ---------- score final ---------- */
+.jeu-score { font-size: 54px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.jeu-score-note { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--red, #d9354b); }
+.jeu-compare { display: flex; gap: 10px; justify-content: center; margin: 14px 0 16px; }
+.jeu-compare div { flex: 1; background: #fff; border-radius: 16px; padding: 10px 8px; box-shadow: 0 4px 0 rgba(27, 39, 71, .12); }
+.jeu-compare span { display: block; font-size: 12px; color: var(--ink-soft, #5b6680); font-weight: 600; }
+.jeu-compare b { font-size: 22px; font-variant-numeric: tabular-nums; }
+
+/* ---------- barre de progression (descente) ---------- */
+.jeu-progres { flex: none; height: 5px; margin: 0 14px; border-radius: 3px; background: rgba(27, 39, 71, .12); overflow: hidden; }
+.jeu-progres i { display: block; height: 100%; border-radius: 3px; background: var(--red, #d9354b); transition: width .2s linear; }
+
+/* ---------- progression (points des questions) ---------- */
+.jeu-points { display: flex; gap: 6px; justify-content: center; padding: 4px 0 2px; }
+.jeu-points i {
+  width: 9px; height: 9px; border-radius: 50%; background: rgba(27, 39, 71, .18);
+  transition: background .2s, transform .2s;
+}
+.jeu-points i.on { background: var(--red, #d9354b); transform: scale(1.25); }
+.jeu-points i.bon { background: var(--green, #2fa37a); }
+.jeu-points i.rate { background: #c9ccd6; }
+
+/* ---------- quiz ---------- */
+.quiz-q { width: min(520px, 100%); }
+.quiz-emoji { font-size: 44px; line-height: 1; }
+.quiz-phase { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--red, #d9354b); margin-top: 6px; }
+.quiz-texte { font-size: 21px; line-height: 1.25; margin: 8px 0 18px; }
+.quiz-options { display: grid; gap: 10px; }
+.quiz-option {
+  border: 0; border-radius: 18px; padding: 14px 16px; font: inherit; font-size: 16px; font-weight: 600;
+  text-align: left; background: var(--cream, #fffaf2); color: var(--ink, #1b2747);
+  box-shadow: 0 5px 0 rgba(27, 39, 71, .15); transition: transform .1s; cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+}
+.quiz-option:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(27, 39, 71, .15); }
+.quiz-option .puce {
+  flex: none; width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center;
+  background: rgba(27, 39, 71, .08); font-size: 13px; font-weight: 700; color: var(--ink-soft, #5b6680);
+}
+.quiz-option.choisi { background: #fff; box-shadow: 0 0 0 3px var(--red, #d9354b) inset, 0 5px 0 rgba(27, 39, 71, .15); }
+.quiz-option.bon { background: #e4f6ef; box-shadow: 0 0 0 3px var(--green, #2fa37a) inset, 0 5px 0 rgba(27, 39, 71, .12); }
+.quiz-option.mauvais { background: #fde8ea; box-shadow: 0 0 0 3px var(--red, #d9354b) inset, 0 5px 0 rgba(27, 39, 71, .12); }
+.quiz-option:disabled { cursor: default; }
+.quiz-retour { min-height: 28px; font-size: 15px; font-weight: 600; margin-top: 12px; }
+.quiz-retour.bon { color: var(--green, #2fa37a); }
+.quiz-retour.rate { color: var(--red, #d9354b); }
+.quiz-attente { color: var(--ink-soft, #5b6680); font-weight: 600; }
+
+/* ---------- bandeau d'info au milieu du jeu ---------- */
+.jeu-flash {
+  position: absolute; left: 50%; top: 18%; transform: translateX(-50%);
+  background: rgba(27, 39, 71, .82); color: #fff; padding: 8px 16px; border-radius: 14px;
+  font-weight: 700; font-size: 15px; white-space: nowrap; pointer-events: none;
+  animation: jeuFlash 2.2s ease-out forwards;
+}
+@keyframes jeuFlash {
+  0% { opacity: 0; transform: translate(-50%, 10px); }
+  12%, 70% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -14px); }
+}
+
+@media (max-width: 560px) {
+  .jeu-barre { gap: 6px; padding-left: 10px; padding-right: 10px; }
+  .jeu-barre .jeu-titre { font-size: 12px; letter-spacing: .6px; }
+  .jeu-chip { padding: 5px 9px; font-size: 14px; }
+  .jeu-chip.pale { font-size: 12px; }
+  .quiz-texte { font-size: 19px; }
+  .jeu-panneau h2 { font-size: 21px; }
+  .jeu-score { font-size: 46px; }
+}
+@media (min-height: 760px) {
+  .jeu-centre { gap: 18px; }
+}
