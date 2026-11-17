@@ -77,6 +77,10 @@ export type Sfx = "open" | "good" | "bad" | "pop" | "win" | "locked" | "step" | 
 
 export interface SoundApi {
   setEnabled(on: boolean): void;
+  /** Volume général 0..1 */
+  setVolume(v: number): void;
+  /** À appeler dans un geste de l'utilisateur (clic, toucher) pour débloquer le son, surtout sur iOS */
+  unlock(): Promise<void>;
   /** Change d'ambiance musicale (fondu) */
   setZone(zone: ZoneId, night: boolean): void;
   /** Musique spéciale pendant un jeu (null = retour à l'ambiance) */
