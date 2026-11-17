@@ -22,3 +22,19 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
 
 ## Journal
 - 17 nov : terrain continu retenu ; Alexandre veut « de vraies montagnes en pointe, des falaises, une neige plus lisse ».
+- 17 nov — direction artistique des montagnes (tâche 1), validée avec Alexandre sur captures :
+  - **crêtes** : arêtes nettes et pics élancés (chaînes de sommets reliés, pas de cônes isolés) ;
+  - **limite neige / roche** : franche et guidée par la pente, avec un liseré de poudreuse sur l'arête — plus de taches au hasard ;
+  - **palette** : roche bleu-gris froid (`0x6e789a`), ombres violettes, neige très peu modelée pour rester lisse ;
+  - **sapins** : 3 essences (épicéa, sapin, jeune pousse), 4 verts, neige variable ; au-dessus d'une certaine
+    altitude les sapins cèdent la place aux rochers.
+  - Rochers redessinés en blocs facettés coiffés de neige (`boulder()` dans `iso.ts`).
+  - Reste à faire : liseré blanc dessiné sur l'arête elle-même, et reprise des autres mondes avec la même méthode.
+- 17 nov — architecture par monde et bâtiments assis dans le relief, demandé par Alexandre :
+  - **ancrage** : terrasse plate taillée dans la pente sous l'emprise du bâtiment (jamais sous la route),
+    puis soubassement de pierre appareillée qui comble la marche restante côté aval (`drop` sur `PlacedProp`) ;
+  - **architecture** : chalet à balcon de bois et rondins (montagnes), maison à colombages et pignon à redans
+    (Saint-Nicolas et pôle Nord), cabane de bois avec appentis et tas de bûches (forêt et lac, grotte),
+    maison étroite et haute à auvent rayé (marché). Les échoppes et l'atelier reçoivent aussi un soubassement.
+  - Carrure (largeur, profondeur, hauteur, pente du toit) tirée au sort par maison : deux voisines diffèrent.
+  - Quelques cabanes de bois ajoutées au bord du lac, qui n'avait aucune construction.
