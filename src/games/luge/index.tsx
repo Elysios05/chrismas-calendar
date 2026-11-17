@@ -65,7 +65,7 @@ function Luge({ ctx }: { ctx: GameContext }) {
         : `${prenomAutre} est à ${sonMeilleur}. Il te manque ${sonMeilleur - f.score} points…`);
     }
     ctx.say(lignes);
-    ctx.complete({ success: f.arrivee, score: f.score, data: f });
+    // `ctx.complete` ferme le jeu : on ne l'appelle qu'au bouton « Fermer », pas ici.
   }, [ctx, prenomAutre, sonMeilleur]);
 
   const jouer = useCallback(() => {
