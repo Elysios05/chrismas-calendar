@@ -15,6 +15,8 @@ import "./atelier.css";
 
 const sonMuet: SoundApi = {
   setEnabled: () => { /* atelier silencieux */ },
+  setVolume: () => { /* rien */ },
+  unlock: async () => { /* rien */ },
   setZone: (_z: ZoneId, _n: boolean) => { /* rien */ },
   setGameMusic: () => { /* rien */ },
   play: (_s: Sfx) => { /* rien */ },

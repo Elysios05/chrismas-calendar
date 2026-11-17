@@ -8,7 +8,7 @@ import { PINGOU_CASE, type PingouLine } from "./pingou/lines";
 const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
 /** Son silencieux : utilisé tant que l'équipe Audio n'est pas branchée. */
-const MUET: SoundApi = { setEnabled() {}, setZone() {}, setGameMusic() {}, play() {} };
+const MUET: SoundApi = { setEnabled() {}, setVolume() {}, unlock: async () => {}, setZone() {}, setGameMusic() {}, play() {} };
 
 type Etape = "intro" | "jeu" | "fini";
 
