@@ -2,9 +2,9 @@
  * Page de démo audio : écouter chaque ambiance (jour/nuit), les musiques de jeu
  * et les effets. Lancer `npm run dev` puis ouvrir /audio-demo.html.
  */
-import type { Sfx, ZoneId } from "../core/contracts";
+import type { ZoneId } from "../core/contracts";
 import { sound, type GameMood } from "./engine";
-import { renderPiece, renderSfx, toWav, wavBase64 } from "./render";
+import { renderAmbience, renderPiece, renderSfx, toWav, wavBase64 } from "./render";
 import { SFX_LIST } from "./sfx";
 
 const ZONES: [ZoneId, string][] = [
@@ -34,7 +34,11 @@ root.innerHTML = `<style>${css}</style>
   <p>Toute la musique est composée en code (Tone.js) : aucun fichier audio.</p>
   <div id="status">Clique sur un bouton pour démarrer le son.</div>
   <div class="row"><button id="mute">Couper le son</button>
-    <label>Volume <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"></label></div>
+    <label>Général <input id="vol" type="range" min="0" max="1" step="0.01" value="1"></label>
+    <label>Musique <input id="mvol" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+    <label>Effets et ambiance <input id="svol" type="range" min="0" max="1" step="0.01" value="0.6"></label></div>
+  <div class="row"><button id="storm">Tempête : non</button>
+    <label>Vent (col) <input id="wind" type="range" min="0" max="1" step="0.01" value="0.5"></label></div>
   <h2>Ambiances des mondes</h2><div id="zones"></div>
   <h2>Musiques de jeu</h2><div id="moods"></div>
   <h2>Effets</h2><div class="row" id="sfx"></div>`;
@@ -101,7 +105,7 @@ mrow.append(button("Retour à l'ambiance", (b) => {
 moods.append(mrow);
 
 const sfxRow = root.querySelector("#sfx")!;
-for (const s of SFX_LIST) sfxRow.append(button(s, () => sound.play(s as Sfx)));
+for (const s of SFX_LIST) sfxRow.append(button(s, () => sound.play(s)));
 
 root.querySelector<HTMLButtonElement>("#mute")!.onclick = (e) => {
   const b = e.currentTarget as HTMLButtonElement;
@@ -109,7 +113,18 @@ root.querySelector<HTMLButtonElement>("#mute")!.onclick = (e) => {
   sound.setEnabled(on);
   b.textContent = on ? "Couper le son" : "Rétablir le son";
 };
-root.querySelector<HTMLInputElement>("#vol")!.oninput = (e) => sound.setVolume(Number((e.target as HTMLInputElement).value));
+const slider = (id: string, fn: (v: number) => void) =>
+  (root.querySelector<HTMLInputElement>(id)!.oninput = (e) => fn(Number((e.target as HTMLInputElement).value)));
+slider("#vol", (v) => sound.setVolume(v));
+slider("#mvol", (v) => sound.setMusicVolume(v));
+slider("#svol", (v) => sound.setSfxVolume(v));
+slider("#wind", (v) => sound.setWind(v));
+let storm = false;
+root.querySelector<HTMLButtonElement>("#storm")!.onclick = (e) => {
+  storm = !storm;
+  sound.setWeather(storm);
+  (e.currentTarget as HTMLButtonElement).textContent = `Tempête : ${storm ? "oui" : "non"}`;
+};
 
 // Accès pour l'automatisation (rendu des extraits)
-Object.assign(window, { __audio: { renderPiece, renderSfx, wavBase64 } });
+Object.assign(window, { __audio: { renderPiece, renderSfx, renderAmbience, wavBase64 } });

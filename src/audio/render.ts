@@ -3,11 +3,12 @@
  * Sert à la page de démo et à fabriquer les extraits à faire écouter.
  */
 import * as T from "tone";
-import type { Sfx } from "../core/contracts";
+import type { ZoneId } from "../core/contracts";
+import { AmbienceRunner } from "./ambience";
 import { GAMES } from "./pieces/games";
 import { WORLDS } from "./pieces/worlds";
 import { PieceRunner } from "./runner";
-import { SfxBank, SFX_LIST } from "./sfx";
+import { SfxBank, SFX_LIST, type SfxName } from "./sfx";
 import type { PieceDef } from "./types";
 
 export const ALL_PIECES: Record<string, PieceDef> = { ...WORLDS, ...GAMES };
@@ -30,12 +31,24 @@ export async function renderPiece(id: string, night: boolean, seconds: number, f
 }
 
 /** Rend les effets à la suite, un toutes les `gap` secondes */
-export async function renderSfx(list: Sfx[] = SFX_LIST, gap = 1.1): Promise<AudioBuffer> {
+export async function renderSfx(list: SfxName[] = SFX_LIST, gap = 1.1): Promise<AudioBuffer> {
   const buf = await T.Offline(() => {
     const limiter = new T.Limiter(-1.5).toDestination();
     const bank = new SfxBank(T, limiter);
     list.forEach((s, k) => bank.play(s, 0.2 + k * gap));
   }, 0.4 + list.length * gap, 2, 44100);
+  return buf.get() as AudioBuffer;
+}
+
+/** Rend les bruitages d'ambiance seuls (avec un fondu d'entrée et de sortie) */
+export async function renderAmbience(zone: ZoneId, night: boolean, seconds: number, storm = false, wind = 0.5): Promise<AudioBuffer> {
+  const buf = await T.Offline(() => {
+    const limiter = new T.Limiter(-1.5).toDestination();
+    const amb = new AmbienceRunner(T, zone, night, limiter, { storm, wind });
+    amb.start(0, 1);
+    amb.fadeOut(seconds - 1.5, 1.5);
+    amb.pump(seconds, 0);
+  }, seconds, 2, 44100);
   return buf.get() as AudioBuffer;
 }
 

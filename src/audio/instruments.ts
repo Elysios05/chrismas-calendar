@@ -233,3 +233,23 @@ export const drip: InstrFactory = (T, out) => {
     },
   };
 };
+
+/* ------------------------------ Couleurs de Noël ------------------------------ */
+
+/** Petit chœur « ooh » : sinus épaissis, filtrés comme une voyelle fermée */
+export const choir: InstrFactory = (T, out) =>
+  poly(T, out, T.Synth, {
+    oscillator: { type: "fatsine", count: 3, spread: 22 },
+    envelope: { attack: 0.35, decay: 0.3, sustain: 0.85, release: 1.1 },
+  }, 4, [new T.Filter({ frequency: 1100, type: "lowpass", Q: 0.8 }), new T.Vibrato({ frequency: 4.5, depth: 0.06 })]);
+
+/** Cloche d'église lointaine : partiels inharmoniques, longue résonance */
+export const churchBell: InstrFactory = (T, out) =>
+  poly(T, out, T.FMSynth, {
+    harmonicity: 2.41,
+    modulationIndex: 5,
+    oscillator: { type: "sine" },
+    modulation: { type: "sine" },
+    envelope: { attack: 0.003, decay: 3.5, sustain: 0, release: 3 },
+    modulationEnvelope: { attack: 0.002, decay: 1.2, sustain: 0.1, release: 1.5 },
+  }, 3, [new T.Filter({ frequency: 2500, type: "lowpass" })]);
