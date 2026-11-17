@@ -38,3 +38,16 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     maison étroite et haute à auvent rayé (marché). Les échoppes et l'atelier reçoivent aussi un soubassement.
   - Carrure (largeur, profondeur, hauteur, pente du toit) tirée au sort par maison : deux voisines diffèrent.
   - Quelques cabanes de bois ajoutées au bord du lac, qui n'avait aucune construction.
+- 17 nov — densité et différence entre les mondes, demandées par Alexandre (« que ce soit beaucoup plus beau ») :
+  - **village** : rangées de maisons serrées des deux côtés de la rue (trois bandes de densité dégressive),
+    lampadaires réguliers, et une **place centrale** dégagée autour de la case du 6, avec sapin décoré,
+    bonhomme de neige, lampadaires et badauds ;
+  - **marché** : deux allées d'échoppes côte à côte, guirlandes lumineuses tendues au-dessus de la rue,
+    brasiers et visiteurs. Premier essai trop serré (murs d'échoppes qui se chevauchaient) : échoppe
+    rétrécie à 0,98 case de large et densité ramenée à 0,72 pour qu'elles se touchent sans se superposer ;
+  - **forêt** : densité pilotée par un bruit basse fréquence (clairières), décroissante loin de la route,
+    avec buissons enneigés ; chaque élément naturel est décalé au hasard pour casser l'effet plantation ;
+  - **lac** : bleu glacier franc (`ice` sur la zone), plaques larges et bord givré.
+  - Nouveaux décors : `bush`, `visitor`, `brazier`, `garland`.
+  - Mesure : 10–11 i/s avant densification, 9–11 i/s après, sur ce conteneur sans carte graphique. Le plancher
+    vient du rendu logiciel, pas du nombre de décors — mais il faudra mesurer sur un vrai téléphone (tâche 6).
