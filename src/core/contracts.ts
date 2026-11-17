@@ -24,6 +24,12 @@ export type PreparedContent = {
 
 export type Progress = { opened: DayNumber[]; completed: DayNumber[] };
 
+/** locked = pas encore le jour J ; empty = rien d'écrit ; ready = contenu disponible */
+export type PreparedResult =
+  | { status: "locked" }
+  | { status: "empty" }
+  | { status: "ready"; content: PreparedContent };
+
 export type RealtimeRoom = {
   send: (event: string, payload: unknown) => void;
   on: (event: string, cb: (payload: unknown, from: Who) => void) => () => void;
@@ -31,12 +37,15 @@ export type RealtimeRoom = {
   leave: () => void;
 };
 
+/** Obtenu via `await createBackend()` (src/backend/index.ts) : asynchrone car Supabase est chargé à la demande */
 export interface BackendApi {
   readonly mode: "demo" | "supabase";
   /** Utilisateur connecté (null si personne) */
   me(): Promise<Who | null>;
   signIn(who: Who, password: string): Promise<void>;
   signOut(): Promise<void>;
+  /** Prévient quand la session change (connexion, déconnexion, expiration) */
+  onAuthChange(cb: (who: Who | null) => void): () => void;
 
   /** Date « serveur » utilisée pour déverrouiller les cases */
   today(): Promise<DayNumber>;
@@ -45,8 +54,10 @@ export interface BackendApi {
   markOpened(day: DayNumber): Promise<void>;
   markCompleted(day: DayNumber): Promise<void>;
 
-  /** Case préparée : lecture refusée par le serveur avant le jour J */
-  getPrepared(day: DayNumber, to: Who): Promise<PreparedContent | null>;
+  /** Case préparée : lecture refusée par le serveur avant le jour J (heure d'ouverture : 7 h, Paris) */
+  getPrepared(day: DayNumber, to: Who): Promise<PreparedResult>;
+  /** Refusé (erreur) si le destinataire a déjà ouvert la case : elle est alors figée */
+
   savePrepared(day: DayNumber, content: Pick<PreparedContent, "message" | "photos">): Promise<void>;
   uploadPhoto(file: Blob): Promise<string>;
 
