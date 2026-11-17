@@ -50,7 +50,6 @@ export default function App() {
       const scene = new Scene(app, {
         onNodeTap: (day) => window.dispatchEvent(new CustomEvent("node-tap", { detail: day })),
         onZone: setZone,
-        onBg: (css) => { document.body.style.background = css; },
       }, isNightNow());
       sceneRef.current = scene;
       window.dispatchEvent(new Event("scene-ready"));
