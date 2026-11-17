@@ -1,8 +1,47 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { faceOf, textOf, type Expression, type PingouLine } from "./pingou/lines";
 
 export const MASCOT_NAME = "Pingou";
 
-export function PenguinPortrait({ size = 72 }: { size?: number }) {
+/** Les yeux et la bouche changent, le reste du pingouin ne bouge pas. */
+function Face({ expression }: { expression: Expression }) {
+  const eye = (cx: number, mirrored: boolean) => {
+    // clin d'œil : seul l'œil droit se ferme
+    if (expression === "clin" && mirrored) {
+      return <path d={`M${cx - 4} 37 q4 3 8 0`} stroke="#1b2340" strokeWidth="2.4" fill="none" strokeLinecap="round" />;
+    }
+    if (expression === "content") {
+      return <path d={`M${cx - 4.2} 38 q4.2 -5 8.4 0`} stroke="#1b2340" strokeWidth="2.6" fill="none" strokeLinecap="round" />;
+    }
+    const r = expression === "surpris" ? 4.6 : 3.6;
+    const cy = expression === "triste" ? 38.4 : 37;
+    return (
+      <>
+        <circle cx={cx} cy={cy} r={r} fill="#1b2340" />
+        <circle cx={cx + 1.2} cy={cy - 1.2} r={r * 0.33} fill="#fff" />
+        {expression === "triste" && (
+          <path d={`M${cx - 5} 32.6 q5 -1.6 10 1.2`} stroke="#1b2340" strokeWidth="1.8" fill="none" strokeLinecap="round" transform={mirrored ? `scale(-1 1) translate(${-2 * cx} 0)` : undefined} />
+        )}
+      </>
+    );
+  };
+
+  return (
+    <>
+      {eye(43, false)}
+      {eye(57, true)}
+      {/* bec */}
+      {expression === "surpris" ? (
+        <ellipse cx="50" cy="46" rx="4.4" ry="5" fill="#ff9a3d" />
+      ) : (
+        <path d="M45 43 L55 43 L50 49Z" fill="#ff9a3d" />
+      )}
+      {expression === "triste" && <ellipse cx="66" cy="48" rx="2.2" ry="3.4" fill="#8fd0f5" opacity=".9" />}
+    </>
+  );
+}
+
+export function PenguinPortrait({ size = 72, expression = "neutre" }: { size?: number; expression?: Expression }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
       <ellipse cx="50" cy="94" rx="26" ry="5" fill="#1b2347" opacity=".15" />
@@ -14,11 +53,7 @@ export function PenguinPortrait({ size = 72 }: { size?: number }) {
       <ellipse cx="78" cy="64" rx="7" ry="15" fill="#1a2546" transform="rotate(-18 78 64)" />
       <circle cx="50" cy="36" r="22" fill="#223056" />
       <ellipse cx="50" cy="40" rx="15" ry="13" fill="#fff" />
-      <circle cx="43" cy="37" r="3.6" fill="#1b2340" />
-      <circle cx="57" cy="37" r="3.6" fill="#1b2340" />
-      <circle cx="44.2" cy="35.8" r="1.2" fill="#fff" />
-      <circle cx="58.2" cy="35.8" r="1.2" fill="#fff" />
-      <path d="M45 43 L55 43 L50 49Z" fill="#ff9a3d" />
+      <Face expression={expression} />
       <circle cx="37" cy="45" r="3.4" fill="#ff8fa3" opacity=".8" />
       <circle cx="63" cy="45" r="3.4" fill="#ff8fa3" opacity=".8" />
       <rect x="31" y="52" width="38" height="8" rx="4" fill="#d9354b" />
@@ -30,34 +65,59 @@ export function PenguinPortrait({ size = 72 }: { size?: number }) {
   );
 }
 
-/** Bulle de dialogue avec effet machine à écrire */
-export function MascotDialog({ lines, onDone }: { lines: string[]; onDone: () => void }) {
+/**
+ * Bulle de dialogue avec effet machine à écrire.
+ * Un clic (ou Entrée / Espace) finit la ligne, puis passe à la suivante.
+ */
+export function MascotDialog({
+  lines,
+  onDone,
+  variant = "flottant",
+}: {
+  lines: PingouLine[];
+  onDone: () => void;
+  /** « flottant » = posé en bas de l'écran ; « inline » = dans un écran ou une fenêtre */
+  variant?: "flottant" | "inline";
+}) {
   const [i, setI] = useState(0);
   const [shown, setShown] = useState("");
-  const line = lines[i] ?? "";
+  const line = lines[i];
+  const text = line === undefined ? "" : textOf(line);
+  const face = line === undefined ? "neutre" : faceOf(line);
+  const btn = useRef<HTMLButtonElement>(null);
 
   useEffect(() => { setI(0); }, [lines]);
   useEffect(() => {
     setShown("");
+    if (!text) return;
     let k = 0;
-    const t = setInterval(() => { k++; setShown(line.slice(0, k)); if (k >= line.length) clearInterval(t); }, 22);
+    const t = setInterval(() => { k++; setShown(text.slice(0, k)); if (k >= text.length) clearInterval(t); }, 22);
     return () => clearInterval(t);
-  }, [line]);
+  }, [text]);
 
   if (!lines.length) return null;
-  const complete = shown.length >= line.length;
+  const complete = shown.length >= text.length;
+  const last = i >= lines.length - 1;
   const next = () => {
-    if (!complete) { setShown(line); return; }
-    if (i < lines.length - 1) setI(i + 1); else onDone();
+    if (!complete) { setShown(text); return; }
+    if (!last) setI(i + 1); else onDone();
   };
+
   return (
-    <div className="mascot" onClick={next} role="dialog" aria-live="polite">
-      <div className="mascot-portrait"><PenguinPortrait /></div>
-      <div className="mascot-bubble">
-        <div className="mascot-name">{MASCOT_NAME}</div>
-        <p>{shown}<span className="caret" style={{ opacity: complete ? 0 : 1 }} /></p>
-        <span className="mascot-next">{complete ? (i < lines.length - 1 ? "▶" : "✓") : ""}</span>
-      </div>
-    </div>
+    <button
+      ref={btn}
+      type="button"
+      className={`mascot mascot--${variant}`}
+      onClick={next}
+      aria-live="polite"
+      aria-label={complete ? (last ? "Fermer" : "Suite") : "Afficher la suite du texte"}
+    >
+      <span className="mascot-portrait"><PenguinPortrait expression={face} /></span>
+      <span className="mascot-bubble">
+        <span className="mascot-name">{MASCOT_NAME}</span>
+        <span className="mascot-text">{shown}<span className="caret" style={{ opacity: complete ? 0 : 1 }} /></span>
+        <span className="mascot-next">{complete ? (last ? "✓" : "▶") : ""}</span>
+      </span>
+    </button>
   );
 }
