@@ -18,7 +18,9 @@ trap cleanup EXIT
 export PGOPTIONS="-c client_min_messages=warning"
 PSQL=("$PGBIN/psql" -h "$TMP" -p "$PORT" -U postgres -d postgres -v ON_ERROR_STOP=1 -q)
 "${PSQL[@]}" -f "$HERE/stub_supabase.sql" >/dev/null
-"${PSQL[@]}" -f "$ROOT/supabase/migrations/0001_init.sql" >/dev/null
-# Ré-exécution : la migration doit être idempotente
-"${PSQL[@]}" -f "$ROOT/supabase/migrations/0001_init.sql" >/dev/null
-"${PSQL[@]}" -t -f "$HERE/rls_test.sql" | grep -E 'ok  |ÉCHEC|Tous les tests'
+for pass in 1 2; do  # 2e passage : les migrations doivent être ré-exécutables
+  for m in "$ROOT"/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$m" >/dev/null; done
+done
+for t in rls_test rappels_test; do
+  "${PSQL[@]}" -t -f "$HERE/$t.sql" | grep -E 'ok  |ÉCHEC|Tous les tests'
+done
