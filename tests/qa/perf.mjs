@@ -26,6 +26,7 @@ const srv = await C.servir();
 const navigateur = await C.lancerChrome();
 
 async function nouvellePage({ cpu = CPU, reseau = false, mode = "jour" } = {}) {
+  await srv.assurer();
   const ctx = await navigateur.newContext({ ...C.APPAREILS.mobile, timezoneId: C.FUSEAU });
   // pas d'horloge simulée ici : page.clock remplace aussi `performance`, ce qui fausse les mesures.
   // Le mode jour/nuit dépend donc de l'heure réelle (impact négligeable : seule la palette change).

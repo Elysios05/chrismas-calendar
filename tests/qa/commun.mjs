@@ -31,16 +31,28 @@ export function construire() {
   execSync("npm run build", { cwd: RACINE, stdio: "inherit" });
 }
 
-/** Lance `vite preview` sur le port Qualité et attend qu'il réponde. */
-export async function servir() {
-  try { const r = await fetch(BASE); if (r.ok) { console.log(`› serveur déjà présent sur ${BASE}`); return { stop() {} }; } } catch { /* rien */ }
+async function repond() {
+  try { const r = await fetch(`http://127.0.0.1:${PORT}/`); return r.ok; } catch { return false; }
+}
+function demarrer() {
   const proc = spawn("npx", ["vite", "preview", "--port", String(PORT), "--strictPort", "--host", "127.0.0.1"], { cwd: RACINE, stdio: "ignore", detached: true });
-  for (let i = 0; i < 100; i++) {
-    await new Promise((r) => setTimeout(r, 200));
-    try { const r = await fetch(`http://127.0.0.1:${PORT}/`); if (r.ok) break; } catch { /* pas encore prêt */ }
-  }
+  proc.unref();
+  return proc;
+}
+/**
+ * Lance `vite preview` sur le port Qualité et attend qu'il réponde.
+ * `assurer()` le relance s'il est tombé en cours de route (vu une fois pendant une longue série de captures).
+ */
+export async function servir() {
+  if (await repond()) { console.log(`› serveur déjà présent sur ${BASE}`); return { stop() {}, assurer: async () => {} }; }
+  let proc = demarrer();
+  const attendre = async () => { for (let i = 0; i < 100 && !(await repond()); i++) await new Promise((r) => setTimeout(r, 200)); };
+  await attendre();
   console.log(`› vite preview sur ${BASE}`);
-  return { stop() { try { process.kill(-proc.pid); } catch { /* déjà arrêté */ } } };
+  return {
+    async assurer() { if (!(await repond())) { console.log("› serveur tombé : relance"); proc = demarrer(); await attendre(); } },
+    stop() { try { process.kill(-proc.pid); } catch { /* déjà arrêté */ } },
+  };
 }
 
 export function lancerChrome(extra = []) {
