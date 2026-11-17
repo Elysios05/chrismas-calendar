@@ -15,6 +15,9 @@ export class Person extends Container {
   legR = new Graphics();
   walking = 0;
   t = Math.random() * 10;
+  sled = new Graphics();
+  skates = new Graphics();
+  ride: "sled" | "skates" | null = null;
 
   who: Who;
 
@@ -39,8 +42,21 @@ export class Person extends Container {
     g.moveTo(-9.5, -46).arc(0, -46, 9.5, Math.PI, 0).fill(c(p.hat)); // bonnet
     g.rect(-10, -47, 20, 4).fill(c(p.hat === 0xffffff ? 0xe3e6ee : 0x2a5288)); // revers du bonnet
     g.circle(0, -57, 3.5).fill(c(p.pompom));
-    this.body.addChild(this.legL, this.legR, g);
-    this.addChild(shadow, this.body);
+    // luge (descente des montagnes) et patins (lac gelé)
+    this.sled.roundRect(-16, -6, 32, 7, 3).fill(c(0xd9354b)).roundRect(-18, 0, 36, 3, 1.5).fill(c(0xf0b23a));
+    this.skates.roundRect(-8, -1, 8, 2, 1).fill(c(0xb9c0cf)).roundRect(1, -1, 8, 2, 1).fill(c(0xb9c0cf));
+    this.sled.visible = this.skates.visible = false;
+    this.body.addChild(this.legL, this.legR, g, this.skates);
+    this.addChild(shadow, this.sled, this.body);
+  }
+
+  setRide(r: "sled" | "skates" | null) {
+    if (r === this.ride) return;
+    this.ride = r;
+    this.sled.visible = r === "sled";
+    this.skates.visible = r === "skates";
+    this.body.y = 0;
+    this.body.scale.y = r === "sled" ? 0.82 : 1; // assis sur la luge
   }
 
   face(right: boolean) { this.body.scale.x = right ? 1 : -1; }
@@ -48,6 +64,13 @@ export class Person extends Container {
   update(dt: number) {
     this.t += dt * (this.walking ? 0.35 : 0.06);
     const s = Math.sin(this.t);
+    if (this.ride) {
+      this.legL.y = this.legR.y = 0;
+      this.body.y = this.ride === "sled" ? -4 : Math.sin(this.t * 0.5) * 1.5;
+      this.rotation = this.ride === "skates" ? Math.sin(this.t * 0.5) * 0.12 : 0;
+      return;
+    }
+    this.rotation = 0;
     if (this.walking) {
       this.legL.y = Math.max(0, s) * -3; this.legR.y = Math.max(0, -s) * -3;
       this.body.y = -Math.abs(s) * 2;

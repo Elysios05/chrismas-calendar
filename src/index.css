@@ -12,8 +12,8 @@ html, body { margin: 0; }
 body {
   font-family: var(--font);
   color: var(--ink);
-  background: #8fc3dc;
-  transition: background-color .2s linear;
+  /* ciel visible seulement tout en haut, au départ */
+  background: linear-gradient(180deg, #7fb2dc 0, #bcd8ee 380px, #eef4fa 700px) no-repeat, #eef4fa;
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
 }
