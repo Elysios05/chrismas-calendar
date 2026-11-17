@@ -54,4 +54,43 @@ select t.ok((select count(distinct who) from public.reminder_targets(16, true)) 
 select t.ok((select count(*) from public.reminder_targets()) = 0, 'hors décembre / hors heure : personne');
 reset role;
 
+-- ---------- Relance de 22 h 30 (0003_relance.sql) ----------
+select t.ok(public.reminder_kind_at('2026-12-15 20:00:00 Europe/Paris') = 'rappel',  '20 h 00 Paris → rappel');
+select t.ok(public.reminder_kind_at('2026-12-15 19:00:00+00') = 'rappel',            'hiver : 19 h UTC → rappel');
+select t.ok(public.reminder_kind_at('2026-12-15 18:00:00+00') is null,               'hiver : 18 h UTC → rien');
+select t.ok(public.reminder_kind_at('2026-12-15 21:30:00+00') = 'relance',           'hiver : 21 h 30 UTC → relance (22 h 30 Paris)');
+select t.ok(public.reminder_kind_at('2026-12-15 20:30:00+00') is null,               'hiver : 20 h 30 UTC → rien');
+select t.ok(public.reminder_kind_at('2026-07-15 20:30:00+00') = 'relance',           'été : 20 h 30 UTC → relance (22 h 30 Paris)');
+select t.ok(public.reminder_kind_at('2026-07-15 18:00:00+00') = 'rappel',            'été : 18 h UTC → rappel');
+select t.ok(public.reminder_kind_at('2026-12-15 22:38:00 Europe/Paris') = 'relance', 'cron en retard de 8 min : toujours la relance');
+select t.ok(public.reminder_kind_at('2026-12-15 22:45:00 Europe/Paris') is null,     'hors tolérance (15 min) → rien');
+update public.app_settings set followup_time = null;
+select t.ok(public.reminder_kind_at('2026-12-15 22:30:00 Europe/Paris') is null,     'followup_time = null → pas de relance');
+update public.app_settings set followup_time = '22:30';
+
+set role service_role;
+-- Le 16 : le rappel d'Alexandre est déjà au journal (plus haut) ; la relance est comptée à part
+select t.ok((select array_agg(distinct who order by who) from public.reminder_targets(16, false, 'relance')) = array['alexandre', 'flavie'],
+            'relance : journal distinct du premier rappel');
+select t.ok((select bool_and(kind = 'relance') from public.reminder_targets(16, false, 'relance')), 'les lignes portent kind = relance');
+insert into public.reminder_log (day, who, kind) values (16, 'flavie', 'relance');
+select t.ok((select array_agg(distinct who) from public.reminder_targets(16, false, 'relance')) = array['alexandre'], 'pas de seconde relance');
+select t.ok((select array_agg(distinct who) from public.reminder_targets(16, false, 'rappel')) = array['flavie'], 'le rappel de Flavie reste dû');
+reset role;
+-- Alexandre remplit sa case 16 entre 20 h et 22 h 30 : plus de relance pour lui
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false);
+update public.prepared_content set message = 'Coucou !' where day = 16 and from_who = 'alexandre';
+reset role;
+set role service_role;
+select t.ok((select count(*) from public.reminder_targets(16, false, 'relance')) = 0, 'case remplie entre-temps → pas de relance');
+do $$ begin
+  perform * from public.reminder_targets(16, false, 'n_importe');
+  raise exception 'ÉCHEC : type inconnu accepté';
+exception when raise_exception then
+  if sqlerrm like 'ÉCHEC%' then raise; end if;
+end $$;
+select t.ok(true, 'type d''envoi inconnu refusé');
+reset role;
+
 \echo 'Tous les tests des rappels sont passés.'
