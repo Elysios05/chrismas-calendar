@@ -61,4 +61,4 @@ dans les deux backends (pas d'appel immédiat : seulement aux changements).
 **Hors contrat** : interface `PasswordRecovery` dans `src/backend/index.ts` (`resetPassword(who)`, `inPasswordRecovery()`,
 `updatePassword(pw)`), avec le garde-type `hasPasswordRecovery(backend)`. Sans effet en démo.
 
-**Tests** : 35 vérifications SQL, 31 vérifications navigateur sur le DemoBackend.
+**Tests** : 38 vérifications SQL, 31 vérifications navigateur sur le DemoBackend.
