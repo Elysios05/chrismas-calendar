@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import type { BackendApi, GameModule, GameResult, SoundApi, Who } from "../core/contracts";
+import type { BackendApi, GameModule, GameResult, PreparedResult, SoundApi, Who } from "../core/contracts";
 import { PLANNING, KIND_LABEL } from "../data/planning";
 import { MascotDialog } from "./Mascot";
+import { PreparedCase } from "./PreparedCase";
 import { PINGOU_CASE, type PingouLine } from "./pingou/lines";
 
 const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
@@ -35,8 +36,10 @@ export function DayWindow({
 }) {
   const info = PLANNING[day - 1]!;
   const partner: Who = me === "alexandre" ? "flavie" : "alexandre";
+  const estPreparee = info.kind === "prepare";
   const [etape, setEtape] = useState<Etape>(dejaTerminee ? "fini" : "intro");
   const [resultat, setResultat] = useState<GameResult | null>(null);
+  const [prepared, setPrepared] = useState<PreparedResult | null>(null);
   const [lines, setLines] = useState<PingouLine[]>(
     dejaTerminee ? PINGOU_CASE.termine() : PINGOU_CASE.avantJeu(info.title),
   );
@@ -51,9 +54,9 @@ export function DayWindow({
     return () => removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Montage du jeu quand on passe à l'étape « jeu ».
+  // Montage du jeu quand on passe à l'étape « jeu ». Une case préparée n'a pas de jeu.
   useEffect(() => {
-    if (etape !== "jeu" || !game || !zone.current) return;
+    if (etape !== "jeu" || estPreparee || !game || !zone.current) return;
     const demonter = game.mount(zone.current, {
       day,
       me,
@@ -70,12 +73,17 @@ export function DayWindow({
       },
     });
     return demonter;
-  }, [etape, game, day, me, partner, backend, sound]);
+  }, [etape, estPreparee, game, day, me, partner, backend, sound]);
 
   const commencer = async () => {
     setLines([]);
     await backend.markOpened(day).catch(() => { /* on continue même hors ligne */ });
     sound.play("open");
+    if (estPreparee) {
+      // le serveur décide de ce qui est lisible : on ne devine rien côté interface
+      const r = await backend.getPrepared(day, me).catch((): PreparedResult => ({ status: "locked" }));
+      setPrepared(r);
+    }
     setEtape("jeu");
   };
 
@@ -92,7 +100,10 @@ export function DayWindow({
           <span className="sheet-emoji" aria-hidden="true">{info.emoji}</span>
           <div>
             <p className="sheet-day">{day} décembre · {KIND_LABEL[info.kind]}</p>
-            <h2 className="sheet-title" id="case-titre">{info.title}</h2>
+            {/* pour une case préparée, le titre du planning est redondant avec l'étiquette */}
+            <h2 className="sheet-title" id="case-titre">
+              {estPreparee ? `Une lettre de ${PRENOM[partner]}` : info.title}
+            </h2>
           </div>
           <button ref={fermer} className="sheet-close" type="button" onClick={onClose} aria-label="Fermer la case">✕</button>
         </header>
@@ -113,7 +124,11 @@ export function DayWindow({
             </div>
           )}
 
-          {etape === "jeu" && (
+          {etape === "jeu" && estPreparee && prepared && (
+            <PreparedCase resultat={prepared} de={partner} onPingou={setLines} />
+          )}
+
+          {etape === "jeu" && !estPreparee && (
             <>
               <div className="sheet-game" ref={zone} />
               {!game && <p className="sheet-vide">Cette case n'est pas encore écrite. Reviens bientôt 🐧</p>}

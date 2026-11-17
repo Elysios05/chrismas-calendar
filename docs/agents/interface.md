@@ -34,5 +34,19 @@ Livré, **en attente de validation d'Alexandre** :
 - `src/ui/dev/` + `maquettes.html` : page de maquettes et faux backend, **provisoires**,
   à retirer dès que `createBackend()` arrive de `backend/socle`.
 
-À trancher avec Alexandre : ton de Pingou, fréquence de ses interventions,
-emplacement de sa bulle (dans la fenêtre vs flottante), et s'il faut un « mot de passe oublié ».
+**Décisions d'Alexandre (17 novembre)** : ton *taquin et tendre* retenu ; Pingou parle
+**aux moments clés seulement** (il se tait pendant un jeu, sauf si le jeu l'appelle) ;
+sa bulle vit **dans la fenêtre de la case**, en bas ; l'écran de connexion reçoit
+afficher/masquer le mot de passe, « rester connecté·e » et « voir la démo sans compte ».
+
+**Demandé au chef de projet** : option de persistance sur `BackendApi.signIn`
+(issue https://github.com/Elysios05/chrismas-calendar/issues/4). En attendant, la préférence
+passe par `localStorage` sous `interface:rester-connecte`.
+
+### Lecture d'une case préparée
+`src/ui/PreparedCase.tsx` : enveloppe à sceau qui respire → lettre qui se déplie sur papier
+ligné (police manuscrite Caveat, lignes calées sur la hauteur de ligne) → polaroïds qui tombent
+un par un, agrandissables. Les trois états du contrat sont traités (`locked`, `empty`, `ready`) :
+l'interface ne devine jamais ce qui est lisible, c'est le serveur qui tranche.
+`DayWindow` appelle `getPrepared` à l'ouverture de l'enveloppe, et remplace le titre du planning
+par « Une lettre de X » (le titre générique faisait doublon avec l'étiquette du jour).
