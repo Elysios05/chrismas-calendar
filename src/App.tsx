@@ -133,6 +133,16 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
 
   useEffect(() => { if (ready) { sceneRef.current?.setNight(night); } }, [ready, night]);
 
+  // ouverture directe depuis une notification de rappel : ?case=N
+  useEffect(() => {
+    if (!ready || !today) return;
+    const n = Number(new URLSearchParams(location.search).get("case"));
+    if (!n) return;
+    const url = new URL(location.href); url.searchParams.delete("case"); history.replaceState(null, "", url);
+    if ([4, 8, 12, 16, 20, 24].includes(n) && n > today) setEditing(n); // rappel : écrire la case de demain
+    else if (n >= 1 && n <= today) dispatchEvent(new CustomEvent("node-tap", { detail: n }));
+  }, [ready, today]);
+
   // ambiance sonore selon le monde traversé
   useEffect(() => {
     const id = (ZONES[zone]?.id ?? "montagnes") as ZoneId;
