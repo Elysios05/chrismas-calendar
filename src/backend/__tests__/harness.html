@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="UTF-8" /><title>Banc d'essai backend</title></head>
+<body>
+  <p>Banc d'essai du backend (utilisé par demo_backend_test.py). Ouvre la console : <code>window.backend</code>.</p>
+  <script type="module">
+    import { createBackend, backendConfigured } from "../index.ts";
+    window.backendConfigured = backendConfigured();
+    window.backend = await createBackend();
+    window.backendReady = true;
+  </script>
+</body>
+</html>
