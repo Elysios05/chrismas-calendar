@@ -142,7 +142,8 @@ Les photos de test se suppriment dans **Storage** → `photos`.
 | `timezone` | `Europe/Paris` | fuseau de référence (Ljubljana est dans le même) |
 | `open_hour` | `7` | heure d'ouverture de la case du jour (7 = 7 h du matin, 0 = minuit…) |
 | `day_override` | `NULL` | force « aujourd'hui » pour tester |
-| `reminder_hour` | `20` | heure du rappel de la veille (étape 10 ; ajoutée par `0002_rappels.sql`) |
+| `reminder_hour` / `reminder_minute` | `20` / `0` | heure du rappel de la veille (étape 10) |
+| `followup_time` | `22:30` | heure de la relance si la case est toujours vide (`NULL` = pas de relance) |
 
 Si tu changes `open_hour`, change aussi `OPEN_HOUR` dans `src/backend/config.ts` (utilisé par la démo).
 
@@ -257,11 +258,15 @@ Dans Brevo, **Transactionnel** → **Logs** (ou **Statistiques**) montre chaque 
 Paris**, si ta case pour l'autre est encore vide, ton téléphone reçoit :
 > 🐧 Psst… petit rappel de Pingou — *Psst… demain c'est la case 16, et elle est encore vide ! Flavie l'ouvrira à 7 h.*
 
+**Relance à 22 h 30** si la case est **toujours** vide :
+> 🐧 Toc toc… Pingou insiste (gentiment) — *La case 16 est toujours vide, et Flavie l'ouvre demain à 7 h ! Il te reste ce soir : deux lignes et une photo, et je file me coucher 💤💌*
+
 Un toucher sur la notification ouvre le site sur la case. Pièces en jeu : le site (abonnement de
 l'appareil), une **Edge Function** Supabase `rappel-veille` (envoi) et une **tâche planifiée** (`pg_cron`).
 
 ### 10.1 Créer les tables
-**SQL Editor** → colle **tout** [`supabase/migrations/0002_rappels.sql`](../supabase/migrations/0002_rappels.sql) → **Run**.
+**SQL Editor** → colle **tout** [`supabase/migrations/0002_rappels.sql`](../supabase/migrations/0002_rappels.sql) → **Run**,
+puis pareil avec [`supabase/migrations/0003_relance.sql`](../supabase/migrations/0003_relance.sql) (la relance de 22 h 30).
 
 ### 10.2 Générer les clés VAPID (une fois)
 Dans un terminal, à la racine du dépôt :
@@ -294,13 +299,15 @@ L'ID du projet est le morceau `abcdefgh` de `https://abcdefgh.supabase.co`.
 `--no-verify-jwt` est voulu : la fonction vérifie elle-même le `CRON_SECRET`.
 (Dans le tableau de bord, **Edge Functions** → `rappel-veille` → *Details* : « Verify JWT » doit être **désactivé**.)
 
-### 10.5 Planifier l'envoi de 20 h
+### 10.5 Planifier le rappel de 20 h et la relance de 22 h 30
 1. **Database** → **Extensions** : active **pg_cron** et **pg_net** (ou laisse le script le faire).
 2. **SQL Editor** → colle [`supabase/cron_rappel.sql`](../supabase/cron_rappel.sql), **remplace les deux valeurs
    entre chevrons** (l'URL du projet et ton `CRON_SECRET`, sans les `< >`) → **Run**.
 
-La tâche tourne à 18 h et 19 h UTC ; la base ne répond qu'à 20 h heure de Paris, ce qui gère tout seul
-l'heure d'hiver et l'heure d'été. (Si tu changes `app_settings.reminder_hour`, change aussi ces deux heures.)
+Deux tâches sont créées : `rappel-veille` (18 h et 19 h UTC) et `relance-veille` (20 h 30 et 21 h 30 UTC).
+La base ne répond qu'à 20 h et 22 h 30 **heure de Paris**, ce qui gère tout seul l'heure d'hiver et l'heure
+d'été. (Si tu changes `reminder_hour` ou `followup_time` dans `app_settings`, change aussi ces horaires.)
+Tu avais déjà lancé ce script avant la relance ? Relance-le simplement : il est ré-exécutable.
 
 ### 10.6 Brancher la clé publique sur le site
 - En local, dans `.env.local` : `VITE_VAPID_PUBLIC_KEY=la-clé-publique`
@@ -320,6 +327,7 @@ l'heure d'hiver et l'heure d'été. (Si tu changes `app_settings.reminder_hour`,
    select status_code, content from net._http_response order by created desc limit 1;
    ```
 4. Même requête **sans** `"dry": true` → la notification arrive sur ton téléphone (si ta case 16 est vide).
+   Pour voir la relance : `'{"day": 16, "kind": "relance", "force": true}'`.
 5. Le 3 décembre à 20 h, ça partira tout seul. Historique : `select * from public.reminder_log;` et
    `select * from cron.job_run_details order by start_time desc limit 5;`
 
