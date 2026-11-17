@@ -1,0 +1,188 @@
+// Décors isométriques dessinés en vectoriel plat
+import { Graphics } from "pixi.js";
+import { P, box, onLeft, onRight, gableRoof, pyramid, tree, poly, shade, type Palette } from "./iso";
+
+export type PropKind =
+  | "tree" | "treeSmall" | "house" | "chalet" | "snowman" | "lamp" | "rock" | "mountain"
+  | "stall" | "bigTree" | "wheel" | "crystal" | "presents" | "cane" | "sleigh" | "workshop" | "deer" | "skater";
+
+const SNOW = { top: 0xf7f5f0, left: 0xe4e1dc, right: 0xcfccd0 };
+
+export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, seed: number): Graphics {
+  const g = new Graphics();
+  const c = pal.c;
+  const cx = x + 0.5, cy = y + 0.5;
+  const rnd = (n: number) => { const s = Math.sin(seed * 9301 + n * 49297) * 233280; return s - Math.floor(s); };
+
+  switch (kind) {
+    case "tree":
+    case "treeSmall": {
+      const s = kind === "tree" ? 0.85 + rnd(1) * 0.35 : 0.55 + rnd(1) * 0.15;
+      tree(g, P(cx, cy), s, pal);
+      break;
+    }
+    case "house":
+    case "chalet": {
+      const walls = kind === "chalet" ? 0xb5763f : [0xc8362f, 0xe0a63a, 0x3f7fb5, 0x5aa36b, 0xd9705a][Math.floor(rnd(2) * 5)];
+      const w = kind === "chalet" ? 1.5 : 1.1, d = kind === "chalet" ? 1.1 : 0.9, h = kind === "chalet" ? 0.95 : 0.8;
+      const x0 = cx - w / 2, y0 = cy - d / 2;
+      box(g, x0, y0, 0, w, d, h, { top: c(walls), left: c(shade(walls, 0.08)), right: c(shade(walls, -0.18)) });
+      // fenêtres + porte
+      const win = c(0x000000) && pal.window;
+      const n = kind === "chalet" ? 3 : 2;
+      for (let i = 0; i < n; i++) {
+        const a = x0 + 0.18 + i * ((w - 0.36) / n);
+        onLeft(g, y0 + d, a, a + 0.22, h * 0.4, h * 0.75, win);
+      }
+      onRight(g, x0 + w, y0 + d * 0.3, y0 + d * 0.7, 0, h * 0.62, c(0x6b3b22));
+      if (pal.night) { const p = P(x0 + w * 0.5, y0 + d, h * 0.3); g.ellipse(p.x, p.y + 6, 40, 12).fill({ color: 0xffd46b, alpha: 0.18 }); }
+      // cheminée
+      box(g, x0 + w * 0.7, y0 + d * 0.15, h, 0.18, 0.18, 0.65, { top: c(0x5a4a48), left: c(0x8a5a4a), right: c(0x6e463a) });
+      gableRoof(g, x0, y0, h, w, d, 0.55, c(SNOW.left), c(SNOW.top), c(shade(walls, -0.25)));
+      break;
+    }
+    case "snowman": {
+      const p = P(cx, cy);
+      g.ellipse(p.x, p.y, 16, 7).fill({ color: c(0x9aa3b8), alpha: 0.35 });
+      g.circle(p.x, p.y - 14, 15).fill(c(0xffffff));
+      g.circle(p.x + 4, p.y - 12, 12).fill(c(0xe7e9ef));
+      g.circle(p.x, p.y - 36, 11).fill(c(0xffffff));
+      g.rect(p.x - 10, p.y - 44, 20, 4).fill(c(0xd9354b));
+      g.rect(p.x - 7, p.y - 60, 14, 14).fill(c(0x1b2340));
+      g.rect(p.x - 11, p.y - 48, 22, 3).fill(c(0x1b2340));
+      poly(g, [{ x: p.x + 2, y: p.y - 38 }, { x: p.x + 14, y: p.y - 35 }, { x: p.x + 2, y: p.y - 34 }], c(0xff8a3d));
+      g.circle(p.x - 4, p.y - 39, 1.6).fill(c(0x1b2340));
+      g.circle(p.x + 3, p.y - 40, 1.6).fill(c(0x1b2340));
+      break;
+    }
+    case "lamp": {
+      const p = P(cx, cy);
+      g.rect(p.x - 2, p.y - 46, 4, 46).fill(c(0x2b2f45));
+      g.roundRect(p.x - 7, p.y - 58, 14, 14, 3).fill(pal.night ? 0xffd46b : c(0xf4e6b0));
+      g.rect(p.x - 9, p.y - 61, 18, 4).fill(c(0x2b2f45));
+      if (pal.night) g.circle(p.x, p.y - 51, 34).fill({ color: 0xffd46b, alpha: 0.16 });
+      break;
+    }
+    case "rock": {
+      box(g, cx - 0.25, cy - 0.2, 0, 0.5, 0.4, 0.22, { top: c(0xf7f5f0), left: c(0x9aa0ae), right: c(0x7c8293) });
+      break;
+    }
+    case "mountain": {
+      const h = 3 + rnd(3) * 1.6;
+      pyramid(g, cx, cy, 1.5, h, c(0x8d9bb5), c(0x6b7896), c(0xffffff), c(0xdde3ee));
+      break;
+    }
+    case "stall": {
+      const x0 = cx - 0.6, y0 = cy - 0.4;
+      box(g, x0, y0, 0, 1.2, 0.8, 0.5, { top: c(0xc8a06a), left: c(0xb5763f), right: c(0x8f5a2e) });
+      onLeft(g, y0 + 0.8, x0 + 0.1, x0 + 1.1, 0.3, 0.5, c(0xf2d7a8));
+      for (const px of [x0 + 0.05, x0 + 1.1]) box(g, px, y0 + 0.65, 0.5, 0.06, 0.06, 0.45, { top: c(0x6b3b22), left: c(0x6b3b22), right: c(0x4e2a18) });
+      // toit rayé
+      const z = 0.95;
+      for (let i = 0; i < 6; i++) {
+        const a = x0 - 0.1 + i * 0.233, b = a + 0.233;
+        poly(g, [P(a, y0 + 1, z - 0.2), P(b, y0 + 1, z - 0.2), P(b, y0 + 0.35, z + 0.2), P(a, y0 + 0.35, z + 0.2)], c(i % 2 ? 0xffffff : 0xd9354b));
+      }
+      poly(g, [P(x0 - 0.1, y0 + 1, z - 0.2), P(x0 + 1.3, y0 + 1, z - 0.2), P(x0 + 1.3, y0 + 1, z - 0.32), P(x0 - 0.1, y0 + 1, z - 0.32)], c(0xb02a3c));
+      break;
+    }
+    case "bigTree": {
+      const p = P(cx, cy);
+      tree(g, p, 1.9, pal, { snow: false, light: 0x2fa36b, dark: 0x1f7a52 });
+      const cols = [0xd9354b, 0xffc85a, 0x3f7fb5, 0xffffff];
+      for (let i = 0; i < 16; i++) {
+        const t = rnd(10 + i), lvl = rnd(30 + i);
+        const yy = p.y - 20 - lvl * 85, half = (1 - lvl) * 40 + 6;
+        g.circle(p.x + (t - 0.5) * 2 * half * 0.8, yy, 3.4).fill(pal.night ? cols[i % 4] : c(cols[i % 4]));
+      }
+      const sy = p.y - 118;
+      g.star(p.x, sy, 5, 11, 5).fill(0xffd46b);
+      if (pal.night) g.circle(p.x, sy, 26).fill({ color: 0xffd46b, alpha: 0.2 });
+      break;
+    }
+    case "wheel": {
+      const p = P(cx, cy), r = 62, hy = p.y - 86;
+      poly(g, [{ x: p.x - 30, y: p.y }, { x: p.x, y: hy }, { x: p.x - 24, y: p.y }], c(0x8a93a8));
+      poly(g, [{ x: p.x + 30, y: p.y }, { x: p.x, y: hy }, { x: p.x + 24, y: p.y }], c(0x6b7489));
+      g.circle(p.x, hy, r).stroke({ width: 5, color: c(0xd9354b) });
+      g.circle(p.x, hy, r - 12).stroke({ width: 2, color: c(0xe8a0a8) });
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        g.moveTo(p.x, hy).lineTo(p.x + Math.cos(a) * r, hy + Math.sin(a) * r).stroke({ width: 2, color: c(0xb9c0cf) });
+        const col = [0xffc85a, 0x3f7fb5, 0x2fa37a, 0xffffff][i % 4];
+        g.roundRect(p.x + Math.cos(a) * r - 7, hy + Math.sin(a) * r, 14, 12, 3).fill(c(col));
+        if (pal.night) g.circle(p.x + Math.cos(a) * r, hy + Math.sin(a) * r, 3).fill(0xffd46b);
+      }
+      g.circle(p.x, hy, 6).fill(c(0x2b2f45));
+      break;
+    }
+    case "crystal": {
+      const p = P(cx, cy);
+      const k = 0.7 + rnd(4) * 0.7;
+      for (const [dx, hh, ww] of [[0, 70, 14], [-16, 44, 10], [15, 52, 10]] as const) {
+        const h = hh * k, w = ww * k, bx = p.x + dx * k;
+        poly(g, [{ x: bx, y: p.y - h }, { x: bx - w, y: p.y - h * 0.75 }, { x: bx - w, y: p.y - 4 }, { x: bx, y: p.y }], pal.night ? 0x7fe3ff : c(0x9ff0ff));
+        poly(g, [{ x: bx, y: p.y - h }, { x: bx + w, y: p.y - h * 0.75 }, { x: bx + w, y: p.y - 4 }, { x: bx, y: p.y }], pal.night ? 0x3fb8e0 : c(0x4fc6e6));
+      }
+      if (pal.night) g.circle(p.x, p.y - 30, 40).fill({ color: 0x7fe3ff, alpha: 0.13 });
+      break;
+    }
+    case "presents": {
+      const cols = [0xd9354b, 0x2fa37a, 0x3f7fb5, 0xffc85a];
+      const spots = [[-0.3, -0.1, 0.4], [0.1, -0.25, 0.3], [-0.05, 0.2, 0.32]];
+      spots.forEach(([dx, dy, s], i) => {
+        const col = cols[(i + Math.floor(rnd(5) * 4)) % 4];
+        box(g, cx + dx - s / 2, cy + dy - s / 2, 0, s, s, s * 0.9, { top: c(shade(col, 0.15)), left: c(col), right: c(shade(col, -0.2)) });
+        onLeft(g, cy + dy + s / 2, cx + dx - 0.04, cx + dx + 0.04, 0, s * 0.9, c(0xffe7a6));
+        onRight(g, cx + dx + s / 2, cy + dy - 0.04, cy + dy + 0.04, 0, s * 0.9, c(0xffd47a));
+      });
+      break;
+    }
+    case "cane": {
+      const p = P(cx, cy);
+      for (let i = 0; i < 8; i++) g.rect(p.x - 4, p.y - 8 - i * 8, 8, 8).fill(c(i % 2 ? 0xffffff : 0xd9354b));
+      g.moveTo(p.x - 4, p.y - 70).arc(p.x + 10, p.y - 70, 14, Math.PI, 0).stroke({ width: 8, color: c(0xd9354b) });
+      break;
+    }
+    case "sleigh": {
+      const p = P(cx, cy);
+      g.roundRect(p.x - 40, p.y - 34, 70, 26, 10).fill(c(0xd9354b));
+      g.roundRect(p.x - 40, p.y - 34, 70, 8, 4).fill(c(0xf0b23a));
+      g.moveTo(p.x - 46, p.y - 2).lineTo(p.x + 36, p.y - 2).arc(p.x + 36, p.y - 10, 8, Math.PI / 2, -Math.PI / 2, true).stroke({ width: 4, color: c(0xf0b23a) });
+      box(g, cx - 0.35, cy - 0.3, 0.5, 0.35, 0.35, 0.3, { top: c(0x3f9e6e), left: c(0x2fa37a), right: c(0x1f7a52) });
+      break;
+    }
+    case "workshop": {
+      const x0 = cx - 1, y0 = cy - 0.75;
+      box(g, x0, y0, 0, 2, 1.5, 1.1, { top: c(0x9a3b3b), left: c(0xc8463b), right: c(0x9a2f2a) });
+      for (let i = 0; i < 4; i++) onLeft(g, y0 + 1.5, x0 + 0.2 + i * 0.45, x0 + 0.45 + i * 0.45, 0.5, 0.85, pal.window);
+      onRight(g, x0 + 2, y0 + 0.5, y0 + 1, 0, 0.75, c(0x2fa37a));
+      gableRoof(g, x0, y0, 1.1, 2, 1.5, 0.75, c(SNOW.left), c(SNOW.top), c(0x7a2622));
+      const s = P(x0 + 1, y0 + 0.75, 2.1);
+      g.star(s.x, s.y, 5, 12, 5).fill(0xffd46b);
+      break;
+    }
+    case "deer": {
+      const p = P(cx, cy), b = c(0xa86b3d), d = c(0x7d4a26);
+      g.ellipse(p.x, p.y, 16, 6).fill({ color: c(0x9aa3b8), alpha: 0.3 });
+      for (const lx of [-10, -4, 6, 11]) g.rect(p.x + lx, p.y - 16, 3, 16).fill(d);
+      g.roundRect(p.x - 14, p.y - 26, 30, 13, 6).fill(b);
+      g.roundRect(p.x + 10, p.y - 40, 8, 18, 3).fill(b);
+      g.roundRect(p.x + 12, p.y - 46, 14, 9, 4).fill(b);
+      g.circle(p.x + 26, p.y - 42, 3).fill(c(0xd9354b));
+      g.moveTo(p.x + 14, p.y - 46).lineTo(p.x + 8, p.y - 58).lineTo(p.x + 2, p.y - 60).moveTo(p.x + 10, p.y - 53).lineTo(p.x + 16, p.y - 60).stroke({ width: 2.5, color: d });
+      break;
+    }
+    case "skater": {
+      const p = P(cx, cy), col = [0xd9354b, 0x3f7fb5, 0x2fa37a][Math.floor(rnd(6) * 3)];
+      g.ellipse(p.x, p.y, 10, 4).fill({ color: 0x5f86a8, alpha: 0.35 });
+      g.rect(p.x - 4, p.y - 12, 3, 12).fill(c(0x2b2f45));
+      g.rect(p.x + 1, p.y - 12, 3, 12).fill(c(0x2b2f45));
+      g.roundRect(p.x - 7, p.y - 28, 14, 18, 5).fill(c(col));
+      g.circle(p.x, p.y - 33, 6).fill(c(0xf2c9a6));
+      g.circle(p.x, p.y - 37, 6).fill(c(shade(col, -0.2)));
+      break;
+    }
+  }
+  return g;
+}
