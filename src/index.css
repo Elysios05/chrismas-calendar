@@ -289,6 +289,67 @@ button { font-family: inherit; cursor: pointer; }
 .prep-loupe img { max-width: 100%; max-height: 80dvh; border-radius: 10px; border: 9px solid #fff; }
 .prep-loupe .sheet-close { position: absolute; top: 16px; right: 16px; }
 
+/* ---------- éditeur de case préparée ---------- */
+.edit { display: flex; flex-direction: column; gap: 10px; }
+.edit-chargement { padding: 40px 10px; text-align: center; color: var(--ink-soft); }
+.edit-head { text-align: center; margin-bottom: 2px; }
+.edit-kicker { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--red); }
+.edit-titre { margin: 5px 0 0; font-size: 23px; }
+.edit-info { margin: 0; text-align: center; color: var(--ink-soft); font-size: 15px; line-height: 1.45; }
+.edit-label { margin: 8px 0 0; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.edit-petit { font-weight: 500; }
+.edit-zone {
+  width: 100%; border: 2px solid #e6e0d6; border-radius: 16px; padding: 14px 16px;
+  resize: none; overflow: hidden; min-height: 150px;
+  background: #fffdf7; color: #26334f;
+  font-family: "Caveat", var(--font); font-size: 23px; line-height: 32px;
+}
+.edit-zone::placeholder { font-family: var(--font); font-size: 15px; line-height: 1.4; color: #a8aec0; }
+.edit-zone:focus-visible { outline: 0; border-color: #2f6fd0; box-shadow: 0 0 0 4px rgba(47,111,208,.15); }
+.edit-compteur { margin: 0; text-align: right; font-size: 12px; color: var(--ink-soft); }
+.edit-compteur.court { color: var(--red); font-weight: 600; }
+.edit-photos { display: flex; flex-wrap: wrap; gap: 10px; }
+.edit-vignette { position: relative; }
+.edit-vignette img {
+  display: block; width: 86px; height: 86px; object-fit: cover;
+  border-radius: 12px; background: #e8eef6; box-shadow: 0 4px 0 rgba(27,39,71,.14);
+}
+.edit-vignette button {
+  position: absolute; top: -7px; right: -7px; width: 26px; height: 26px; border: 0; border-radius: 50%;
+  background: var(--red); color: #fff; font-size: 12px; box-shadow: 0 2px 6px rgba(27,39,71,.35);
+}
+.edit-ajout {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  width: 86px; height: 86px; border: 2px dashed #ccc5b8; border-radius: 12px; background: #fff;
+  font-size: 12px; font-weight: 600; color: var(--ink-soft);
+}
+.edit-ajout span { font-size: 22px; line-height: 1; }
+.edit-ajout:hover { border-color: var(--red); color: var(--red); }
+.edit-erreur { margin: 0; font-size: 13px; font-weight: 600; color: var(--red); }
+.edit-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+.edit-actions .btn { flex: 1 1 150px; }
+.edit-actions .btn:disabled { opacity: .45; cursor: default; }
+.edit-apercu {
+  border-radius: 20px; padding: 14px; margin-top: 4px;
+  background: #eef2f8; box-shadow: inset 0 2px 10px rgba(27,39,71,.1);
+}
+
+/* rappel la veille */
+.rappel {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: var(--cream); border-radius: 20px; padding: 14px 16px;
+  box-shadow: 0 6px 0 rgba(27,39,71,.18), 0 16px 30px rgba(27,39,71,.16);
+  border-left: 6px solid var(--red);
+}
+.rappel-point {
+  flex: none; width: 11px; height: 11px; border-radius: 50%; background: var(--red);
+  animation: battement 1.4s ease-in-out infinite;
+}
+@keyframes battement { 50% { transform: scale(1.7); opacity: .55; } }
+.rappel-texte { flex: 1 1 180px; margin: 0; font-size: 15px; line-height: 1.35; font-weight: 600; }
+.rappel-texte span { display: block; font-weight: 500; color: var(--ink-soft); }
+.rappel-btn { padding: 10px 18px; font-size: 15px; }
+
 /* contenu du faux jeu des maquettes */
 .demo-q { margin: 0 0 14px; font-size: 19px; font-weight: 600; text-align: center; }
 .demo-reponses { display: grid; gap: 8px; }
@@ -303,6 +364,12 @@ button { font-family: inherit; cursor: pointer; }
 .maq-faces figcaption { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
 .maq-pingou .mascot { width: min(520px, 100%); }
 .maq-monde { min-height: 100dvh; background: linear-gradient(180deg, #7fb2dc 0, #bcd8ee 220px, #eef4fa 460px); }
+.maq-centre { display: flex; align-items: center; justify-content: center; padding: 20px 14px; }
+.maq-feuille {
+  width: min(520px, 100%); background: var(--cream); border-radius: 28px; padding: 20px;
+  box-shadow: 0 10px 0 rgba(27,39,71,.2), 0 28px 50px rgba(27,39,71,.22);
+}
+.maq-rappel { width: min(520px, 100%); }
 
 @media (max-width: 560px) {
   .brand-title { font-size: 16px; }
