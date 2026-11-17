@@ -1,0 +1,17 @@
+{
+  "name": "Calendrier de l'Avent — Alexandre & Flavie",
+  "short_name": "Calendrier",
+  "description": "Le calendrier de l'Avent d'Alexandre et Flavie, avec Pingou.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101a3a",
+  "theme_color": "#101a3a",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

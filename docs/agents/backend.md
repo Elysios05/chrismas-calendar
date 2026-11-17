@@ -73,3 +73,21 @@ dans les deux backends (pas d'appel immédiat : seulement aux changements).
 - À confirmer à l'inscription : les conditions actuelles de Brevo (expéditeur Gmail/Hotmail accepté ou non, délivrabilité).
   La vérification en ligne n'a pas pu être faite (limite d'outil atteinte).
 - 17 nov (soir) : Alexandre valide Brevo avec son Hotmail actuel comme expéditeur, et l'e-mail de Pingou tel quel.
+
+### 18 novembre 2026 — tickets #4 (rester connecté·e) et #5 (rappels), branche `backend/rappels`
+- **#4** : `signIn(who, pw, { rester })`. Supabase : stockage de session commutable (localStorage si `rester`, sinon
+  sessionStorage, retrouvé au rechargement). Démo : même logique avec la session d'onglet.
+- **#5** (décision d'Alexandre : notification à 20 h, heure de Paris, la veille d'une case préparée vide) :
+  - contrat : `ReminderStatus`, `reminderStatus?()` et `enableReminders?()` (**facultatives** pour l'instant, car les faux backends
+    `src/games/dev/backendDemo.ts` et `src/ui/dev/fakeBackend.ts` ne les ont pas : à rendre obligatoires quand leurs équipes les auront ajoutées) ;
+  - navigateur : `src/backend/push.ts`, `public/sw.js` (push → notification, clic → `./?case=N`), `public/manifest.webmanifest`,
+    icônes `public/icons/` (sapin sur bleu nuit), balises dans `index.html` ;
+  - serveur : `0002_rappels.sql` (`push_subscriptions`, `reminder_log`, `save/delete_push_subscription`, `reminder_targets`,
+    `app_settings.reminder_hour = 20`), Edge Function `supabase/functions/rappel-veille`, planification `supabase/cron_rappel.sql`
+    (18 h et 19 h UTC, la base ne répond qu'à 20 h Paris → heure d'été/hiver gérée) ;
+  - démo : `unsupported`, ou état simulé avec `?rappels=off|active|denied|needs-install` ;
+  - se déconnecter désabonne l'appareil.
+- Tests : 52 vérifications SQL (`run_sql_tests.sh`), 38 sur le DemoBackend, 14 dans `pwa_test.py` (manifeste et service worker dans
+  `/chrismas-calendar/`, push simulé par CDP, statuts off / needs-install), et `message_test.ts` (Node).
+- À faire côté Interface : lire `?case=N` pour ouvrir la case depuis la notification ; bouton « Activer les rappels ».
+- `.github/workflows/main.yml` (ajouté directement sur main) fait doublon avec `deploy.yml` : à trancher par le chef de projet.

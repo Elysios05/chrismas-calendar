@@ -33,6 +33,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_EMAIL_ALEXANDRE: ${{ secrets.VITE_EMAIL_ALEXANDRE }}
           VITE_EMAIL_FLAVIE: ${{ secrets.VITE_EMAIL_FLAVIE }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
       # Version démo publique, sans backend, dans le sous-dossier /demo/
       - name: Build version démo
         run: npx vite build --outDir dist/demo --emptyOutDir
