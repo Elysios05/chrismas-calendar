@@ -5,12 +5,14 @@
  *  - ?jour=N        simule le jour N (0..24)
  *  - ?moi=flavie    choisit le personnage de cet onglet (connexion automatique)
  *  - ?demo-reset    efface les données de démo au chargement
+ *  - ?rappels=off   simule l'état des rappels (off | active | denied | unsupported | needs-install) ;
+ *                   sans ce paramètre, la démo répond « unsupported » (pas de notification en démo)
  *
  * Les mots de passe sont ignorés. La session est gardée par onglet (sessionStorage), ce qui
  * permet d'avoir Alexandre dans un onglet et Flavie dans un autre ; les données (progression,
  * cases préparées, état des jeux) sont partagées entre onglets via localStorage.
  */
-import type { BackendApi, DayNumber, PreparedContent, PreparedResult, Progress, RealtimeRoom, Who } from "../core/contracts";
+import type { BackendApi, DayNumber, PreparedContent, PreparedResult, Progress, RealtimeRoom, ReminderStatus, Who } from "../core/contracts";
 import type { PasswordRecovery } from "./index";
 import {
   DEMO_DAY_OUTSIDE_DECEMBER, DEMO_PHOTO_MAX_DIMENSION, FROZEN_MESSAGE, PREPARED_DAYS,
@@ -126,12 +128,14 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
 
   async me() { return delay(this.current()); }
 
-  async signIn(who: Who, _password: string) {
+  async signIn(who: Who, _password: string, options?: { rester?: boolean }) {
     void _password; // n'importe quel mot de passe est accepté en démo
     if (!isWho(who)) throw new Error("Utilisateur inconnu.");
     const before = this.current();
     safe.sset(SESSION_KEY, who);
-    safe.set(SESSION_KEY, who); // mémorisé aussi pour les nouveaux onglets
+    // rester (défaut) : mémorisé aussi pour les prochaines visites ; sinon, seulement pour cet onglet
+    if (options?.rester === false) safe.del(SESSION_KEY);
+    else safe.set(SESSION_KEY, who);
     if (before !== who) this.emitAuth(who);
   }
 
@@ -227,6 +231,21 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
 
   joinRoom(roomId: string): RealtimeRoom {
     return new DemoRoom(roomId, this.requireMe());
+  }
+
+  /* ----- rappels : simulés seulement avec ?rappels=… (aucune vraie notification en démo) ----- */
+  private static REMINDER_STATES: readonly ReminderStatus[] = ["active", "off", "denied", "unsupported", "needs-install"];
+  async reminderStatus(): Promise<ReminderStatus> {
+    const stored = safe.sget(PREFIX + "rappels");
+    const q = this.params.get("rappels");
+    const v = stored ?? q;
+    return DemoBackend.REMINDER_STATES.includes(v as ReminderStatus) ? (v as ReminderStatus) : "unsupported";
+  }
+  async enableReminders(): Promise<ReminderStatus> {
+    const cur = await this.reminderStatus();
+    if (cur !== "off") return cur;
+    safe.sset(PREFIX + "rappels", "active");
+    return "active";
   }
 }
 
