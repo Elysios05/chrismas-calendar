@@ -10,12 +10,14 @@ import { PLAYERS } from "./world/actors";
 import { MascotDialog } from "./ui/Mascot";
 import { LoginScreen } from "./ui/LoginScreen";
 import { DayWindow } from "./ui/DayWindow";
+import { PreparedEditor, RappelVeille } from "./ui/PreparedEditor";
 import { PINGOU_ROUTE, type PingouLine } from "./ui/pingou/lines";
 import { aUnJeu, chargerJeu } from "./games/registry";
 
 const isNightNow = () => { const h = new Date().getHours(); return h >= 17 || h < 7; };
 const other = (w: Who): Who => (w === "alexandre" ? "flavie" : "alexandre");
 const EMPTY: Progress = { opened: [], completed: [] };
+const PREPARED_DAYS = [4, 8, 12, 16, 20, 24];
 
 export default function App() {
   const [backend, setBackend] = useState<BackendApi | null>(null);
@@ -56,7 +58,19 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
   const [open, setOpen] = useState<{ day: number; game?: GameModule } | null>(null);
   const [lines, setLines] = useState<PingouLine[]>([]);
   const [soundOn, setSoundOn] = useState(true);
+  const [editing, setEditing] = useState<number | null>(null);
+  const [reminder, setReminder] = useState<number | null>(null);
   const partner = other(me);
+  // prochaine case préparée que je peux encore écrire (tant que l'autre ne l'a pas ouverte)
+  const nextToWrite = useMemo(
+    () => PREPARED_DAYS.find((d) => d >= Math.max(1, today) && !progress[partner].opened.includes(d)) ?? null,
+    [today, progress, partner],
+  );
+  // rappel la veille : la case de demain est-elle encore vide ?
+  useEffect(() => {
+    if (!today || !PREPARED_DAYS.includes(today + 1)) { setReminder(null); return; }
+    void backend.getPrepared(today + 1, partner).then((r) => setReminder(r.status === "empty" ? today + 1 : null)).catch(() => setReminder(null));
+  }, [backend, today, partner, editing]);
 
   const loadProgress = useCallback(async () => {
     const [a, f] = await Promise.all((["alexandre", "flavie"] as Who[]).map((w) => backend.getProgress(w).catch(() => EMPTY)));
@@ -181,6 +195,9 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
         <div className="zone-pill" key={zone}>{ZONES[zone]?.name}</div>
         <div className="hud-actions">
           <span className="who-badge" style={{ ["--c" as string]: "#" + PLAYERS[me].coat.toString(16).padStart(6, "0") }}>{PLAYERS[me].name}</span>
+          {nextToWrite && (
+            <button className="round" onClick={() => { sound.play("tap"); setEditing(nextToWrite); }} title={`Préparer la case ${nextToWrite}`} aria-label={`Préparer la case ${nextToWrite} pour ${PLAYERS[partner].name}`}>✏️</button>
+          )}
           <button className="round" onClick={toggleSound} title="Son" aria-label="Couper ou remettre le son">{soundOn ? "🔔" : "🔕"}</button>
           <button className="round" onClick={toggleNight} title="Jour / nuit" aria-label="Basculer jour / nuit">{night ? "🌙" : "☀️"}</button>
           <button className="round" onClick={goToday} title="Aller à aujourd'hui" aria-label="Aller à la case du jour">📍</button>
@@ -188,7 +205,19 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
         </div>
       </header>
 
-      {!open && <MascotDialog lines={lines} onDone={() => setLines([])} />}
+      {reminder && !open && !editing && (
+        <div className="rappel-host"><RappelVeille jour={reminder} partenaire={partner} onOuvrir={() => setEditing(reminder)} /></div>
+      )}
+
+      {!open && !editing && <MascotDialog lines={lines} onDone={() => setLines([])} />}
+
+      {editing && (
+        <div className="modal" onClick={() => setEditing(null)}>
+          <div className="edit-host" onClick={(e) => e.stopPropagation()}>
+            <PreparedEditor day={editing} me={me} backend={backend} onClose={() => setEditing(null)} />
+          </div>
+        </div>
+      )}
 
       {open && (
         <DayWindow
