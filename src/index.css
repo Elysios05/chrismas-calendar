@@ -1,0 +1,106 @@
+:root {
+  --red: #d9354b;
+  --red-d: #a3192f;
+  --green: #2fa37a;
+  --ink: #1b2747;
+  --ink-soft: #5b6680;
+  --cream: #fffaf2;
+  --font: "Fredoka", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: #8fc3dc;
+  transition: background-color .2s linear;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font-family: inherit; cursor: pointer; }
+
+.stage-host { position: fixed; inset: 0; z-index: 0; }
+.stage-host canvas { display: block; }
+
+/* ---------- HUD ---------- */
+.hud {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: calc(12px + env(safe-area-inset-top)) 14px 10px;
+  pointer-events: none;
+}
+.hud > * { pointer-events: auto; }
+.brand {
+  display: flex; flex-direction: column; line-height: 1;
+  background: var(--cream); padding: 9px 14px; border-radius: 16px;
+  box-shadow: 0 5px 0 rgba(27,39,71,.18);
+}
+.brand-kicker { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--red); }
+.brand-title { font-size: 19px; font-weight: 700; margin-top: 3px; }
+.zone-pill {
+  order: 3; width: 100%; text-align: center; pointer-events: none;
+  font-size: 15px; font-weight: 700; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.18);
+  animation: zoneIn .7s cubic-bezier(.2,1.5,.4,1);
+}
+@keyframes zoneIn { from { transform: translateY(-10px) scale(.9); opacity: 0; } }
+.hud-actions { display: flex; gap: 8px; align-items: center; }
+.who { display: flex; background: var(--cream); padding: 4px; border-radius: 14px; box-shadow: 0 5px 0 rgba(27,39,71,.18); }
+.who button {
+  border: 0; background: transparent; padding: 7px 11px; border-radius: 10px;
+  font-weight: 600; font-size: 14px; color: var(--ink-soft);
+}
+.who button.on { background: var(--c); color: #fff; }
+.round {
+  width: 42px; height: 42px; border-radius: 14px; border: 0; background: var(--cream);
+  font-size: 19px; box-shadow: 0 5px 0 rgba(27,39,71,.18); transition: transform .1s;
+}
+.round:active, .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(27,39,71,.18); }
+
+/* ---------- mascotte ---------- */
+.mascot {
+  position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 20;
+  transform: translateX(-50%); width: min(560px, calc(100% - 20px));
+  display: flex; align-items: flex-end; gap: 4px; cursor: pointer; user-select: none;
+  animation: mascotIn .5s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes mascotIn { from { transform: translate(-50%, 120%); } }
+.mascot-portrait { flex: none; animation: waddle 1.6s ease-in-out infinite; transform-origin: bottom center; margin-bottom: -4px; }
+@keyframes waddle { 0%,100% { rotate: -5deg; } 50% { rotate: 5deg; } }
+.mascot-bubble {
+  position: relative; flex: 1; background: var(--cream); border-radius: 20px 20px 20px 6px;
+  padding: 12px 16px 14px; box-shadow: 0 6px 0 rgba(27,39,71,.2), 0 14px 30px rgba(27,39,71,.15);
+}
+.mascot-name { font-size: 12px; font-weight: 700; color: var(--red); text-transform: uppercase; letter-spacing: 1px; }
+.mascot-bubble p { margin: 4px 0 0; font-size: 16px; line-height: 1.35; min-height: 44px; }
+.mascot-next { position: absolute; right: 12px; bottom: 8px; font-size: 13px; color: var(--red); animation: blinkNext 1s infinite; }
+@keyframes blinkNext { 50% { opacity: .3; } }
+.caret { display: inline-block; width: 2px; height: 16px; margin-left: 2px; vertical-align: -2px; background: var(--ink); }
+
+/* ---------- carte de case ---------- */
+.modal {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px;
+  background: rgba(16, 26, 58, .45); backdrop-filter: blur(3px); animation: fade .25s;
+}
+@keyframes fade { from { opacity: 0; } }
+.card {
+  width: min(440px, 100%); background: var(--cream); border-radius: 28px; padding: 26px 24px 22px; text-align: center;
+  box-shadow: 0 10px 0 rgba(27,39,71,.25), 0 30px 60px rgba(0,0,0,.25);
+  animation: pop .45s cubic-bezier(.2,1.5,.4,1);
+}
+@keyframes pop { from { transform: scale(.7) translateY(30px); opacity: 0; } }
+.card-emoji { font-size: 56px; }
+.card-day { font-size: 13px; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
+.card h2 { margin: 6px 0 10px; font-size: 26px; line-height: 1.15; }
+.card-note { color: var(--ink-soft); margin: 0 0 18px; }
+.card-actions { display: flex; gap: 10px; justify-content: center; }
+.btn {
+  border: 0; border-radius: 16px; padding: 12px 20px; font-weight: 700; font-size: 16px;
+  background: var(--red); color: #fff; box-shadow: 0 5px 0 var(--red-d); transition: transform .1s;
+}
+.btn.ghost { background: #fff; color: var(--ink); box-shadow: 0 5px 0 rgba(27,39,71,.15); }
+
+@media (max-width: 560px) {
+  .brand-title { font-size: 16px; }
+  .who button { padding: 6px 8px; font-size: 13px; }
+  .round { width: 38px; height: 38px; }
+}
