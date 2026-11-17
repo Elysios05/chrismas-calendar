@@ -20,3 +20,32 @@
 Règles et difficulté de chaque jeu, contenu à mettre (souvenirs, private jokes), durée des parties.
 
 ## Journal
+
+### 17 novembre 2026 — cadre commun + jours 1 et 2 (branche `jeux/cadre-et-jours-1-2`)
+
+**Décisions prises avec Alexandre :**
+- **Quiz (jour 1)** : 10 questions à choix multiples, correction immédiate, pas de chrono.
+  Les « bonnes » réponses ne sont pas écrites à l'avance : **chacun répond d'abord pour soi, puis devine l'autre**.
+  Conséquence signalée à Alexandre et retenue : si l'autre n'a pas encore rempli ses réponses, pas de correction
+  immédiate — Pingou annonce que le score arrivera plus tard. En mode démo, les réponses d'exemple de
+  `src/data/games/quiz-jour1.ts` tiennent lieu de réponses de l'autre.
+- **Luge (jour 2)** : descente longue (~2 min, 1900 m), pilotage **au glissement du doigt** (flèches ← → sur ordinateur).
+  Ajouts décidés seul pour rendre la longueur supportable : 3 chocs permis, ligne d'arrivée avec bonus
+  (300 + 200 par choc épargné), piste **tirée au sort à partir d'une graine** pour que les deux descendent
+  exactement la même piste.
+
+**Fait :**
+- `src/games/registry.ts` : jour → jeu, chargé à la demande ; `contenuDuJour()` pour `GameContext.content`.
+- `src/games/shared/` : cadre, barre de score, vies, points de progression, barre de progression, écrans de
+  règles et de fin (`ui.tsx`), pont React↔`GameModule` (`monter.tsx`), base PixiJS + saisie (`scene.ts`),
+  tirage reproductible (`alea.ts`), scores à battre via `BackendApi` (`scores.ts`), styles (`games.css`).
+- `src/games/quiz/` et `src/games/luge/` (+ moteur PixiJS), contenu dans `src/data/games/`.
+- `jeux.html` + `src/games/dev/` : atelier de test des jeux (hors site livré), avec un faux backend
+  en localStorage en attendant `src/backend/`.
+
+**Reste à faire :**
+- Brancher le registre dans `src/App.tsx` (fichier du chef de projet) : aujourd'hui la carte d'une case
+  n'ouvre pas encore le jeu.
+- Remplacer le faux backend d'atelier par le vrai mode démo quand `src/backend/` existe.
+- Alexandre : remplacer les 10 questions d'exemple par les vraies.
+- Suite : rébus (7), pendu (15), mots croisés (17), puis les scores à battre 10 et 22.
