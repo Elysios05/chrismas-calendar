@@ -8,11 +8,12 @@
  */
 import type { DayNumber, Who } from "../core/contracts";
 
-/** Fuseau horaire de référence pour l'ouverture des cases. À VALIDER (Paris = Ljubljana, même fuseau). */
+/** Fuseau horaire de référence pour l'ouverture des cases (Paris = Ljubljana, même fuseau). */
 export const TIMEZONE = "Europe/Paris";
 
-/** Heure (0–23) à laquelle la case du jour s'ouvre. 0 = minuit. À VALIDER. */
-export const OPEN_HOUR = 0;
+/** Heure (0–23, heure de Paris) à laquelle la case du jour s'ouvre : 7 h (décision d'Alexandre).
+ *  Avant 7 h, on est encore « la veille ». Doit rester égal à app_settings.open_hour côté serveur. */
+export const OPEN_HOUR = 7;
 
 /** Jour simulé par la démo quand on n'est pas en décembre. */
 export const DEMO_DAY_OUTSIDE_DECEMBER = 9;
@@ -20,7 +21,7 @@ export const DEMO_DAY_OUTSIDE_DECEMBER = 9;
 /** Jours des cases préparées par chacun pour l'autre. */
 export const PREPARED_DAYS: readonly DayNumber[] = [4, 8, 12, 16, 20, 24];
 
-/** Taille maximale d'une photo APRÈS compression (octets). À VALIDER. Doit rester ≤ à celle du bucket. */
+/** Taille maximale d'une photo APRÈS compression (octets). Doit rester ≤ à celle du bucket (10 Mo). */
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 /** Plus grand côté (px) d'une photo après redimensionnement côté navigateur. */
@@ -33,11 +34,24 @@ export const UPLOAD_URL_TTL_SECONDS = 60 * 24 * 3600;
 /** Durée de validité des URLs signées renvoyées par getPrepared (secondes). */
 export const READ_URL_TTL_SECONDS = 24 * 3600;
 
-/** Adresses e-mail des deux comptes (surchargeables par VITE_EMAIL_ALEXANDRE / VITE_EMAIL_FLAVIE). */
-export const ACCOUNT_EMAILS: Record<Who, string> = {
-  alexandre: (import.meta.env.VITE_EMAIL_ALEXANDRE as string | undefined) || "alexandre@example.com",
-  flavie: (import.meta.env.VITE_EMAIL_FLAVIE as string | undefined) || "flavie@example.com",
+/**
+ * Adresses e-mail des deux comptes. JAMAIS en dur dans le dépôt : elles viennent des variables
+ * VITE_EMAIL_ALEXANDRE / VITE_EMAIL_FLAVIE (.env.local en local, secrets GitHub au déploiement).
+ * ⚠️ Elles restent lisibles dans le JavaScript publié de la version privée.
+ */
+export const ACCOUNT_EMAILS: Record<Who, string | undefined> = {
+  alexandre: (import.meta.env.VITE_EMAIL_ALEXANDRE as string | undefined) || undefined,
+  flavie: (import.meta.env.VITE_EMAIL_FLAVIE as string | undefined) || undefined,
 };
+
+export function emailOf(who: Who): string {
+  const e = ACCOUNT_EMAILS[who];
+  if (!e) throw new Error(`Adresse e-mail de ${who} non configurée (variable VITE_EMAIL_${who.toUpperCase()}).`);
+  return e;
+}
+
+/** Message d'erreur quand l'auteur veut modifier une case que le destinataire a déjà ouverte. */
+export const FROZEN_MESSAGE = "Cette case a déjà été ouverte : elle ne peut plus être modifiée.";
 
 export const WHO_LIST: readonly Who[] = ["alexandre", "flavie"];
 export const partnerOf = (w: Who): Who => (w === "alexandre" ? "flavie" : "alexandre");
@@ -45,6 +59,7 @@ export const isWho = (v: unknown): v is Who => v === "alexandre" || v === "flavi
 
 /**
  * Numéro de la case du jour pour une date donnée (même règle que la fonction SQL advent_today) :
+ * on recule de OPEN_HOUR heures (avant 7 h = la veille), puis
  * décembre → jour du mois (max 24) ; janvier–juin → 24 (tout reste ouvert après Noël) ; sinon 0.
  * `outsideDecember` permet à la démo de renvoyer un jour fictif hors saison.
  */
