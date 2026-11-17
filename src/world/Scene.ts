@@ -120,7 +120,9 @@ export class Scene {
     // lumière venant de l'arrière-gauche : les faces tournées vers la gauche sont claires
     const Lx = -0.35, Ly = 0.55, Lz = 0.76;
     const flatB = Lz;
-    const SHADOW = 0x7d8cc0;
+    const SHADOW = 0x9aa2d2;      // ombre de la neige : lavande froide
+    const ROCK_SHADOW = 0x5d668f; // ombre de la roche : violet, mais qui garde de la matière
+    const ROCK_T = 0.5;           // au-delà de cette pente, c'est de la roche
     const face = (pts: [number, number, number][], cell: typeof list[number]) => {
       const [a, b, d] = pts;
       const ux = b[0] - a[0], uy = b[1] - a[1], uz = (b[2] - a[2]) * 1.1;
@@ -134,15 +136,24 @@ export class Scene {
       const zdef = ZONES[cell.zone];
       let col: number;
       if (cell.lake) col = 0xbfe4f0;
-      else {
-        const rocky = steep > 0.5 + (noise(cell.x, cell.y) - 0.5) * 0.1;
-        const base = rocky ? zdef.atmo.rock : zdef.ground;
-        col = bright < 0 ? mix(base, rocky ? 0x3a4260 : SHADOW, Math.min(rocky ? 0.65 : 0.6, -bright * 2.2)) : mix(base, 0xffffff, Math.min(0.6, bright * 2));
+      else if (steep > ROCK_T) {
+        // roche : seuil franc sur la pente, sans tache au hasard.
+        // juste au-dessus du seuil, un liseré de neige poudreuse accroche l'arête
+        const dust = Math.max(0, 1 - (steep - ROCK_T) / 0.09);
+        const base = mix(zdef.atmo.rock, 0xe9edf8, dust * 0.5);
+        col = bright < 0
+          ? mix(base, ROCK_SHADOW, Math.min(0.5, -bright * 1.7))
+          : mix(base, 0xffffff, Math.min(0.55, bright * 1.9));
+      } else {
+        // neige : modelé très doux, elle doit rester lisse
+        const base = zdef.ground;
+        col = bright < 0
+          ? mix(base, SHADOW, Math.min(0.42, -bright * 1.5))
+          : mix(base, 0xffffff, Math.min(0.35, bright * 1.2));
       }
       poly(g, pts.map(([x, y, z]) => P(x, y, z)), c(col));
       g.poly(pts.flatMap(([x, y, z]) => { const q = P(x, y, z); return [q.x, q.y]; }), true).stroke({ width: 0.8, color: c(col) });
     };
-    const noise = (x: number, y: number) => { const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; return s - Math.floor(s); };
     for (const cell of list) {
       const { x, y } = cell;
       const A: [number, number, number] = [x, y, hv(x, y)], B: [number, number, number] = [x + 1, y, hv(x + 1, y)];

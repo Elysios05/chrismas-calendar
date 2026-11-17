@@ -23,7 +23,7 @@ export const ZONES: Zone[] = [
     props: [{ kind: "tree", weight: 6 }, { kind: "rock", weight: 2 }, { kind: "treeSmall", weight: 3 }, { kind: "deer", weight: 0.5 }],
     landmarks: ["mountain", "mountain", "mountain", "chalet", "snowman"],
     weather: { snow: 0.6, wind: 0.2, speed: 1 },
-    atmo: { fog: 0.18, fogColor: 0xdfe9f5, clouds: 0.9, tint: 0x8fb4e0, tintAlpha: 0.06, rock: 0x8a97b0 },
+    atmo: { fog: 0.18, fogColor: 0xdfe9f5, clouds: 0.9, tint: 0x8fb4e0, tintAlpha: 0.06, rock: 0x6e789a },
   },
   {
     id: "saint-nicolas", name: "Le Village de Saint-Nicolas", bgDay: 0xf3c6a5, bgNight: 0x1d1838, ground: 0xfbf3ea,
