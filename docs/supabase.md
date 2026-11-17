@@ -40,29 +40,43 @@ Menu **Authentication** → **Users** → **Add user** → **Create new user**, 
 
 | Pour | E-mail | Mot de passe |
 |---|---|---|
-| Alexandre | `alexandre@example.com` | celui que tu veux |
-| Flavie | `flavie@example.com` | celui que tu choisis pour elle |
+| Alexandre | ta vraie adresse | celui que tu veux |
+| Flavie | sa vraie adresse | celui que tu choisis pour elle (elle pourra le changer) |
 
 Coche **Auto Confirm User**.
 
-> Les adresses `@example.com` sont fictives : personne ne reçoit de mail, et ta vraie adresse
-> n'apparaît pas dans le code du site. Tu préfères vos vraies adresses (pour pouvoir réinitialiser
-> un mot de passe oublié) ? Mets-les ici **et** renseigne `VITE_EMAIL_ALEXANDRE` / `VITE_EMAIL_FLAVIE`
-> aux étapes 6 et 7.
+> **Les adresses ne sont écrites nulle part dans le dépôt** : le site les lit dans des variables
+> (`VITE_EMAIL_ALEXANDRE`, `VITE_EMAIL_FLAVIE`, étapes 6 et 7).
+> ⚠️ Mais elles **restent visibles dans le code JavaScript du site publié** (version privée) :
+> quelqu'un qui fouille le code de la page pourrait les lire. Il ne pourrait rien en faire sans
+> les mots de passe, mais c'est à savoir.
 
-Puis relie chaque compte à son personnage : **SQL Editor** → nouvelle requête → colle et **Run** :
+Puis relie chaque compte à son personnage : **SQL Editor** → nouvelle requête → colle, **remplace les deux
+adresses** et **Run** :
 
 ```sql
 insert into public.profiles (user_id, who)
-select id, 'alexandre' from auth.users where email = 'alexandre@example.com'
+select id, 'alexandre' from auth.users where email = 'ADRESSE_D_ALEXANDRE'
 union all
-select id, 'flavie'    from auth.users where email = 'flavie@example.com'
+select id, 'flavie'    from auth.users where email = 'ADRESSE_DE_FLAVIE'
 on conflict (user_id) do update set who = excluded.who;
 
 select p.who, u.email from public.profiles p join auth.users u on u.id = p.user_id;  -- doit afficher 2 lignes
 ```
 
-(Adapte les e-mails si tu en as mis d'autres.)
+### Mot de passe oublié
+
+Le site peut envoyer un lien « choisir un nouveau mot de passe ». Pour que ce lien ramène sur le site :
+**Authentication** → **URL Configuration** :
+- *Site URL* : `https://<ton-compte>.github.io/chrismas-calendar/`
+- *Redirect URLs* : ajoute la même adresse, et `http://localhost:5173/**` pour tester en local.
+
+⚠️ Sans configuration supplémentaire, l'envoi d'e-mails de Supabase est **très limité** (quelques
+e-mails par heure, et seulement vers les adresses des membres de ton organisation Supabase). Deux
+solutions simples :
+- inviter Flavie dans ton organisation Supabase (**Organization** → **Team** → **Invite**) ; ou
+- en cas d'oubli, change son mot de passe toi-même : **Authentication** → **Users** → clic sur son
+  compte → **Send password recovery** ou modifie-le directement.
 
 ## 5. Temps réel
 
@@ -81,9 +95,8 @@ Menu **Project Settings** → **API** (ou **Data API** / **API Keys**) :
 ```
 VITE_SUPABASE_URL=https://abcdefgh.supabase.co
 VITE_SUPABASE_ANON_KEY=colle-la-clé-anon-ici
-# Seulement si tu n'utilises pas les adresses @example.com :
-# VITE_EMAIL_ALEXANDRE=...
-# VITE_EMAIL_FLAVIE=...
+VITE_EMAIL_ALEXANDRE=ton-adresse
+VITE_EMAIL_FLAVIE=son-adresse
 ```
 
 Puis `npm run dev` : le site passe automatiquement en mode Supabase (il demande le mot de passe).
@@ -98,8 +111,8 @@ Sur GitHub, dépôt `chrismas-calendar` → **Settings** → **Secrets and varia
 |---|---|
 | `VITE_SUPABASE_URL` | la Project URL |
 | `VITE_SUPABASE_ANON_KEY` | la clé anon / publishable |
-| `VITE_EMAIL_ALEXANDRE` *(facultatif)* | ta vraie adresse si tu l'as utilisée |
-| `VITE_EMAIL_FLAVIE` *(facultatif)* | celle de Flavie |
+| `VITE_EMAIL_ALEXANDRE` | ton adresse (celle du compte) |
+| `VITE_EMAIL_FLAVIE` | celle de Flavie |
 
 Puis **Actions** → **Déploiement GitHub Pages** → **Run workflow** (ou pousse sur `main`).
 Résultat :
@@ -110,7 +123,8 @@ Résultat :
 
 ## 8. Tester avant le 1er décembre
 
-Les cases s'ouvrent selon la date **du serveur** (heure de Paris, à minuit). Pour simuler un jour :
+Les cases s'ouvrent selon la date **du serveur** : **à 7 h du matin, heure de Paris**
+(avant 7 h, c'est encore la case de la veille). Pour simuler un jour :
 **Table Editor** → `app_settings` → colonne `day_override` → mets par ex. `12` → **Save**.
 **Remets-la à `NULL` avant le 1er décembre !**
 
@@ -125,7 +139,7 @@ Les photos de test se suppriment dans **Storage** → `photos`.
 | Colonne | Défaut | Rôle |
 |---|---|---|
 | `timezone` | `Europe/Paris` | fuseau de référence (Ljubljana est dans le même) |
-| `open_hour` | `0` | heure d'ouverture de la case du jour (0 = minuit, 7 = 7 h du matin…) |
+| `open_hour` | `7` | heure d'ouverture de la case du jour (7 = 7 h du matin, 0 = minuit…) |
 | `day_override` | `NULL` | force « aujourd'hui » pour tester |
 
 Si tu changes `open_hour`, change aussi `OPEN_HOUR` dans `src/backend/config.ts` (utilisé par la démo).
@@ -135,5 +149,7 @@ Si tu changes `open_hour`, change aussi `OPEN_HOUR` dans `src/backend/config.ts`
 - **Projet gratuit mis en pause** après 7 jours sans aucune visite : si ça arrive avant décembre,
   ouvre le tableau de bord Supabase et clique **Restore project**. Pendant décembre, vos visites
   quotidiennes le gardent éveillé.
+- **Case préparée figée** : tu peux modifier la case que tu prépares pour l'autre jusqu'au moment où
+  il ou elle l'ouvre ; ensuite le serveur refuse toute modification.
 - Photos : le site les réduit (2000 px max, JPEG) avant l'envoi ; le serveur refuse au-delà de 10 Mo.
 - Vérifier les règles de sécurité sans Supabase (développeurs) : `bash supabase/tests/run_sql_tests.sh`.

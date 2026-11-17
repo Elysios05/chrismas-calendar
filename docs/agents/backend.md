@@ -44,3 +44,21 @@ Fuseau horaire de référence pour l'ouverture (Paris ?), qui crée les comptes,
 - `joinRoom` : les messages ne sont pas renvoyés à l'expéditeur ; avant l'abonnement, les `send` sont mis en file d'attente.
 
 **En attente d'Alexandre** : fuseau/heure d'ouverture, e-mails fictifs ou réels, taille max des photos, emplacement de la démo (`/demo/`).
+
+### 17 novembre 2026 (suite) — réponses d'Alexandre intégrées
+**Décisions d'Alexandre**
+- Fuseau Europe/Paris pour tous ; **ouverture des cases à 7 h** (avant 7 h = la veille) : `OPEN_HOUR = 7`,
+  `app_settings.open_hour = 7`, fonction pure `advent_day_at(ts)` testée (6 h 59 / 7 h 00, 1er décembre, après Noël).
+- **Vraies adresses e-mail**, jamais en dur : `VITE_EMAIL_ALEXANDRE` / `VITE_EMAIL_FLAVIE` (secrets GitHub, `.env.local`).
+  Le guide prévient qu'elles restent visibles dans le JavaScript publié.
+- Photos compressées à 2000 px ; démo publique dans `/demo/`, version privée à la racine (inchangé).
+- **Case préparée figée dès que le destinataire l'a ouverte** (ligne dans `progress`) : trigger `prepared_guard`
+  (erreur `CASE_FIGEE`, traduite en « Cette case a déjà été ouverte… ») + RLS ; même règle en démo.
+
+**Contrat (commit dbafe65)** : `getPrepared` → `PreparedResult` (`locked` / `empty` / `ready`), `onAuthChange(cb)` implémenté
+dans les deux backends (pas d'appel immédiat : seulement aux changements).
+
+**Hors contrat** : interface `PasswordRecovery` dans `src/backend/index.ts` (`resetPassword(who)`, `inPasswordRecovery()`,
+`updatePassword(pw)`), avec le garde-type `hasPasswordRecovery(backend)`. Sans effet en démo.
+
+**Tests** : 35 vérifications SQL, 31 vérifications navigateur sur le DemoBackend.
