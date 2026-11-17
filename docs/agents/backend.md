@@ -72,3 +72,4 @@ dans les deux backends (pas d'appel immédiat : seulement aux changements).
   tout se règle dans le tableau de bord.
 - À confirmer à l'inscription : les conditions actuelles de Brevo (expéditeur Gmail/Hotmail accepté ou non, délivrabilité).
   La vérification en ligne n'a pas pu être faite (limite d'outil atteinte).
+- 17 nov (soir) : Alexandre valide Brevo avec son Hotmail actuel comme expéditeur, et l'e-mail de Pingou tel quel.
