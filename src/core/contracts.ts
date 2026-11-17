@@ -74,12 +74,23 @@ export interface BackendApi {
 /* Audio                                                               */
 /* ------------------------------------------------------------------ */
 
-export type Sfx = "open" | "good" | "bad" | "pop" | "win" | "locked" | "step" | "whoosh";
+export type Sfx =
+  | "open" | "good" | "bad" | "pop" | "win" | "locked" | "step" | "whoosh"
+  // interface : tap = bouton, select = case touchée, hover = approche d'un cadeau, talk = voix de Pingou,
+  // pingou = apparition, day/night = bascule, unlock = nouvelle case, photo/send/notify = jeux à deux
+  | "tap" | "select" | "hover" | "talk" | "pingou" | "day" | "night" | "unlock" | "photo" | "send" | "notify" | "jingle" | "snow";
 
 export interface SoundApi {
   setEnabled(on: boolean): void;
   /** Volume général 0..1 */
   setVolume(v: number): void;
+  /** Volumes séparés 0..1 (défauts : musique 0,5 ; effets et bruitages 0,6) */
+  setMusicVolume(v: number): void;
+  setSfxVolume(v: number): void;
+  /** Tempête de neige (jour 10) : vent fort */
+  setWeather(storm: boolean): void;
+  /** Force du vent 0..1 (montagnes : 1 près du col ; pôle Nord) */
+  setWind(x: number): void;
   /** À appeler dans un geste de l'utilisateur (clic, toucher) pour débloquer le son, surtout sur iOS */
   unlock(): Promise<void>;
   /** Change d'ambiance musicale (fondu) */
