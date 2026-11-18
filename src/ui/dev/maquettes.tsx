@@ -50,6 +50,7 @@ const EXPRESSIONS: { face: Expression; nom: string }[] = [
 
 function Maquettes() {
   const vue = new URLSearchParams(location.search).get("vue") ?? "connexion";
+  const [ouverte, setOuverte] = useState(true);
   const [lines, setLines] = useState([
     { text: "Case 12 ouverte. Flavie a déjà fait 1 400 points, au cas où.", face: "clin" as Expression },
   ]);
@@ -135,6 +136,7 @@ function Maquettes() {
   }
 
   // la case préparée (12) pour l'intro et la lettre, une case de jeu (1) pour le jeu et la fin
+  if (!ouverte) return <div className="maq-monde" />;
   return (
     <div className="maq-monde">
       <DayWindow
@@ -143,7 +145,7 @@ function Maquettes() {
         backend={backend}
         game={fauxJeu}
         dejaTerminee={vue === "case-fini"}
-        onClose={() => {}}
+        onClose={() => setOuverte(false)}
       />
     </div>
   );

@@ -8,7 +8,7 @@ const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" }
 
 /** Photo en grand : fenêtre modale à part entière (focus piégé, Échap, retour du focus). */
 function Loupe({ src, onClose }: { src: string; onClose: () => void }) {
-  const panneau = useDialog<HTMLDivElement>(onClose);
+  const { panneau, surFond } = useDialog<HTMLDivElement>(onClose);
   return (
     <div
       ref={panneau}
@@ -17,7 +17,7 @@ function Loupe({ src, onClose }: { src: string; onClose: () => void }) {
       role="dialog"
       aria-modal="true"
       aria-label="Photo en grand"
-      onClick={onClose}
+      onClick={surFond}
     >
       <img src={src} alt="" />
       <button type="button" className="sheet-close" onClick={onClose} aria-label="Fermer la photo">✕</button>
