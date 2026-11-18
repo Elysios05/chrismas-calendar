@@ -11,6 +11,9 @@ import { MascotDialog } from "./ui/Mascot";
 import { LoginScreen } from "./ui/LoginScreen";
 import { DayWindow } from "./ui/DayWindow";
 import { PreparedEditor, RappelVeille } from "./ui/PreparedEditor";
+import { RaceIndicator } from "./ui/RaceIndicator";
+import { Settings, chargerPreferences } from "./ui/Settings";
+import { FinalScreen } from "./ui/FinalScreen";
 import { PINGOU_ROUTE, type PingouLine } from "./ui/pingou/lines";
 import { aUnJeu, chargerJeu } from "./games/registry";
 
@@ -57,7 +60,9 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
   const [progress, setProgress] = useState<Record<Who, Progress>>({ alexandre: EMPTY, flavie: EMPTY });
   const [open, setOpen] = useState<{ day: number; game?: GameModule } | null>(null);
   const [lines, setLines] = useState<PingouLine[]>([]);
-  const [soundOn, setSoundOn] = useState(true);
+  const [settings, setSettings] = useState(false);
+  const [finale, setFinale] = useState(false);
+  useEffect(() => { chargerPreferences(sound); }, []);
   const [editing, setEditing] = useState<number | null>(null);
   const [reminder, setReminder] = useState<number | null>(null);
   const partner = other(me);
@@ -181,6 +186,7 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
     const wasOpened = progress[me].opened.includes(day);
     const next = await loadProgress();
     if (wasOpened || !next[me].opened.includes(day)) return;
+    if (day === 24) { await sceneRef.current?.walkTo(me, day); setFinale(true); return; }
     sound.play("open");
     await sceneRef.current?.walkTo(me, day);
     const diff = Math.max(0, ...next[me].opened) - Math.max(0, ...next[partner].opened);
@@ -188,7 +194,6 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
     setLines([...PINGOU_ROUTE.ouverture(day), ...(diff > 0 ? PINGOU_ROUTE.avance(diff, name) : diff < 0 ? PINGOU_ROUTE.retard(-diff, name) : PINGOU_ROUTE.egalite(name))]);
   };
 
-  const toggleSound = () => { const on = !soundOn; setSoundOn(on); sound.setEnabled(on); if (on) sound.play("tap"); };
   const toggleNight = () => { sound.play(night ? "day" : "night"); setNight(!night); };
   const goToday = () => { sound.play("tap"); const s = sceneRef.current; if (s && today) scrollTo({ top: s.scrollForDay(Math.min(24, today)), behavior: "smooth" }); };
 
@@ -203,15 +208,15 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
           <span className="brand-title">Alexandre & Flavie</span>
         </div>
         <div className="zone-pill" key={zone}>{ZONES[zone]?.name}</div>
+        <RaceIndicator me={me} progress={progress} compact />
         <div className="hud-actions">
           <span className="who-badge" style={{ ["--c" as string]: "#" + PLAYERS[me].coat.toString(16).padStart(6, "0") }}>{PLAYERS[me].name}</span>
           {nextToWrite && (
             <button className="round" onClick={() => { sound.play("tap"); setEditing(nextToWrite); }} title={`Préparer la case ${nextToWrite}`} aria-label={`Préparer la case ${nextToWrite} pour ${PLAYERS[partner].name}`}>✏️</button>
           )}
-          <button className="round" onClick={toggleSound} title="Son" aria-label="Couper ou remettre le son">{soundOn ? "🔔" : "🔕"}</button>
           <button className="round" onClick={toggleNight} title="Jour / nuit" aria-label="Basculer jour / nuit">{night ? "🌙" : "☀️"}</button>
           <button className="round" onClick={goToday} title="Aller à aujourd'hui" aria-label="Aller à la case du jour">📍</button>
-          <button className="round" onClick={() => void backend.signOut()} title="Se déconnecter" aria-label="Se déconnecter">⏏️</button>
+          <button className="round" onClick={() => { sound.play("tap"); setSettings(true); }} title="Réglages" aria-label="Réglages">⚙️</button>
         </div>
       </header>
 
@@ -219,7 +224,7 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
         <div className="rappel-host"><RappelVeille jour={reminder} partenaire={partner} onOuvrir={() => setEditing(reminder)} /></div>
       )}
 
-      {!open && !editing && <MascotDialog lines={lines} onDone={() => setLines([])} />}
+      {!open && !editing && !finale && <MascotDialog lines={lines} onDone={() => setLines([])} />}
 
       {editing && (
         <div className="modal" onClick={() => setEditing(null)}>
@@ -228,6 +233,10 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
           </div>
         </div>
       )}
+
+      {settings && <Settings me={me} backend={backend} sound={sound} onClose={() => setSettings(false)} />}
+
+      {finale && <FinalScreen me={me} progress={progress} sound={sound} onRevoir={() => setFinale(false)} onFermer={() => setFinale(false)} />}
 
       {open && (
         <DayWindow
