@@ -4,7 +4,7 @@
  */
 import type { ZoneId } from "../core/contracts";
 import { sound, type GameMood } from "./engine";
-import { renderAmbience, renderPiece, renderSfx, toWav, wavBase64 } from "./render";
+import { renderAmbience, renderPiece, renderSfx, stressSfx, toWav, wavBase64 } from "./render";
 import { SFX_LIST } from "./sfx";
 
 const ZONES: [ZoneId, string][] = [
@@ -127,4 +127,4 @@ root.querySelector<HTMLButtonElement>("#storm")!.onclick = (e) => {
 };
 
 // Accès pour l'automatisation (rendu des extraits)
-Object.assign(window, { __audio: { renderPiece, renderSfx, renderAmbience, wavBase64 } });
+Object.assign(window, { __audio: { renderPiece, renderSfx, renderAmbience, stressSfx, wavBase64 } });
