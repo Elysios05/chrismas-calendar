@@ -4,6 +4,8 @@
 :root {
   --red: #d9354b;
   --red-d: #a3192f;
+  /* le rouge vif ne passe pas le contraste en petit : celui-ci oui (7,3:1 sur le crème) */
+  --red-texte: #a3192f;
   --green: #2fa37a;
   --ink: #1b2747;
   --ink-soft: #5b6680;
@@ -22,6 +24,14 @@ body {
 }
 button { font-family: inherit; cursor: pointer; }
 
+/* ---------- accessibilité : repères visibles partout ---------- */
+/* un seul style de focus pour tout le site, bien contrasté sur le crème comme sur la nuit */
+:focus-visible { outline: 3px solid #1b2747; outline-offset: 3px; border-radius: 4px; }
+.login :focus-visible, .final :focus-visible, .sheet :focus-visible { outline-color: #fff; }
+.sheet-panel :focus-visible, .login-card :focus-visible, .final-carte :focus-visible { outline-color: #1b2747; }
+/* le panneau lui-même prend le focus à l'ouverture sans se souligner */
+[role="dialog"]:focus { outline: none; }
+
 .stage-host { position: fixed; inset: 0; z-index: 0; }
 .stage-host canvas { display: block; }
 
@@ -38,7 +48,7 @@ button { font-family: inherit; cursor: pointer; }
   background: var(--cream); padding: 9px 14px; border-radius: 16px;
   box-shadow: 0 5px 0 rgba(27,39,71,.18);
 }
-.brand-kicker { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--red); }
+.brand-kicker { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--red-texte); }
 .brand-title { font-size: 19px; font-weight: 700; margin-top: 3px; }
 .zone-pill {
   order: 3; width: 100%; text-align: center; pointer-events: none;
@@ -54,7 +64,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 .who button.on { background: var(--c); color: #fff; }
 .round {
-  width: 42px; height: 42px; border-radius: 14px; border: 0; background: var(--cream);
+  width: 44px; height: 44px; border-radius: 14px; border: 0; background: var(--cream);
   font-size: 19px; box-shadow: 0 5px 0 rgba(27,39,71,.18); transition: transform .1s;
 }
 .round:active, .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(27,39,71,.18); }
@@ -80,7 +90,7 @@ button { font-family: inherit; cursor: pointer; }
   background: var(--cream); border-radius: 20px 20px 20px 6px;
   padding: 12px 16px 14px; box-shadow: 0 6px 0 rgba(27,39,71,.2), 0 14px 30px rgba(27,39,71,.15);
 }
-.mascot-name { display: block; font-size: 12px; font-weight: 700; color: var(--red); text-transform: uppercase; letter-spacing: 1px; }
+.mascot-name { display: block; font-size: 12px; font-weight: 700; color: var(--red-texte); text-transform: uppercase; letter-spacing: 1px; }
 .mascot-text { display: block; margin-top: 4px; font-size: 16px; line-height: 1.35; min-height: 44px; }
 .mascot:focus-visible .mascot-bubble { outline: 3px solid var(--red); outline-offset: 3px; }
 .mascot-next { position: absolute; right: 12px; bottom: 8px; font-size: 13px; color: var(--red); animation: blinkNext 1s infinite; }
@@ -100,7 +110,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 @keyframes pop { from { transform: scale(.7) translateY(30px); opacity: 0; } }
 .card-emoji { font-size: 56px; }
-.card-day { font-size: 13px; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
+.card-day { font-size: 13px; font-weight: 600; color: var(--red-texte); text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
 .card h2 { margin: 6px 0 10px; font-size: 26px; line-height: 1.15; }
 .card-note { color: var(--ink-soft); margin: 0 0 18px; }
 .card-actions { display: flex; gap: 10px; justify-content: center; }
@@ -133,7 +143,7 @@ button { font-family: inherit; cursor: pointer; }
   animation: pop .5s cubic-bezier(.2,1.5,.4,1);
 }
 .login-portrait { margin-top: -54px; }
-.login-kicker { margin: 2px 0 0; font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--red); }
+.login-kicker { margin: 2px 0 0; font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--red-texte); }
 .login-title { margin: 4px 0 20px; font-size: 27px; line-height: 1.1; }
 .login-question { margin: 0 0 8px; text-align: left; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
 .login-who { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -195,11 +205,12 @@ button { font-family: inherit; cursor: pointer; }
 @keyframes monte { from { transform: translateY(100%); } }
 .sheet-head { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 12px; }
 .sheet-emoji { font-size: 40px; line-height: 1; }
-.sheet-day { margin: 2px 0 0; font-size: 12px; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 1px; }
+.sheet-day { margin: 2px 0 0; font-size: 12px; font-weight: 600; color: var(--red-texte); text-transform: uppercase; letter-spacing: 1px; }
 .sheet-title { margin: 4px 0 0; font-size: 22px; line-height: 1.15; }
+/* 44 px : la taille minimale confortable au doigt */
 .sheet-close {
-  width: 36px; height: 36px; flex: none; border: 0; border-radius: 12px;
-  background: #fff; color: var(--ink-soft); font-size: 15px; box-shadow: 0 3px 0 rgba(27,39,71,.14);
+  width: 44px; height: 44px; flex: none; border: 0; border-radius: 14px;
+  background: #fff; color: var(--ink-soft); font-size: 16px; box-shadow: 0 3px 0 rgba(27,39,71,.14);
 }
 .sheet-body { display: flex; flex-direction: column; gap: 14px; }
 .sheet-intro, .sheet-fini { text-align: center; padding: 10px 4px; }
@@ -256,7 +267,7 @@ button { font-family: inherit; cursor: pointer; }
 @keyframes deplie { from { transform: scaleY(.04) translateY(-18px); opacity: .2; } }
 .prep-de {
   margin: 0 0 12px; font-size: 13px; font-weight: 600; letter-spacing: .5px;
-  text-transform: uppercase; color: var(--red);
+  text-transform: uppercase; color: var(--red-texte);
 }
 .prep-texte {
   margin: 0 0 14px; font-family: "Caveat", var(--font); font-size: 25px; line-height: 36px;
@@ -318,7 +329,7 @@ button { font-family: inherit; cursor: pointer; }
   animation: pop .6s cubic-bezier(.2,1.5,.4,1);
 }
 .final-portrait { margin-top: -50px; }
-.final-kicker { margin: 2px 0 0; font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--red); }
+.final-kicker { margin: 2px 0 0; font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--red-texte); }
 .final-titre { margin: 4px 0 10px; font-size: 32px; line-height: 1.05; }
 .final-sous { margin: 0 0 18px; color: var(--ink-soft); font-size: 15px; line-height: 1.45; }
 .final-compte {
@@ -342,7 +353,7 @@ button { font-family: inherit; cursor: pointer; }
 .course-couloirs { display: flex; flex-direction: column; gap: 7px; }
 .course-couloir { display: grid; grid-template-columns: 54px 1fr 22px; align-items: center; gap: 8px; }
 .course-nom {
-  font-size: 12px; font-weight: 600; color: var(--c);
+  font-size: 12px; font-weight: 600; color: var(--ct);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .course-rail {
@@ -353,9 +364,9 @@ button { font-family: inherit; cursor: pointer; }
   display: block; height: 100%; border-radius: 5px; background: var(--c);
   transition: width .6s cubic-bezier(.3,1.2,.4,1);
 }
-.course-jour { font-size: 13px; font-weight: 700; color: var(--c); text-align: right; }
-/* phrase complète pour les lecteurs d'écran, invisible à l'œil */
-.course-lecture {
+.course-jour { font-size: 13px; font-weight: 700; color: var(--ct); text-align: right; }
+/* texte réservé aux lecteurs d'écran, invisible à l'œil */
+.pour-lecteurs {
   position: absolute; width: 1px; height: 1px; overflow: hidden;
   clip-path: inset(50%); white-space: nowrap;
 }
@@ -397,7 +408,7 @@ html[data-animations="non"] *, html[data-animations="non"] *::before, html[data-
 .edit { display: flex; flex-direction: column; gap: 10px; }
 .edit-chargement { padding: 40px 10px; text-align: center; color: var(--ink-soft); }
 .edit-head { text-align: center; margin-bottom: 2px; }
-.edit-kicker { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--red); }
+.edit-kicker { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--red-texte); }
 .edit-titre { margin: 5px 0 0; font-size: 23px; }
 .edit-info { margin: 0; text-align: center; color: var(--ink-soft); font-size: 15px; line-height: 1.45; }
 .edit-label { margin: 8px 0 0; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
@@ -419,8 +430,8 @@ html[data-animations="non"] *, html[data-animations="non"] *::before, html[data-
   border-radius: 12px; background: #e8eef6; box-shadow: 0 4px 0 rgba(27,39,71,.14);
 }
 .edit-vignette button {
-  position: absolute; top: -7px; right: -7px; width: 26px; height: 26px; border: 0; border-radius: 50%;
-  background: var(--red); color: #fff; font-size: 12px; box-shadow: 0 2px 6px rgba(27,39,71,.35);
+  position: absolute; top: -8px; right: -8px; width: 30px; height: 30px; border: 0; border-radius: 50%;
+  background: var(--red-d); color: #fff; font-size: 13px; box-shadow: 0 2px 6px rgba(27,39,71,.35);
 }
 .edit-ajout {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
@@ -478,7 +489,7 @@ html[data-animations="non"] *, html[data-animations="non"] *::before, html[data-
 @media (max-width: 560px) {
   .brand-title { font-size: 16px; }
   .who button { padding: 6px 8px; font-size: 13px; }
-  .round { width: 38px; height: 38px; }
+  .round { width: 44px; height: 44px; }
   .login-title { font-size: 23px; }
   .sheet-title { font-size: 19px; }
 }
