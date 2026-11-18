@@ -12,6 +12,7 @@ import { QUIZ_JOUR1 } from "../data/games/quiz-jour1";
 import { LUGE_JOUR2 } from "../data/games/luge-jour2";
 import { REBUS_JOUR7 } from "../data/games/rebus-jour7";
 import { PENDU_JOUR15 } from "../data/games/pendu-jour15";
+import { MOTSCROISES_JOUR17 } from "../data/games/motscroises-jour17";
 
 type Chargeur = () => Promise<GameModule>;
 
@@ -20,6 +21,7 @@ const JEUX: Partial<Record<DayNumber, Chargeur>> = {
   2: () => import("./luge/index").then((m) => m.lugeJour2),
   7: () => import("./rebus/index").then((m) => m.rebusJour7),
   15: () => import("./pendu/index").then((m) => m.penduJour15),
+  17: () => import("./motscroises/index").then((m) => m.motsCroisesJour17),
   // les autres jours : à venir (défis photo, en direct, pendu, mots croisés…)
 };
 
@@ -29,6 +31,7 @@ const CONTENU: Partial<Record<DayNumber, unknown>> = {
   2: LUGE_JOUR2,
   7: REBUS_JOUR7,
   15: PENDU_JOUR15,
+  17: MOTSCROISES_JOUR17,
 };
 
 export const joursAvecJeu = (): DayNumber[] => Object.keys(JEUX).map(Number).sort((a, b) => a - b);
