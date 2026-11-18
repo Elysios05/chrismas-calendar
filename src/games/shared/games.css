@@ -8,6 +8,14 @@
 .jeu-fenetre-fermer { position: absolute; z-index: 5; left: 12px; top: calc(10px + env(safe-area-inset-top)); }
 .jeu-fenetre .jeu-barre { padding-left: 58px; }
 
+/* Boîte posée par `monterReact` dans l'élément prêté par l'hôte.
+   L'hôte peut être plein écran (atelier, lanceur) ou une simple div dans une fenêtre
+   (src/ui/DayWindow.tsx) : dans ce cas la boîte se donne une hauteur jouable
+   au lieu de laisser le jeu déborder par-dessus la fenêtre. */
+.jeu-boite { position: relative; width: 100%; height: 100%; min-height: min(68vh, 560px); }
+/* hôte déjà dimensionné (position: absolute/fixed) : la boîte le remplit exactement */
+.jeu-hote > .jeu-boite, .atelier-jeu > .jeu-boite { position: absolute; inset: 0; min-height: 0; }
+
 .jeu {
   position: absolute; inset: 0;
   display: flex; flex-direction: column;
