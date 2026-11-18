@@ -11,7 +11,8 @@ export type PropKind =
 /** Parties animées d'un décor, que la scène fait vivre à chaque image */
 export type AnimPart =
   | { kind: "wheel"; hub: Container; cars: Container[] }
-  | { kind: "smoke"; puffs: Graphics[]; phase: number };
+  | { kind: "smoke"; puffs: Graphics[]; phase: number }
+  | { kind: "takeoff"; node: Container; t: number };
 export type PropNode = Container & { anim?: AnimPart[] };
 
 const SNOW = { top: 0xf7f5f0, left: 0xe4e1dc, right: 0xcfccd0 };
@@ -210,7 +211,39 @@ function drawHouse(
   if (pal.night) { const p = P(cx, y0 + d, h * 0.3); g.ellipse(p.x, p.y + 6, 44, 14).fill({ color: 0xffd46b, alpha: 0.18 }); }
 }
 
-export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, seed: number, opts: { zone?: string; drop?: number } = {}): PropNode {
+/** Traîneau du Père Noël. En vol, on lui attelle deux rennes et une traînée d'étoiles. */
+function drawSleigh(g: Graphics, p: { x: number; y: number }, pal: Palette, flying: boolean) {
+  const c = pal.c;
+  if (flying) {
+    // traînée d'étoiles derrière le traîneau
+    for (let i = 0; i < 6; i++) {
+      const t = i / 5;
+      g.star(p.x - 60 - t * 90, p.y - 6 + Math.sin(t * 3) * 12, 5, 5 - t * 3, 2).fill({ color: 0xffd46b, alpha: 0.55 - t * 0.4 });
+    }
+    // l'attelage : deux rennes devant, au bout des guides
+    for (const [dx, dy] of [[52, -14], [86, -26]] as const) {
+      const b = c(0xa86b3d), d = c(0x7d4a26);
+      g.roundRect(p.x + dx, p.y + dy - 10, 26, 11, 5).fill(b);
+      for (const lx of [2, 18]) g.rect(p.x + dx + lx, p.y + dy + 1, 2.6, 9).fill(d);
+      g.roundRect(p.x + dx + 20, p.y + dy - 18, 7, 12, 3).fill(b);
+      g.roundRect(p.x + dx + 23, p.y + dy - 23, 12, 8, 3).fill(b);
+      g.circle(p.x + dx + 34, p.y + dy - 19, 2.6).fill(c(0xd9354b));
+      g.moveTo(p.x + dx + 25, p.y + dy - 23).lineTo(p.x + dx + 20, p.y + dy - 33)
+        .moveTo(p.x + dx + 29, p.y + dy - 23).lineTo(p.x + dx + 34, p.y + dy - 33).stroke({ width: 2.2, color: d });
+    }
+    g.moveTo(p.x + 24, p.y - 18).lineTo(p.x + 54, p.y - 22).stroke({ width: 2, color: c(0x8a5a33) });
+  }
+  g.roundRect(p.x - 40, p.y - 34, 70, 26, 10).fill(c(0xd9354b));
+  g.roundRect(p.x - 40, p.y - 34, 70, 8, 4).fill(c(0xf0b23a));
+  g.moveTo(p.x - 46, p.y - 2).lineTo(p.x + 36, p.y - 2).arc(p.x + 36, p.y - 10, 8, Math.PI / 2, -Math.PI / 2, true).stroke({ width: 4, color: c(0xf0b23a) });
+  // la hotte, dessinée en relatif pour que le traîneau puisse pivoter sur lui-même
+  const sx = p.x - 18, sy = p.y - 44;
+  poly(g, [{ x: sx, y: sy }, { x: sx + 14, y: sy - 8 }, { x: sx + 28, y: sy }, { x: sx + 14, y: sy + 8 }], c(0x3f9e6e));
+  poly(g, [{ x: sx, y: sy }, { x: sx + 14, y: sy + 8 }, { x: sx + 14, y: sy + 22 }, { x: sx, y: sy + 14 }], c(0x2fa37a));
+  poly(g, [{ x: sx + 14, y: sy + 8 }, { x: sx + 28, y: sy }, { x: sx + 28, y: sy + 14 }, { x: sx + 14, y: sy + 22 }], c(0x1f7a52));
+}
+
+export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, seed: number, opts: { zone?: string; drop?: number; alongX?: boolean; flying?: boolean } = {}): PropNode {
   const g = new Graphics();
   const c = pal.c;
   const cx = x + 0.5, cy = y + 0.5;
@@ -424,26 +457,40 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       break;
     }
     case "caveMouth": {
-      // porche de glace sombre : quatre piliers et un linteau, le chemin s'y enfonce
-      const r = 0.95, hgt = 2.2, t = 0.3;
-      const ice = { top: c(0x9ecfe6), left: c(0x7cb4d2), right: c(0x4d85a8) };
-      for (const [dx, dy] of [[-r, -r], [r, -r], [-r, r], [r, r]] as const) {
-        box(g, cx + dx - t / 2, cy + dy - t / 2, 0, t, t, hgt, ice);
+      // vraie voûte : une paroi de glace percée d'une arche, dans le sens de la marche
+      const along = opts.alongX ?? true;
+      const half = 1.9, open = 0.95, top = 1.5, peak = 2.5;
+      const ice = { top: 0x9ecfe6, left: 0x79b2d2, right: 0x4b84a8 };
+      // u : le long de la paroi (elle barre le passage), v : son épaisseur
+      const face = (u0: number, u1: number, z0: number, z1: number, col: number) => {
+        const q = (u: number, z: number) => (along ? P(cx + u, cy + 0.42, z) : P(cx + 0.42, cy + u, z));
+        poly(g, [q(u0, z1), q(u1, z1), q(u1, z0), q(u0, z0)], c(col));
+      };
+      const slab = (u0: number, u1: number, z0: number, z1: number) => {
+        // dessus de la paroi, pour lui donner de l'épaisseur
+        const t = (u: number, v: number, z: number) => (along ? P(cx + u, cy + v, z) : P(cx + v, cy + u, z));
+        poly(g, [t(u0, -0.42, z1), t(u1, -0.42, z1), t(u1, 0.42, z1), t(u0, 0.42, z1)], c(ice.top));
+        face(u0, u1, z0, z1, along ? ice.left : ice.right);
+      };
+      slab(-half, -open, 0, peak * 0.86);
+      slab(open, half, 0, peak * 0.86);
+      // le cintre de l'arche, en gradins
+      const steps = 4;
+      for (let i = 0; i < steps; i++) {
+        const u = open - (open * 0.55 * (i + 1)) / steps;
+        const z = top + ((peak - top) * (i + 1)) / steps;
+        slab(-u - 0.001, -0.001, top + ((peak - top) * i) / steps, z);
+        slab(0.001, u + 0.001, top + ((peak - top) * i) / steps, z);
       }
-      // linteau sur les deux faces visibles, en gradins de glace
-      for (let i = 0; i < 2; i++) {
-        const e = i * 0.12;
-        box(g, cx - r - t / 2 + e, cy + r - t / 2, hgt + i * 0.22, 2 * r + t - 2 * e, t, 0.24, ice);
-        box(g, cx + r - t / 2, cy - r - t / 2 + e, hgt + i * 0.22, t, 2 * r + t - 2 * e, 0.24, ice);
-      }
-      // stalactites accrochées au linteau, et l'ombre du porche sur le sol
-      for (let i = 0; i < 5; i++) {
-        const a = cx - r + 0.12 + i * (2 * r - 0.24) / 4;
-        const q = P(a, cy + r, hgt);
-        poly(g, [{ x: q.x - 5, y: q.y }, { x: q.x + 5, y: q.y }, { x: q.x, y: q.y + 10 + rnd(i) * 16 }], c(0x8fd0e8));
+      // stalactites sous le cintre, et l'ombre du porche sur le sol
+      for (let i = 0; i < 6; i++) {
+        const u = -open + 0.1 + (i * (2 * open - 0.2)) / 5;
+        const h2 = top + (peak - top) * (1 - Math.abs(u) / open) * 0.8;
+        const q = along ? P(cx + u, cy + 0.42, h2) : P(cx + 0.42, cy + u, h2);
+        poly(g, [{ x: q.x - 4, y: q.y }, { x: q.x + 4, y: q.y }, { x: q.x, y: q.y + 9 + rnd(i) * 15 }], c(0x8fd0e8));
       }
       const o = P(cx, cy, 0);
-      g.ellipse(o.x, o.y, 54, 26).fill({ color: 0x0c2740, alpha: 0.3 });
+      g.ellipse(o.x, o.y, 58, 28).fill({ color: 0x0c2740, alpha: 0.32 });
       break;
     }
     case "icicle": {
@@ -527,10 +574,22 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
     }
     case "sleigh": {
       const p = P(cx, cy);
-      g.roundRect(p.x - 40, p.y - 34, 70, 26, 10).fill(c(0xd9354b));
-      g.roundRect(p.x - 40, p.y - 34, 70, 8, 4).fill(c(0xf0b23a));
-      g.moveTo(p.x - 46, p.y - 2).lineTo(p.x + 36, p.y - 2).arc(p.x + 36, p.y - 10, 8, Math.PI / 2, -Math.PI / 2, true).stroke({ width: 4, color: c(0xf0b23a) });
-      box(g, cx - 0.35, cy - 0.3, 0.5, 0.35, 0.35, 0.3, { top: c(0x3f9e6e), left: c(0x2fa37a), right: c(0x1f7a52) });
+      // le 24, le traîneau quitte le sol : on le met dans un conteneur que la scène fait décoller
+      if (opts.flying) {
+        // ancré sur sa case, avec un conteneur interne : la scène le fait monter, pencher et s'éloigner
+        // sans que l'échelle ni la rotation ne le projettent à l'autre bout du monde
+        const anchor = new Container();
+        anchor.position.set(p.x, p.y);
+        const inner = new Container();
+        const gf = new Graphics();
+        drawSleigh(gf, { x: 0, y: 0 }, pal, true);
+        inner.addChild(gf);
+        anchor.addChild(inner);
+        extra.addChild(anchor);
+        anim.push({ kind: "takeoff", node: inner, t: 0 });
+      } else {
+        drawSleigh(g, p, pal, false);
+      }
       break;
     }
     case "workshop": {
