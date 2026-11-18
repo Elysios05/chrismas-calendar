@@ -154,6 +154,41 @@
 .rebus-retour.passe { color: var(--ink-soft, #5b6680); }
 @keyframes rebusSecoue { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
+/* ---------- pendu : le bonhomme qui fond ---------- */
+.pendu { gap: 10px; }
+.pendu-bonhomme { width: min(220px, 46vw); height: auto; flex: none; }
+.pendu-part { animation: penduPart .3s ease-out; }
+@keyframes penduPart { from { opacity: 0; transform: translateY(-6px); } }
+.pendu-etiquette {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px;
+  color: var(--red, #d9354b);
+}
+.pendu-mot { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; }
+.pendu-groupe { display: flex; gap: 4px; }
+.pendu-case {
+  width: 24px; height: 32px; border-radius: 6px; background: var(--cream, #fffaf2);
+  box-shadow: 0 3px 0 rgba(27, 39, 71, .14);
+  display: grid; place-items: center; font-size: 18px; font-weight: 700;
+}
+.pendu-case.vue { background: #fff; animation: penduLettre .25s cubic-bezier(.2, 1.5, .4, 1); }
+@keyframes penduLettre { from { transform: scale(.6); } }
+.pendu-signe { width: 12px; display: grid; place-items: center; font-size: 18px; font-weight: 700; color: var(--ink-soft, #5b6680); }
+.pendu-retour { min-height: 24px; font-size: 15px; font-weight: 600; }
+.pendu-retour.gagne { color: var(--green, #2fa37a); }
+.pendu-retour.perdu { color: var(--red, #d9354b); }
+.pendu-clavier { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 440px; }
+.pendu-rangee { display: flex; gap: 5px; justify-content: center; }
+.pendu-touche {
+  flex: 1 1 0; min-width: 0; max-width: 42px; height: 42px; border: 0; border-radius: 9px;
+  background: var(--cream, #fffaf2); color: var(--ink, #1b2747);
+  font: inherit; font-size: 16px; font-weight: 700;
+  box-shadow: 0 3px 0 rgba(27, 39, 71, .16); cursor: pointer; transition: transform .08s;
+}
+.pendu-touche:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(27, 39, 71, .16); }
+.pendu-touche.bonne { background: #e4f6ef; color: var(--green, #2fa37a); }
+.pendu-touche.ratee { background: #eceef3; color: #a9b0c0; }
+.pendu-touche:disabled { cursor: default; }
+
 /* ---------- bandeau d'info au milieu du jeu ---------- */
 .jeu-flash {
   position: absolute; left: 50%; top: 18%; transform: translateX(-50%);
