@@ -99,6 +99,8 @@ export function MascotDialog({
   }, [text]);
 
   if (!lines.length) return null;
+  // la phrase la plus longue de la série donne sa taille à la bulle
+  const gabarit = lines.reduce<string>((plus, l) => (textOf(l).length > plus.length ? textOf(l) : plus), "");
   const complete = shown.length >= text.length;
   const last = i >= lines.length - 1;
   const next = () => {
@@ -117,9 +119,17 @@ export function MascotDialog({
       <span className="mascot-portrait"><PenguinPortrait expression={face} /></span>
       <span className="mascot-bubble">
         <span className="mascot-name">{MASCOT_NAME}</span>
-        {/* la machine à écrire est purement visuelle ; la phrase entière est annoncée une seule fois */}
+        {/*
+          La machine à écrire est purement visuelle ; la phrase entière est annoncée une seule fois.
+          Le « gabarit » est la plus longue phrase de la série, posée invisible : elle réserve la
+          hauteur une fois pour toutes, sinon la bulle grandit lettre par lettre et déplace toute
+          la fenêtre pendant qu'on vise un bouton (issue #31).
+        */}
         <span className="mascot-text" aria-hidden="true">
-          {shown}<span className="caret" style={{ opacity: complete ? 0 : 1 }} />
+          <span className="mascot-gabarit">{gabarit}</span>
+          <span className="mascot-ecrit">
+            {shown}<span className="caret" style={{ opacity: complete ? 0 : 1 }} />
+          </span>
         </span>
         <span className="pour-lecteurs" aria-live="polite">{MASCOT_NAME} dit : {text}</span>
         <span className="mascot-next" aria-hidden="true">{complete ? (last ? "✓" : "▶") : ""}</span>
