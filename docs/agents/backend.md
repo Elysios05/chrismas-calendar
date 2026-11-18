@@ -104,3 +104,4 @@ dans les deux backends (pas d'appel immédiat : seulement aux changements).
 - Texte de la relance (signé Pingou) : « 🐧 Toc toc… Pingou insiste (gentiment) — La case N est toujours vide, et X l'ouvre demain à 7 h !
   Il te reste ce soir : deux lignes et une photo, et je file me coucher 💤💌 » (variante pour le 24).
 - Tests : 68 vérifications SQL (été/hiver, tolérance, journal distinct, case remplie entre-temps) + `message_test.ts`.
+- 18 nov : relance de 22 h 30 validée telle quelle par Alexandre.
