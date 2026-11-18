@@ -89,4 +89,4 @@ pour les surtitres et des couleurs assombries pour les noms de la course.
 
 **Vérifié avec axe-core** sur sept écrans en 390×844 : **0 violation** WCAG 2.1 AA, focus bien piégé,
 interrupteurs pilotables au clavier. Script d'audit proposé à l'équipe Qualité dans l'issue
-https://github.com/Elysios05/chrismas-calendar/issues/27.
+https://github.com/Elysios05/chrismas-calendar/issues/34.
