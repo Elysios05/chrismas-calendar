@@ -8,7 +8,7 @@ export type DayNode = { day: number; idx: number; x: number; y: number; z: numbe
 /** `rz` = altitude de la route la plus proche : sert à mesurer la hauteur relative d'une cellule */
 export type Cell = { x: number; y: number; h: number; zone: number; road: boolean; lake: boolean; d: number; front: boolean; rz: number; pi: number };
 /** `drop` = dénivelé à combler sous un bâtiment, côté aval (hauteur du soubassement) */
-export type PlacedProp = { kind: PropKind; x: number; y: number; z: number; zone: number; seed: number; drop: number };
+export type PlacedProp = { kind: PropKind; x: number; y: number; z: number; zone: number; seed: number; drop: number; alongX?: boolean };
 export type Terrain = { path: PathCell[]; nodes: DayNode[]; cells: Map<string, Cell>; props: PlacedProp[]; V: Map<string, number> };
 
 /** Hauteur du terrain en un point quelconque (interpolation bilinéaire des sommets) */
@@ -404,7 +404,9 @@ export function buildTerrain(seed = 2026): Terrain {
   if (caveZone >= 0) {
     const cz = path.filter((p) => p.zone === caveZone);
     if (cz.length > 2) for (const p of [cz[0], cz[cz.length - 1]]) {
-      props.push({ kind: "caveMouth", x: p.x, y: p.y, z: p.z, zone: caveZone, seed: Math.floor(R() * 1e6), drop: 0 });
+      // la voûte est percée dans le sens de la marche : on lit la direction sur le chemin
+      const nxt = path[Math.min(path.length - 1, p.i + 1)];
+      props.push({ kind: "caveMouth", x: p.x, y: p.y, z: p.z, zone: caveZone, seed: Math.floor(R() * 1e6), drop: 0, alongX: nxt.x !== p.x });
     }
   }
 

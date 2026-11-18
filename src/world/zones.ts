@@ -61,6 +61,7 @@ export const ZONES: Zone[] = [
   },
   {
     id: "pole-nord", name: "Le Pôle Nord", bgDay: 0xb8366a, bgNight: 0x1a0f2e, ground: 0xfff5f8,
+    roadColor: 0xd3ddec, // piste damée plutôt que goudron
     props: [{ kind: "cane", weight: 3 }, { kind: "presents", weight: 3 }, { kind: "tree", weight: 2 }, { kind: "deer", weight: 1 }],
     landmarks: ["workshop", "sleigh", "deer", "deer", "bigTree"],
     weather: { snow: 0.8, wind: 0.3, speed: 1 },
