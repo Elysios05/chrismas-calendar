@@ -6,12 +6,6 @@ import { PINGOU_LOGIN, type PingouLine } from "./pingou/lines";
 const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 const COULEUR: Record<Who, string> = { alexandre: "#2f6fd0", flavie: "#d9354b" };
 
-/**
- * Préférence « rester connecté ».
- * TODO (chef de projet) : `BackendApi.signIn` n'a pas encore d'option pour ça — l'équipe Backend
- * lira cette clé, ou on ajoute un troisième paramètre au contrat.
- */
-export const CLE_RESTER_CONNECTE = "interface:rester-connecte";
 
 /**
  * Écran de connexion : on choisit son profil, puis son mot de passe.
@@ -23,9 +17,7 @@ export function LoginScreen({ backend, onSignedIn }: { backend: BackendApi; onSi
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
-  const [rester, setRester] = useState(() => {
-    try { return localStorage.getItem(CLE_RESTER_CONNECTE) !== "non"; } catch { return true; }
-  });
+  const [rester, setRester] = useState(true);
   const [lines, setLines] = useState<PingouLine[]>(PINGOU_LOGIN.accueil());
   const champ = useRef<HTMLInputElement>(null);
 
@@ -44,8 +36,8 @@ export function LoginScreen({ backend, onSignedIn }: { backend: BackendApi; onSi
     setBusy(true);
     setErreur(null);
     try {
-      try { localStorage.setItem(CLE_RESTER_CONNECTE, rester ? "oui" : "non"); } catch { /* stockage indisponible */ }
-      await backend.signIn(who, password);
+      // le contrat porte l'option depuis l'issue #4 : plus de pansement dans localStorage
+      await backend.signIn(who, password, { rester });
       setLines(PINGOU_LOGIN.bienvenue(PRENOM[who]));
       onSignedIn?.(who);
     } catch {
