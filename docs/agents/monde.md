@@ -118,3 +118,22 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     dégradé blanc posé sur le bas de l'écran. Pour un vrai brouillard il faudrait désaturer la scène entière.
   - Reste de la tâche 5 : le crépuscule doux. Il demande de passer la palette d'un booléen jour/nuit à un
     facteur continu, donc de toucher à ce que l'interface appelle (`setNight`) — à faire avec le chef de projet.
+- 18 nov — performances (tâche 6), première passe :
+  - **Décors groupés par tranche de profondeur** : au lieu de plusieurs centaines d'objets triés et transformés
+    à chaque image, la scène manipule quelques dizaines de conteneurs. Les décors d'une même diagonale ont de
+    toute façon la même profondeur, donc l'ordre de dessin ne change pas.
+  - **Culling** : chaque tranche de décor, chaque bande de terrain et chaque case connaît la hauteur qu'elle
+    occupe, et n'est dessinée que si elle touche l'écran.
+  - **Mesure** : les images par seconde ne disent rien ici (le conteneur n'a pas de carte graphique, le coût est
+    dominé par le rendu logiciel plein écran : 7–8 i/s avant comme après). J'ai donc mesuré le **temps processeur
+    JavaScript par image** avec le profileur de Chrome, qui est ce que ces optimisations visent :
+    | | avant | après |
+    |---|---|---|
+    | Village (j6) | 7,14 ms | 3,75 ms |
+    | Marché (j13) | 6,70 ms | 4,53 ms |
+    | Pôle Nord (j21) | 7,38 ms | 3,99 ms |
+    Soit environ **45 % de temps processeur en moins par image**.
+  - Le découpage du terrain en bandes **n'apporte aucun gain mesurable ici** : il n'y avait qu'un seul objet,
+    donc rien à trier. Il est gardé parce qu'il évite d'envoyer au processeur graphique les milliers de polygones
+    hors écran — ce qui compte sur un vrai téléphone, mais reste à confirmer sur appareil.
+  - Reste à faire : la mesure sur un vrai téléphone, seule à pouvoir valider l'objectif de 60 i/s.
