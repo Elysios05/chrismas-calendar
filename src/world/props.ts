@@ -199,7 +199,7 @@ function drawHouse(
     stack.position.set(sp.x, sp.y);
     const puffs: Graphics[] = [];
     for (let i = 0; i < 3; i++) {
-      const puff = new Graphics().circle(0, 0, 9 + i * 2.5).fill(0xd3dae8); // gris doux : le blanc se perdrait dans la neige
+      const puff = new Graphics().circle(0, 0, 11 + i * 3).fill(0xc6cfe0); // gris bleuté : le blanc se perdrait dans la neige
       stack.addChild(puff);
       puffs.push(puff);
     }
@@ -360,12 +360,22 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       break;
     }
     case "sled": {
-      // luge appuyée dans la neige
+      // luge de bois posée de profil, patins recourbés à l'avant
       const p = P(cx, cy), col = [0xd9354b, 0x3f7fb5, 0x2fa37a][Math.floor(rnd(1) * 3)];
-      g.ellipse(p.x, p.y, 14, 5).fill({ color: c(0x9aa3b8), alpha: 0.28 });
-      g.roundRect(p.x - 14, p.y - 26, 26, 24, 4).fill(c(col));
-      g.roundRect(p.x - 11, p.y - 23, 20, 7, 2).fill(c(shade(col, -0.22)));
-      g.moveTo(p.x - 17, p.y - 2).lineTo(p.x + 13, p.y - 6).stroke({ width: 3, color: c(0xd6a86a) });
+      g.ellipse(p.x, p.y, 15, 5).fill({ color: c(0x9aa3b8), alpha: 0.28 });
+      // patins : une barre basse qui remonte en crosse devant
+      for (const dy of [0, -4]) {
+        g.moveTo(p.x - 15, p.y - 3 + dy).lineTo(p.x + 9, p.y - 3 + dy)
+          .arc(p.x + 9, p.y - 9 + dy, 6, Math.PI / 2, -Math.PI / 4, true)
+          .stroke({ width: 2.6, color: c(0x7a4a2b) });
+      }
+      // montants et plateau de lattes
+      for (const dx of [-11, 2]) g.rect(p.x + dx, p.y - 11, 2.4, 8).fill(c(0x8a5a33));
+      g.roundRect(p.x - 14, p.y - 15, 26, 5, 2).fill(c(0xd6a86a));
+      for (let i = 0; i < 4; i++) g.rect(p.x - 13 + i * 6.4, p.y - 15, 1.4, 5).fill(c(0xa5713f));
+      // dossier incliné, peint
+      g.roundRect(p.x - 15, p.y - 26, 5, 12, 2).fill(c(col));
+      g.roundRect(p.x - 15, p.y - 26, 20, 4, 2).fill(c(shade(col, -0.18)));
       break;
     }
     case "bigTree": {
