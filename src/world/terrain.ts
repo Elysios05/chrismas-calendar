@@ -2,10 +2,11 @@
 import { ZONES, DAYS_PER_ZONE } from "./zones";
 import type { PropKind } from "./props";
 
-export type PathCell = { x: number; y: number; z: number; zone: number };
+/** `i` = rang de la cellule le long du chemin */
+export type PathCell = { x: number; y: number; z: number; zone: number; i: number };
 export type DayNode = { day: number; idx: number; x: number; y: number; z: number; zone: number };
 /** `rz` = altitude de la route la plus proche : sert à mesurer la hauteur relative d'une cellule */
-export type Cell = { x: number; y: number; h: number; zone: number; road: boolean; lake: boolean; d: number; front: boolean; rz: number };
+export type Cell = { x: number; y: number; h: number; zone: number; road: boolean; lake: boolean; d: number; front: boolean; rz: number; pi: number };
 /** `drop` = dénivelé à combler sous un bâtiment, côté aval (hauteur du soubassement) */
 export type PlacedProp = { kind: PropKind; x: number; y: number; z: number; zone: number; seed: number; drop: number };
 export type Terrain = { path: PathCell[]; nodes: DayNode[]; cells: Map<string, Cell>; props: PlacedProp[]; V: Map<string, number> };
@@ -21,6 +22,9 @@ export function heightAt(t: Terrain, x: number, y: number) {
 
 export const key = (x: number, y: number) => `${x},${y}`;
 const SEG = 4, TRANSITION = 6, LEAD = 4;
+/** Longueur du passage d'un monde au suivant. Entre le lac et le marché il est bien plus long :
+ *  la forêt doit avoir le temps de s'éteindre avant que le marché commence. */
+const transitionLen = (fromZone: number) => (ZONES[fromZone]?.id === "lac" ? 18 : TRANSITION);
 const HALF_WIDTH = 17; // demi-largeur du terrain (en tuiles, axe écran horizontal)
 
 function rng(seed: number) {
@@ -46,15 +50,16 @@ export function buildTerrain(seed = 2026): Terrain {
   const path: PathCell[] = [];
   const nodes: DayNode[] = [];
   let x = 0, y = 0, dirX = true, zone = 0;
-  path.push({ x, y, z: 0, zone });
-  const step = () => { if (dirX) x++; else y++; path.push({ x, y, z: 0, zone }); };
+  path.push({ x, y, z: 0, zone, i: 0 });
+  const step = () => { if (dirX) x++; else y++; path.push({ x, y, z: 0, zone, i: path.length }); };
   for (let i = 0; i < LEAD; i++) step();
   for (let day = 1; day <= 24; day++) {
     for (let i = 0; i < SEG; i++) step();
     nodes.push({ day, idx: path.length - 1, x, y, z: 0, zone });
     dirX = !dirX;
     if (day % DAYS_PER_ZONE === 0 && day < 24) {
-      for (let i = 0; i < TRANSITION; i++) { step(); if (i === TRANSITION / 2 - 1) zone++; path[path.length - 1].zone = zone; }
+      const len = transitionLen(zone);
+      for (let i = 0; i < len; i++) { step(); if (i === Math.floor(len / 2) - 1) zone++; path[path.length - 1].zone = zone; }
     }
   }
   for (let i = 0; i < 4; i++) step();
@@ -109,7 +114,7 @@ export function buildTerrain(seed = 2026): Terrain {
       } else {
         h += bd > 3 ? (n - 0.5) * 0.35 : 0;
       }
-      cells.set(key(cx, cy), { x: cx, y: cy, h: Math.max(0, h), zone: best.zone, road: onRoad.has(key(cx, cy)), lake: false, d: bd, front, rz: best.z });
+      cells.set(key(cx, cy), { x: cx, y: cy, h: Math.max(0, h), zone: best.zone, road: onRoad.has(key(cx, cy)), lake: false, d: bd, front, rz: best.z, pi: best.i });
     }
   }
   // lissage : pentes en terrasses plutôt qu'en piliers
@@ -273,6 +278,8 @@ export function buildTerrain(seed = 2026): Terrain {
   // une case de chaque nœud reste dégagée
   for (const n of nodes) for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) taken.add(key(n.x + dx, n.y + dy));
 
+  // rangs du chemin où l'on change de monde
+  const zoneEdges = path.filter((p, i) => i > 0 && p.zone !== path[i - 1].zone).map((p) => p.i);
   for (const c of all) {
     if (c.road || taken.has(key(c.x, c.y))) continue;
     const z = ZONES[c.zone];
@@ -280,6 +287,8 @@ export function buildTerrain(seed = 2026): Terrain {
     const steep = slopeOf(c);
     if (steep > 0.9) continue; // falaises : pas de décor
     const d = c.d;
+    // près d'une frontière de monde, les constructions se raréfient : chaque monde s'éteint avant le suivant
+    const edge = Math.min(1, Math.min(...zoneEdges.map((b) => Math.abs(c.pi - b))) / 8);
     if (c.lake) { if (z.id === "lac" && d > 1.2 && R() < 0.05) place("skater", c); continue; }
     switch (z.id) {
       case "montagnes": {
@@ -291,10 +300,15 @@ export function buildTerrain(seed = 2026): Terrain {
       }
       case "saint-nicolas": {
         // un vrai bourg : des rangées de maisons serrées de part et d'autre de la rue
-        const row = d > 1.55 && d < 3.2 ? 0.95 : d > 3.6 && d < 5.4 ? 0.85 : d > 5.8 && d < 8.5 ? 0.6 : 0;
+        const row = (d > 1.55 && d < 3.2 ? 0.95 : d > 3.6 && d < 5.4 ? 0.85 : d > 5.8 && d < 8.5 ? 0.6 : 0) * edge;
         if (row && R() < row && flatAround(0) && free(c.x, c.y, 1)) place("house", c, 1);
-        else if (d > 1 && d < 1.55 && R() < 0.34) place("lamp", c);
-        else if (d > 1.4 && d < 4 && R() < 0.09) place(R() < 0.6 ? "visitor" : R() < 0.85 ? "presents" : "snowman", c);
+        // guirlandes tendues au-dessus de la chaussée, et lampadaires le long des trottoirs
+        else if (d > 1 && d < 1.6 && R() < 0.4 * edge) place(R() < 0.55 ? "lamp" : "garland", c);
+        // du mobilier de rue : bancs, luges contre les murs, sapins décorés, badauds
+        else if (d > 1.4 && d < 4.5 && R() < 0.16 * edge) {
+          const k = R();
+          place(k < 0.34 ? "visitor" : k < 0.52 ? "bench" : k < 0.68 ? "sled" : k < 0.84 ? "presents" : "snowman", c);
+        }
         else if (d > 1.4 && R() < 0.16) place(R() < 0.4 ? "tree" : R() < 0.75 ? "treeSmall" : "bush", c);
         break;
       }
@@ -302,7 +316,7 @@ export function buildTerrain(seed = 2026): Terrain {
         // forêt profonde, trouée de clairières ; la densité retombe loin de la route
         const wood = noise2(c.x * 0.15, c.y * 0.15);
         const far = Math.max(0, Math.min(1, (d - 8) / 7));
-        const dense = (wood > 0.44 ? 0.95 : 0.3) * (c.front ? 0.55 : 1) * (1 - far * 0.75);
+        const dense = (wood > 0.44 ? 0.95 : 0.3) * (c.front ? 0.55 : 1) * (1 - far * 0.75) * (0.35 + edge * 0.65);
         if (d > 1.8 && d < 6 && R() < 0.05 && flatAround(0) && free(c.x, c.y, 1)) place("house", c, 1);
         else if (d > 1.3 && R() < dense) place(R() < 0.5 ? "tree" : R() < 0.78 ? "treeSmall" : R() < 0.96 ? "bush" : "rock", c);
         else if (d > 1.5 && R() < 0.025) place("deer", c);
@@ -311,10 +325,13 @@ export function buildTerrain(seed = 2026): Terrain {
       case "marche": {
         // deux allées d'échoppes collées les unes aux autres, guirlandes au-dessus de la rue
         const aisle = (d > 1.6 && d < 2.6) || (d > 3.6 && d < 4.6);
-        if (aisle && R() < 0.72 && free(c.x, c.y, 0)) place("stall", c);
-        else if (d > 1 && d < 1.6 && R() < 0.45) place(R() < 0.5 ? "lamp" : "garland", c);
-        else if (d > 1.2 && d < 5 && R() < 0.4) place(R() < 0.55 ? "visitor" : R() < 0.82 ? "brazier" : "presents", c);
-        else if (d > 5 && d < 9 && R() < 0.55 && flatAround(0) && free(c.x, c.y, 1)) place("house", c, 1);
+        if (aisle && R() < 0.72 * edge && free(c.x, c.y, 0)) place("stall", c);
+        else if (d > 1 && d < 1.6 && R() < 0.45 * edge) place(R() < 0.5 ? "lamp" : "garland", c);
+        else if (d > 1.2 && d < 5 && R() < 0.4 * edge) {
+          const k = R();
+          place(k < 0.45 ? "visitor" : k < 0.68 ? "brazier" : k < 0.84 ? "presents" : "bench", c);
+        }
+        else if (d > 5 && d < 9 && R() < 0.55 * edge && flatAround(0) && free(c.x, c.y, 1)) place("house", c, 1);
         else if (d > 5 && R() < 0.22) place(R() < 0.55 ? "tree" : R() < 0.8 ? "treeSmall" : "bush", c);
         break;
       }

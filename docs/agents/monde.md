@@ -51,3 +51,17 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - Nouveaux décors : `bush`, `visitor`, `brazier`, `garland`.
   - Mesure : 10–11 i/s avant densification, 9–11 i/s après, sur ce conteneur sans carte graphique. Le plancher
     vient du rendu logiciel, pas du nombre de décors — mais il faudra mesurer sur un vrai téléphone (tâche 6).
+- 18 nov — rues pavées, village chaleureux et marché vivant, demandés par Alexandre :
+  - **pavés** : nouveau drapeau `paved` sur la zone ; au village et au marché la chaussée devient un fond de
+    mortier clair couvert de pavés gris chauds légèrement différents, sans bande centrale, avec un liseré de
+    neige tassée au bord ;
+  - **chaleur du village** : une maison sur deux a ses fenêtres allumées même de jour, couronne de houx sur la
+    porte, fumée qui monte de la cheminée, guirlandes tendues au-dessus de la chaussée, bancs, luges et badauds ;
+  - **marché** : trois modèles d'échoppe (auvent rayé, chalet de vin chaud à toit enneigé qui fume, stand ouvert
+    habillé de sapinage et de lanternes), et la **grande roue tourne** — jante et nacelles dans un conteneur que
+    la scène fait pivoter, chaque nacelle contre-tournée pour rester droite ;
+  - **séparation lac / marché** : la transition entre ces deux mondes passe de 6 à 18 cases, et la densité des
+    constructions retombe près de chaque frontière (facteur `edge`), pour que chaque monde s'éteigne avant le suivant.
+  - Piège rencontré : la fumée était bien dessinée mais invisible (blanc sur neige, bouffées minuscules). Vérifié
+    en la coloriant en magenta et en comptant les pixels : 0 d'abord, puis 40 — donc rendue mais trop discrète.
+    Corrigé en gris bleuté, bouffées plus grosses et plus opaques.

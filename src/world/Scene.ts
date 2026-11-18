@@ -2,7 +2,7 @@
 import { Application, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import { P, ZH, mix, poly, makePalette, type Palette, type Pt } from "./iso";
 import { buildTerrain, heightAt, key, type Terrain, type DayNode } from "./terrain";
-import { drawProp } from "./props";
+import { drawProp, type AnimPart } from "./props";
 import { ZONES } from "./zones";
 import { Person, Penguin, type Who } from "./actors";
 
@@ -64,6 +64,7 @@ export class Scene {
   states = new Map<number, NodeState>();
   flakes: { s: Sprite; vy: number; ph: number; z: number }[] = [];
   zoneNow = -1;
+  anims: AnimPart[] = [];
   time = 0;
   boundaries: number[] = [];
 
@@ -173,21 +174,44 @@ export class Scene {
     const H = (x: number, y: number) => heightAt(T, x, y) + 0.01;
     const quad = (pts: [number, number][], col: number, alpha = 1) => poly(g, pts.map(([x, y]) => P(x, y, H(x, y))), c(col), alpha);
     const hw = 0.3;
+    const rect = (x0: number, x1: number, y0: number, y1: number, col: number, alpha = 1) =>
+      quad([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], col, alpha);
+    // rue pavée : un fond de mortier clair, puis des pavés de gris chauds légèrement différents
+    const JOINT = 0xb9afa4, COBBLE = [0x9d948c, 0xa79e96, 0x918880, 0xaba39b];
+    const hash = (i: number, j: number) => { const s = Math.sin(i * 41.7 + j * 93.3) * 43758.5453; return s - Math.floor(s); };
+    const pave = (x0: number, x1: number, y0: number, y1: number, nx: number, ny: number, seed: number) => {
+      rect(x0, x1, y0, y1, JOINT);
+      const m = 0.014;
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+        const a0 = x0 + (x1 - x0) * (i / nx) + m, a1 = x0 + (x1 - x0) * ((i + 1) / nx) - m;
+        const b0 = y0 + (y1 - y0) * (j / ny) + m, b1 = y0 + (y1 - y0) * ((j + 1) / ny) - m;
+        rect(a0, a1, b0, b1, COBBLE[Math.floor(hash(seed * 3 + i, j) * COBBLE.length)]);
+      }
+    };
     for (let i = 0; i < path.length; i++) {
       const a = path[i], b = path[i + 1];
       const onLake = cells.get(key(a.x, a.y))?.lake;
+      const paved = !onLake && !!ZONES[a.zone].paved;
       const col = onLake ? 0x8fcde6 : ROAD;
       const ax = a.x + 0.5, ay = a.y + 0.5;
-      quad([[ax - hw, ay - hw], [ax + hw, ay - hw], [ax + hw, ay + hw], [ax - hw, ay + hw]], col);
+      if (paved) pave(ax - hw, ax + hw, ay - hw, ay + hw, 3, 3, i);
+      else quad([[ax - hw, ay - hw], [ax + hw, ay - hw], [ax + hw, ay + hw], [ax - hw, ay + hw]], col);
       if (!b) continue;
       const along = b.x !== a.x;
       // segment découpé en petits morceaux pour suivre la pente
       for (let s2 = 0; s2 < 4; s2++) {
         const t0 = hw + (1 - 2 * hw) * (s2 / 4), t1 = hw + (1 - 2 * hw) * ((s2 + 1) / 4);
-        if (along) quad([[ax + t0, ay - hw], [ax + t1, ay - hw], [ax + t1, ay + hw], [ax + t0, ay + hw]], col);
+        if (paved) {
+          if (along) pave(ax + t0, ax + t1, ay - hw, ay + hw, 1, 3, i * 7 + s2);
+          else pave(ax - hw, ax + hw, ay + t0, ay + t1, 3, 1, i * 7 + s2);
+        } else if (along) quad([[ax + t0, ay - hw], [ax + t1, ay - hw], [ax + t1, ay + hw], [ax + t0, ay + hw]], col);
         else quad([[ax - hw, ay + t0], [ax + hw, ay + t0], [ax + hw, ay + t1], [ax - hw, ay + t1]], col);
       }
-      if (!onLake) {
+      if (paved) {
+        // pas de bande centrale sur les pavés : juste un peu de neige tassée au bord
+        if (along) { rect(ax + 0.3, ax + 0.7, ay - hw, ay - hw + 0.045, 0xf1ece4, 0.5); rect(ax + 0.3, ax + 0.7, ay + hw - 0.045, ay + hw, 0xf1ece4, 0.5); }
+        else { rect(ax - hw, ax - hw + 0.045, ay + 0.3, ay + 0.7, 0xf1ece4, 0.5); rect(ax + hw - 0.045, ax + hw, ay + 0.3, ay + 0.7, 0xf1ece4, 0.5); }
+      } else if (!onLake) {
         if (along) quad([[ax + 0.38, ay - 0.04], [ax + 0.62, ay - 0.04], [ax + 0.62, ay + 0.04], [ax + 0.38, ay + 0.04]], 0xf3eee6, 0.75);
         else quad([[ax - 0.04, ay + 0.38], [ax + 0.04, ay + 0.38], [ax + 0.04, ay + 0.62], [ax - 0.04, ay + 0.62]], 0xf3eee6, 0.75);
       } else if (i % 2 === 0) {
@@ -197,8 +221,10 @@ export class Scene {
     }
     this.ground.addChild(g);
 
+    this.anims = [];
     for (const p of props) {
       const o = drawProp(p.kind, p.x, p.y, this.pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop });
+      if (o.anim) this.anims.push(...o.anim);
       o.y = -p.z * ZH;
       o.zIndex = p.x + p.y + (p.kind === "mountain" ? -1.4 : p.kind === "wheel" || p.kind === "workshop" ? -0.6 : 0.5);
       this.objects.addChild(o);
@@ -396,6 +422,21 @@ export class Scene {
     const wo = Math.max(0, density - 1) * 0.25;
     if (wo > 0.01) this.whiteout.rect(0, 0, innerWidth, innerHeight).fill({ color: 0xffffff, alpha: wo });
 
+    // décors vivants : la grande roue tourne (nacelles toujours droites), la fumée monte des cheminées
+    for (const a of this.anims) {
+      if (a.kind === "wheel") {
+        a.hub.rotation += 0.0045 * dt;
+        for (const car of a.cars) car.rotation = -a.hub.rotation;
+      } else {
+        a.puffs.forEach((puff, i) => {
+          const t = (((this.time * 0.012 + a.phase + i * 0.9) % 3) / 3);
+          puff.y = -8 - t * 58;
+          puff.x = Math.sin(t * 3.4 + a.phase) * 9 * t;
+          puff.alpha = 0.9 * (1 - t) * (1 - t * 0.5);
+          puff.scale.set(0.55 + t * 1.1);
+        });
+      }
+    }
     for (const [, cont] of this.gifts) {
       const meta = (cont as Container & { meta: { inner: Container; glow: Graphics; st: NodeState } }).meta;
       if (meta.st === "available") {
