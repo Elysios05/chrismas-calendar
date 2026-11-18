@@ -72,6 +72,24 @@ def main():
             check(a.evaluate("backend.me()") == "alexandre", "?moi=alexandre connecte l'onglet")
             check(a.evaluate("backend.today()") == 10, "?jour=10 simule le 10")
 
+            print("Exemples selon le jour simulé (ticket #32)")
+            j1 = open_page(ctx, "moi=alexandre&jour=1")
+            for w in ("alexandre", "flavie"):
+                p1 = j1.evaluate(f"backend.getProgress('{w}')")
+                check(p1 == {"opened": [], "completed": []}, f"jour 1 : rien d'ouvert ni de terminé pour {w}")
+            check(j1.evaluate("backend.getPrepared(4, 'flavie')") == {"status": "empty"}, "jour 1 : pas de case préparée d'exemple")
+            check(j1.evaluate("backend.getGameState(2, 'score:flavie')") is None, "jour 1 : pas de score d'exemple")
+            j1.close()
+            j3 = open_page(ctx, "moi=alexandre&jour=3")
+            check(j3.evaluate("backend.getProgress('flavie')")["opened"] == [1, 2], "jour 3 : exemples limités aux jours 1 et 2")
+            check(j3.evaluate("backend.getGameState(2, 'score:flavie')") == 1840, "jour 3 : score de la luge (jour 2) présent")
+            check(j3.evaluate("backend.getPrepared(4, 'alexandre')") == {"status": "locked"}, "jour 3 : case 4 encore verrouillée")
+            j3.close()
+            j4 = open_page(ctx, "moi=alexandre&jour=4")
+            check(j4.evaluate("backend.getPrepared(4, 'alexandre')")["status"] == "ready", "jour 4 : la case 4 d'exemple est prête")
+            check(4 not in j4.evaluate("backend.getProgress('alexandre')")["opened"], "jour 4 : la case du jour reste à ouvrir")
+            j4.close()
+
             print("Progression")
             a.evaluate("backend.markOpened(10)")
             err = a.evaluate("backend.markOpened(11).then(() => null, e => e.message)")
@@ -80,6 +98,10 @@ def main():
             prog = a.evaluate("backend.getProgress('alexandre')")
             check(10 in prog["opened"] and 10 in prog["completed"], "case 10 ouverte et terminée")
             check(len(a.evaluate("backend.getProgress('flavie')")["opened"]) == 7, "progression d'exemple de Flavie")
+
+            back = open_page(ctx, "moi=alexandre&jour=5")
+            check(10 not in back.evaluate("backend.getProgress('alexandre')")["opened"], "revenir au jour 5 masque la case 10 ouverte")
+            back.close()
 
             print("Cases préparées")
             r8 = a.evaluate("backend.getPrepared(8, 'alexandre')")

@@ -38,8 +38,15 @@ function placeholderPhoto(label: string, hue: number): string {
   return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
 }
 
-function seedData(): DemoData {
+/**
+ * Données d'exemple pour le jour simulé `today` (ticket #32) : rien d'ouvert ni de joué à partir du jour
+ * simulé ; les cases préparées d'exemple n'existent que jusqu'à ce jour (écrites la veille). Au jour 1,
+ * tout est neuf. Ces exemples ne sont jamais enregistrés : ils sont recalculés à chaque lecture et
+ * fusionnés avec ce que l'utilisateur a réellement fait (qui reste prioritaire).
+ */
+function seedData(today: DayNumber): DemoData {
   const now = new Date().toISOString();
+  const before = (days: number[]) => days.filter((d) => d < today);
   const prepared: PreparedContent[] = [];
   const msgs: Record<Who, string[]> = {
     flavie: [
@@ -62,16 +69,17 @@ function seedData(): DemoData {
       });
     });
   }
+  const gameState: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries({ "2:score:flavie": 1840, "10:score:alexandre": 57 })) {
+    if (Number(k.split(":")[0]) < today) gameState[k] = v;
+  }
   return {
     progress: {
-      alexandre: { opened: [1, 2, 3, 4, 5, 6], completed: [1, 2, 3, 4, 5] },
-      flavie: { opened: [1, 2, 3, 4, 5, 6, 7], completed: [1, 2, 3, 4, 5, 6, 7] },
+      alexandre: { opened: before([1, 2, 3, 4, 5, 6]), completed: before([1, 2, 3, 4, 5]) },
+      flavie: { opened: before([1, 2, 3, 4, 5, 6, 7]), completed: before([1, 2, 3, 4, 5, 6, 7]) },
     },
-    prepared,
-    gameState: {
-      "2:score:flavie": 1840,
-      "10:score:alexandre": 57,
-    },
+    prepared: prepared.filter((c) => c.day <= today),
+    gameState,
   };
 }
 
@@ -85,14 +93,39 @@ const safe = {
   sset(k: string, v: string | null) { try { if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch { /* idem */ } },
 };
 
-const DATA_KEY = PREFIX + "data";
+// v2 : seules les actions de l'utilisateur sont enregistrées (les exemples sont recalculés, ticket #32)
+const DATA_KEY = PREFIX + "data-v2";
+const emptyData = (): DemoData => ({
+  progress: { alexandre: { opened: [], completed: [] }, flavie: { opened: [], completed: [] } },
+  prepared: [],
+  gameState: {},
+});
 
+/** Ce que l'utilisateur a fait dans la démo (sans les exemples). */
 function load(): DemoData {
   const raw = safe.get(DATA_KEY);
-  if (raw) { try { return JSON.parse(raw) as DemoData; } catch { /* données corrompues : on repart des exemples */ } }
-  const d = seedData();
-  safe.set(DATA_KEY, JSON.stringify(d));
-  return d;
+  if (raw) { try { return { ...emptyData(), ...(JSON.parse(raw) as DemoData) }; } catch { /* données corrompues */ } }
+  return emptyData();
+}
+
+/** Vue complète pour le jour simulé : exemples + actions de l'utilisateur, rien au-delà de `today`. */
+function view(today: DayNumber): DemoData {
+  const seed = seedData(today);
+  const user = load();
+  const progress = {} as Record<Who, Progress>;
+  for (const w of ["alexandre", "flavie"] as Who[]) {
+    const s = seed.progress[w], u = user.progress[w] ?? { opened: [], completed: [] };
+    progress[w] = {
+      opened: uniqSorted([...s.opened, ...u.opened]).filter((d) => d <= today),
+      completed: uniqSorted([...s.completed, ...u.completed]).filter((d) => d <= today),
+    };
+  }
+  const mine = new Set(user.prepared.map((c) => `${c.day}:${c.from}`));
+  return {
+    progress,
+    prepared: [...seed.prepared.filter((c) => !mine.has(`${c.day}:${c.from}`)), ...user.prepared],
+    gameState: { ...seed.gameState, ...user.gameState },
+  };
 }
 function save(d: DemoData) {
   try { localStorage.setItem(DATA_KEY, JSON.stringify(d)); }
@@ -110,6 +143,7 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
   private params = new URLSearchParams(typeof location !== "undefined" ? location.search : "");
 
   constructor() {
+    safe.del(PREFIX + "data"); // ancien format (exemples figés, avant le ticket #32)
     if (this.params.has("demo-reset")) { safe.del(DATA_KEY); safe.sset(SESSION_KEY, null); safe.del(SESSION_KEY); }
     const forced = this.params.get("moi");
     if (isWho(forced)) safe.sset(SESSION_KEY, forced);
@@ -165,7 +199,7 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
   async today() { return delay(this.todaySync()); }
 
   async getProgress(who: Who): Promise<Progress> {
-    const p = load().progress[who] ?? { opened: [], completed: [] };
+    const p = view(this.todaySync()).progress[who];
     return delay({ opened: [...p.opened], completed: [...p.completed] });
   }
 
@@ -188,16 +222,20 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
     const from = partnerOf(to);
     // Même règle que le serveur : le destinataire ne lit qu'à partir du jour J, l'auteur toujours.
     if (me !== from && day > this.todaySync()) return delay({ status: "locked" });
-    const c = load().prepared.find((x) => x.day === day && x.from === from);
+    const c = view(this.todaySync()).prepared.find((x) => x.day === day && x.from === from);
     return delay(c ? { status: "ready", content: { ...c, photos: [...c.photos] } } : { status: "empty" });
   }
 
   async savePrepared(day: DayNumber, content: Pick<PreparedContent, "message" | "photos">) {
     const me = this.requireMe();
     if (!PREPARED_DAYS.includes(day)) throw new Error(`Le jour ${day} n'est pas une case préparée.`);
-    const d = load();
     // Figée dès que le destinataire l'a ouverte (même règle que le serveur)
-    if (d.progress[partnerOf(me)]?.opened.includes(day)) throw new Error(FROZEN_MESSAGE);
+    // (on regarde aussi les ouvertures réelles non filtrées : un autre onglet peut simuler un jour plus avancé)
+    const d = load();
+    const other = partnerOf(me);
+    if (view(this.todaySync()).progress[other].opened.includes(day) || d.progress[other]?.opened.includes(day)) {
+      throw new Error(FROZEN_MESSAGE);
+    }
     const item: PreparedContent = {
       day, from: me, to: partnerOf(me), message: content.message, photos: [...content.photos],
       updatedAt: new Date().toISOString(),
@@ -219,7 +257,7 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
   }
 
   async getGameState<T>(day: DayNumber, key: string): Promise<T | null> {
-    const v = load().gameState[`${day}:${key}`];
+    const v = view(this.todaySync()).gameState[`${day}:${key}`];
     return delay(v === undefined ? null : (structuredClone(v) as T));
   }
   async setGameState<T>(day: DayNumber, key: string, value: T) {
