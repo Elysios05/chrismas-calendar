@@ -105,3 +105,10 @@ dans les deux backends (pas d'appel immédiat : seulement aux changements).
   Il te reste ce soir : deux lignes et une photo, et je file me coucher 💤💌 » (variante pour le 24).
 - Tests : 68 vérifications SQL (été/hiver, tolérance, journal distinct, case remplie entre-temps) + `message_test.ts`.
 - 18 nov : relance de 22 h 30 validée telle quelle par Alexandre.
+
+### 18 novembre 2026 — correctif #32 (branche `backend/correctif-32`)
+- Démo : les exemples (progression, cases préparées, scores) sont recalculés selon le jour simulé et ne sont plus enregistrés.
+  Seules les actions de l'utilisateur sont stockées (`cc-demo:data-v2`). Rien d'ouvert ni de joué à partir du jour simulé ;
+  cases préparées d'exemple jusqu'au jour simulé inclus ; au jour 1, tout est neuf. La progression est aussi filtrée à `≤ ?jour`
+  (revenir à un jour antérieur masque les cases ouvertes plus tard).
+- Tests : 48 vérifications dans `demo_backend_test.py`.
