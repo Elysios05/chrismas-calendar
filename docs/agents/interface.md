@@ -65,3 +65,13 @@ projet dans l'issue https://github.com/Elysios05/chrismas-calendar/issues/5 (mai
 **Question en suspens pour le chef de projet** : `getPrepared` est documenté comme refusé par le serveur
 avant le jour J. L'auteur doit pourtant pouvoir relire **son propre brouillon** avant cette date.
 En attendant, l'éditeur traite l'échec comme une page blanche — à confirmer côté backend.
+
+### Course, réglages et écran de fin (branche `interface/course-et-reglages`)
+- `RaceIndicator` : **deux couloirs séparés**, un par personne. Première version avec deux pions sur
+  une seule piste : illisible dès que l'écart tombe sous deux cases, les pastilles se chevauchaient.
+- `Settings` : son et animations (interrupteurs `role="switch"`), déconnexion. Les préférences vivent
+  dans `localStorage` (`interface:son`, `interface:animations`) ; `chargerPreferences(sound)` les applique
+  au démarrage, et « Animations » coupe tout mouvement via `html[data-animations="non"]`,
+  en plus de `prefers-reduced-motion` déjà respecté.
+- `FinalScreen` : feu d'artifice en CSS, compte des cases (toi, l'autre, celles faites à deux),
+  « Relire vos lettres », et le dernier mot de Pingou.

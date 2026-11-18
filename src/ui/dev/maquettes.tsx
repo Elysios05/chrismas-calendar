@@ -2,7 +2,7 @@
  * Page de maquettes de l'équipe Interface (outil de travail, pas livrée au public).
  * `npm run dev` puis http://localhost:5173/maquettes.html?vue=connexion
  * Vues : connexion · connexion-erreur · case-intro · case-jeu · case-fini · lettre
- *         editeur · editeur-vide · rappel · pingou
+ *         editeur · editeur-vide · rappel · course · reglages · final · pingou
  */
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -10,6 +10,9 @@ import type { GameModule } from "../../core/contracts";
 import { LoginScreen } from "../LoginScreen";
 import { DayWindow } from "../DayWindow";
 import { PreparedEditor, RappelVeille } from "../PreparedEditor";
+import { RaceIndicator } from "../RaceIndicator";
+import { Settings } from "../Settings";
+import { FinalScreen } from "../FinalScreen";
 import { MascotDialog, PenguinPortrait } from "../Mascot";
 import type { Expression } from "../pingou/lines";
 import { fakeBackend } from "./fakeBackend";
@@ -72,6 +75,44 @@ function Maquettes() {
         <div className="maq-rappel">
           <RappelVeille jour={16} partenaire="flavie" onOuvrir={() => {}} />
         </div>
+      </div>
+    );
+  }
+
+  if (vue === "final") {
+    const tout = Array.from({ length: 24 }, (_, i) => i + 1);
+    return (
+      <FinalScreen
+        me="alexandre"
+        progress={{
+          alexandre: { opened: tout, completed: tout },
+          flavie: { opened: tout, completed: tout.filter((d) => d !== 15) },
+        }}
+        onRevoir={() => {}}
+        onFermer={() => {}}
+      />
+    );
+  }
+
+  if (vue === "course") {
+    const progress = {
+      alexandre: { opened: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], completed: [] },
+      flavie: { opened: [1, 2, 3, 4, 5, 6, 7, 8, 9], completed: [] },
+    };
+    return (
+      <div className="maq-monde maq-centre">
+        <div className="maq-course">
+          <RaceIndicator me="alexandre" progress={progress} />
+          <RaceIndicator me="flavie" progress={progress} compact />
+        </div>
+      </div>
+    );
+  }
+
+  if (vue === "reglages") {
+    return (
+      <div className="maq-monde">
+        <Settings me="alexandre" backend={backend} onClose={() => {}} />
       </div>
     );
   }
