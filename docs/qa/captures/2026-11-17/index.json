@@ -1,0 +1,992 @@
+{
+  "date": "2026-11-18T00:13:01.532Z",
+  "heures": {
+    "jour": "2026-11-30T12:00:00",
+    "nuit": "2026-11-30T21:00:00"
+  },
+  "index": [
+    {
+      "appareil": "mobile",
+      "mode": "jour",
+      "jour": 1,
+      "captures": [
+        {
+          "nom": "accueil",
+          "fichier": "mobile-jour-j01-accueil.png",
+          "scrollY": 69,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "haut",
+          "fichier": "mobile-jour-j01-haut.png",
+          "scrollY": 0,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case01",
+          "fichier": "mobile-jour-j01-case01.png",
+          "scrollY": 106,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case05",
+          "fichier": "mobile-jour-j01-case05.png",
+          "scrollY": 486,
+          "max": 2037,
+          "zone": "Le Village de Saint-Nicolas"
+        },
+        {
+          "nom": "case09",
+          "fichier": "mobile-jour-j01-case09.png",
+          "scrollY": 792,
+          "max": 2037,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "case13",
+          "fichier": "mobile-jour-j01-case13.png",
+          "scrollY": 1099,
+          "max": 2037,
+          "zone": "Le Marché de Noël"
+        },
+        {
+          "nom": "case17",
+          "fichier": "mobile-jour-j01-case17.png",
+          "scrollY": 1405,
+          "max": 2037,
+          "zone": "La Grotte de glace"
+        },
+        {
+          "nom": "case21",
+          "fichier": "mobile-jour-j01-case21.png",
+          "scrollY": 1712,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "case24",
+          "fichier": "mobile-jour-j01-case24.png",
+          "scrollY": 1879,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "bas",
+          "fichier": "mobile-jour-j01-bas.png",
+          "scrollY": 2037,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        }
+      ],
+      "console": [
+        {
+          "type": "warning",
+          "texte": "[.WebGL-0x2ec001aba00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+        },
+        {
+          "type": "warning",
+          "texte": "[.WebGL-0x2ec001aba00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+        },
+        {
+          "type": "warning",
+          "texte": "[.WebGL-0x2ec001aba00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+        },
+        {
+          "type": "warning",
+          "texte": "[.WebGL-0x2ec001aba00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+        }
+      ],
+      "sceneMs": 1310,
+      "modeAffiche": "☀️"
+    },
+    {
+      "appareil": "mobile",
+      "mode": "jour",
+      "jour": 9,
+      "captures": [
+        {
+          "nom": "accueil",
+          "fichier": "mobile-jour-j09-accueil.png",
+          "scrollY": 755,
+          "max": 2037,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "haut",
+          "fichier": "mobile-jour-j09-haut.png",
+          "scrollY": 0,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case01",
+          "fichier": "mobile-jour-j09-case01.png",
+          "scrollY": 106,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case05",
+          "fichier": "mobile-jour-j09-case05.png",
+          "scrollY": 486,
+          "max": 2037,
+          "zone": "Le Village de Saint-Nicolas"
+        },
+        {
+          "nom": "case09",
+          "fichier": "mobile-jour-j09-case09.png",
+          "scrollY": 788,
+          "max": 2037,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "case13",
+          "fichier": "mobile-jour-j09-case13.png",
+          "scrollY": 1099,
+          "max": 2037,
+          "zone": "Le Marché de Noël"
+        },
+        {
+          "nom": "case17",
+          "fichier": "mobile-jour-j09-case17.png",
+          "scrollY": 1405,
+          "max": 2037,
+          "zone": "La Grotte de glace"
+        },
+        {
+          "nom": "case21",
+          "fichier": "mobile-jour-j09-case21.png",
+          "scrollY": 1712,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "case24",
+          "fichier": "mobile-jour-j09-case24.png",
+          "scrollY": 1879,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "bas",
+          "fichier": "mobile-jour-j09-bas.png",
+          "scrollY": 2037,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        }
+      ],
+      "console": [],
+      "sceneMs": 1106,
+      "modeAffiche": "☀️"
+    },
+    {
+      "appareil": "mobile",
+      "mode": "jour",
+      "jour": 24,
+      "captures": [
+        {
+          "nom": "accueil",
+          "fichier": "mobile-jour-j24-accueil.png",
+          "scrollY": 1842,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "haut",
+          "fichier": "mobile-jour-j24-haut.png",
+          "scrollY": 0,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case01",
+          "fichier": "mobile-jour-j24-case01.png",
+          "scrollY": 106,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case05",
+          "fichier": "mobile-jour-j24-case05.png",
+          "scrollY": 486,
+          "max": 2037,
+          "zone": "Le Village de Saint-Nicolas"
+        },
+        {
+          "nom": "case09",
+          "fichier": "mobile-jour-j24-case09.png",
+          "scrollY": 789,
+          "max": 2037,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "case13",
+          "fichier": "mobile-jour-j24-case13.png",
+          "scrollY": 1098,
+          "max": 2037,
+          "zone": "Le Marché de Noël"
+        },
+        {
+          "nom": "case17",
+          "fichier": "mobile-jour-j24-case17.png",
+          "scrollY": 1404,
+          "max": 2037,
+          "zone": "La Grotte de glace"
+        },
+        {
+          "nom": "case21",
+          "fichier": "mobile-jour-j24-case21.png",
+          "scrollY": 1711,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "case24",
+          "fichier": "mobile-jour-j24-case24.png",
+          "scrollY": 1876,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "bas",
+          "fichier": "mobile-jour-j24-bas.png",
+          "scrollY": 2037,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        }
+      ],
+      "console": [],
+      "sceneMs": 1371,
+      "modeAffiche": "☀️"
+    },
+    {
+      "appareil": "mobile",
+      "mode": "nuit",
+      "jour": 1,
+      "captures": [
+        {
+          "nom": "accueil",
+          "fichier": "mobile-nuit-j01-accueil.png",
+          "scrollY": 69,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "haut",
+          "fichier": "mobile-nuit-j01-haut.png",
+          "scrollY": 0,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case01",
+          "fichier": "mobile-nuit-j01-case01.png",
+          "scrollY": 106,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case05",
+          "fichier": "mobile-nuit-j01-case05.png",
+          "scrollY": 486,
+          "max": 2037,
+          "zone": "Le Village de Saint-Nicolas"
+        },
+        {
+          "nom": "case09",
+          "fichier": "mobile-nuit-j01-case09.png",
+          "scrollY": 792,
+          "max": 2037,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "case13",
+          "fichier": "mobile-nuit-j01-case13.png",
+          "scrollY": 1099,
+          "max": 2037,
+          "zone": "Le Marché de Noël"
+        },
+        {
+          "nom": "case17",
+          "fichier": "mobile-nuit-j01-case17.png",
+          "scrollY": 1405,
+          "max": 2037,
+          "zone": "La Grotte de glace"
+        },
+        {
+          "nom": "case21",
+          "fichier": "mobile-nuit-j01-case21.png",
+          "scrollY": 1712,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "case24",
+          "fichier": "mobile-nuit-j01-case24.png",
+          "scrollY": 1879,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "bas",
+          "fichier": "mobile-nuit-j01-bas.png",
+          "scrollY": 2037,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        }
+      ],
+      "console": [],
+      "sceneMs": 1261,
+      "modeAffiche": "🌙"
+    },
+    {
+      "appareil": "mobile",
+      "mode": "nuit",
+      "jour": 9,
+      "captures": [
+        {
+          "nom": "accueil",
+          "fichier": "mobile-nuit-j09-accueil.png",
+          "scrollY": 755,
+          "max": 2037,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "haut",
+          "fichier": "mobile-nuit-j09-haut.png",
+          "scrollY": 0,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case01",
+          "fichier": "mobile-nuit-j09-case01.png",
+          "scrollY": 106,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case05",
+          "fichier": "mobile-nuit-j09-case05.png",
+          "scrollY": 486,
+          "max": 2037,
+          "zone": "Le Village de Saint-Nicolas"
+        },
+        {
+          "nom": "case09",
+          "fichier": "mobile-nuit-j09-case09.png",
+          "scrollY": 787,
+          "max": 2037,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "case13",
+          "fichier": "mobile-nuit-j09-case13.png",
+          "scrollY": 1099,
+          "max": 2037,
+          "zone": "Le Marché de Noël"
+        },
+        {
+          "nom": "case17",
+          "fichier": "mobile-nuit-j09-case17.png",
+          "scrollY": 1405,
+          "max": 2037,
+          "zone": "La Grotte de glace"
+        },
+        {
+          "nom": "case21",
+          "fichier": "mobile-nuit-j09-case21.png",
+          "scrollY": 1712,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "case24",
+          "fichier": "mobile-nuit-j09-case24.png",
+          "scrollY": 1879,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "bas",
+          "fichier": "mobile-nuit-j09-bas.png",
+          "scrollY": 2037,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        }
+      ],
+      "console": [],
+      "sceneMs": 1301,
+      "modeAffiche": "🌙"
+    },
+    {
+      "appareil": "mobile",
+      "mode": "nuit",
+      "jour": 24,
+      "captures": [
+        {
+          "nom": "accueil",
+          "fichier": "mobile-nuit-j24-accueil.png",
+          "scrollY": 1842,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "haut",
+          "fichier": "mobile-nuit-j24-haut.png",
+          "scrollY": 0,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case01",
+          "fichier": "mobile-nuit-j24-case01.png",
+          "scrollY": 106,
+          "max": 2037,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case05",
+          "fichier": "mobile-nuit-j24-case05.png",
+          "scrollY": 486,
+          "max": 2037,
+          "zone": "Le Village de Saint-Nicolas"
+        },
+        {
+          "nom": "case09",
+          "fichier": "mobile-nuit-j24-case09.png",
+          "scrollY": 788,
+          "max": 2037,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "case13",
+          "fichier": "mobile-nuit-j24-case13.png",
+          "scrollY": 1096,
+          "max": 2037,
+          "zone": "Le Marché de Noël"
+        },
+        {
+          "nom": "case17",
+          "fichier": "mobile-nuit-j24-case17.png",
+          "scrollY": 1400,
+          "max": 2037,
+          "zone": "La Grotte de glace"
+        },
+        {
+          "nom": "case21",
+          "fichier": "mobile-nuit-j24-case21.png",
+          "scrollY": 1709,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "case24",
+          "fichier": "mobile-nuit-j24-case24.png",
+          "scrollY": 1877,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "bas",
+          "fichier": "mobile-nuit-j24-bas.png",
+          "scrollY": 2037,
+          "max": 2037,
+          "zone": "Le Pôle Nord"
+        }
+      ],
+      "console": [],
+      "sceneMs": 1267,
+      "modeAffiche": "🌙"
+    },
+    {
+      "appareil": "ordinateur",
+      "mode": "jour",
+      "jour": 1,
+      "captures": [
+        {
+          "nom": "accueil",
+          "fichier": "ordinateur-jour-j01-accueil.png",
+          "scrollY": 266,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "haut",
+          "fichier": "ordinateur-jour-j01-haut.png",
+          "scrollY": 0,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case01",
+          "fichier": "ordinateur-jour-j01-case01.png",
+          "scrollY": 297,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case05",
+          "fichier": "ordinateur-jour-j01-case05.png",
+          "scrollY": 979,
+          "max": 3763,
+          "zone": "Le Village de Saint-Nicolas"
+        },
+        {
+          "nom": "case09",
+          "fichier": "ordinateur-jour-j01-case09.png",
+          "scrollY": 1529,
+          "max": 3763,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "case13",
+          "fichier": "ordinateur-jour-j01-case13.png",
+          "scrollY": 2079,
+          "max": 3763,
+          "zone": "Le Marché de Noël"
+        },
+        {
+          "nom": "case17",
+          "fichier": "ordinateur-jour-j01-case17.png",
+          "scrollY": 2629,
+          "max": 3763,
+          "zone": "La Grotte de glace"
+        },
+        {
+          "nom": "case21",
+          "fichier": "ordinateur-jour-j01-case21.png",
+          "scrollY": 3179,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "case24",
+          "fichier": "ordinateur-jour-j01-case24.png",
+          "scrollY": 3479,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "bas",
+          "fichier": "ordinateur-jour-j01-bas.png",
+          "scrollY": 3763,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        }
+      ],
+      "console": [],
+      "sceneMs": 1322,
+      "modeAffiche": "☀️"
+    },
+    {
+      "appareil": "ordinateur",
+      "mode": "jour",
+      "jour": 9,
+      "captures": [
+        {
+          "nom": "accueil",
+          "fichier": "ordinateur-jour-j09-accueil.png",
+          "scrollY": 1498,
+          "max": 3763,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "haut",
+          "fichier": "ordinateur-jour-j09-haut.png",
+          "scrollY": 0,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case01",
+          "fichier": "ordinateur-jour-j09-case01.png",
+          "scrollY": 297,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case05",
+          "fichier": "ordinateur-jour-j09-case05.png",
+          "scrollY": 979,
+          "max": 3763,
+          "zone": "Le Village de Saint-Nicolas"
+        },
+        {
+          "nom": "case09",
+          "fichier": "ordinateur-jour-j09-case09.png",
+          "scrollY": 1528,
+          "max": 3763,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "case13",
+          "fichier": "ordinateur-jour-j09-case13.png",
+          "scrollY": 2079,
+          "max": 3763,
+          "zone": "Le Marché de Noël"
+        },
+        {
+          "nom": "case17",
+          "fichier": "ordinateur-jour-j09-case17.png",
+          "scrollY": 2629,
+          "max": 3763,
+          "zone": "La Grotte de glace"
+        },
+        {
+          "nom": "case21",
+          "fichier": "ordinateur-jour-j09-case21.png",
+          "scrollY": 3179,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "case24",
+          "fichier": "ordinateur-jour-j09-case24.png",
+          "scrollY": 3479,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "bas",
+          "fichier": "ordinateur-jour-j09-bas.png",
+          "scrollY": 3763,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        }
+      ],
+      "console": [],
+      "sceneMs": 999,
+      "modeAffiche": "☀️"
+    },
+    {
+      "appareil": "ordinateur",
+      "mode": "jour",
+      "jour": 24,
+      "captures": [
+        {
+          "nom": "accueil",
+          "fichier": "ordinateur-jour-j24-accueil.png",
+          "scrollY": 3448,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "haut",
+          "fichier": "ordinateur-jour-j24-haut.png",
+          "scrollY": 0,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case01",
+          "fichier": "ordinateur-jour-j24-case01.png",
+          "scrollY": 297,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case05",
+          "fichier": "ordinateur-jour-j24-case05.png",
+          "scrollY": 979,
+          "max": 3763,
+          "zone": "Le Village de Saint-Nicolas"
+        },
+        {
+          "nom": "case09",
+          "fichier": "ordinateur-jour-j24-case09.png",
+          "scrollY": 1525,
+          "max": 3763,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "case13",
+          "fichier": "ordinateur-jour-j24-case13.png",
+          "scrollY": 2078,
+          "max": 3763,
+          "zone": "Le Marché de Noël"
+        },
+        {
+          "nom": "case17",
+          "fichier": "ordinateur-jour-j24-case17.png",
+          "scrollY": 2625,
+          "max": 3763,
+          "zone": "La Grotte de glace"
+        },
+        {
+          "nom": "case21",
+          "fichier": "ordinateur-jour-j24-case21.png",
+          "scrollY": 3175,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "case24",
+          "fichier": "ordinateur-jour-j24-case24.png",
+          "scrollY": 3471,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "bas",
+          "fichier": "ordinateur-jour-j24-bas.png",
+          "scrollY": 3763,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        }
+      ],
+      "console": [],
+      "sceneMs": 1310,
+      "modeAffiche": "☀️"
+    },
+    {
+      "appareil": "ordinateur",
+      "mode": "nuit",
+      "jour": 1,
+      "captures": [
+        {
+          "nom": "accueil",
+          "fichier": "ordinateur-nuit-j01-accueil.png",
+          "scrollY": 266,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "haut",
+          "fichier": "ordinateur-nuit-j01-haut.png",
+          "scrollY": 0,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case01",
+          "fichier": "ordinateur-nuit-j01-case01.png",
+          "scrollY": 297,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case05",
+          "fichier": "ordinateur-nuit-j01-case05.png",
+          "scrollY": 979,
+          "max": 3763,
+          "zone": "Le Village de Saint-Nicolas"
+        },
+        {
+          "nom": "case09",
+          "fichier": "ordinateur-nuit-j01-case09.png",
+          "scrollY": 1529,
+          "max": 3763,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "case13",
+          "fichier": "ordinateur-nuit-j01-case13.png",
+          "scrollY": 2079,
+          "max": 3763,
+          "zone": "Le Marché de Noël"
+        },
+        {
+          "nom": "case17",
+          "fichier": "ordinateur-nuit-j01-case17.png",
+          "scrollY": 2629,
+          "max": 3763,
+          "zone": "La Grotte de glace"
+        },
+        {
+          "nom": "case21",
+          "fichier": "ordinateur-nuit-j01-case21.png",
+          "scrollY": 3179,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "case24",
+          "fichier": "ordinateur-nuit-j01-case24.png",
+          "scrollY": 3479,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "bas",
+          "fichier": "ordinateur-nuit-j01-bas.png",
+          "scrollY": 3763,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        }
+      ],
+      "console": [],
+      "sceneMs": 1447,
+      "modeAffiche": "🌙"
+    },
+    {
+      "appareil": "ordinateur",
+      "mode": "nuit",
+      "jour": 9,
+      "captures": [
+        {
+          "nom": "accueil",
+          "fichier": "ordinateur-nuit-j09-accueil.png",
+          "scrollY": 1498,
+          "max": 3763,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "haut",
+          "fichier": "ordinateur-nuit-j09-haut.png",
+          "scrollY": 0,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case01",
+          "fichier": "ordinateur-nuit-j09-case01.png",
+          "scrollY": 297,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case05",
+          "fichier": "ordinateur-nuit-j09-case05.png",
+          "scrollY": 979,
+          "max": 3763,
+          "zone": "Le Village de Saint-Nicolas"
+        },
+        {
+          "nom": "case09",
+          "fichier": "ordinateur-nuit-j09-case09.png",
+          "scrollY": 1519,
+          "max": 3763,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "case13",
+          "fichier": "ordinateur-nuit-j09-case13.png",
+          "scrollY": 2079,
+          "max": 3763,
+          "zone": "Le Marché de Noël"
+        },
+        {
+          "nom": "case17",
+          "fichier": "ordinateur-nuit-j09-case17.png",
+          "scrollY": 2629,
+          "max": 3763,
+          "zone": "La Grotte de glace"
+        },
+        {
+          "nom": "case21",
+          "fichier": "ordinateur-nuit-j09-case21.png",
+          "scrollY": 3179,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "case24",
+          "fichier": "ordinateur-nuit-j09-case24.png",
+          "scrollY": 3479,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "bas",
+          "fichier": "ordinateur-nuit-j09-bas.png",
+          "scrollY": 3763,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        }
+      ],
+      "console": [],
+      "sceneMs": 1158,
+      "modeAffiche": "🌙"
+    },
+    {
+      "appareil": "ordinateur",
+      "mode": "nuit",
+      "jour": 24,
+      "captures": [
+        {
+          "nom": "accueil",
+          "fichier": "ordinateur-nuit-j24-accueil.png",
+          "scrollY": 3448,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "haut",
+          "fichier": "ordinateur-nuit-j24-haut.png",
+          "scrollY": 0,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case01",
+          "fichier": "ordinateur-nuit-j24-case01.png",
+          "scrollY": 297,
+          "max": 3763,
+          "zone": "Les Montagnes"
+        },
+        {
+          "nom": "case05",
+          "fichier": "ordinateur-nuit-j24-case05.png",
+          "scrollY": 979,
+          "max": 3763,
+          "zone": "Le Village de Saint-Nicolas"
+        },
+        {
+          "nom": "case09",
+          "fichier": "ordinateur-nuit-j24-case09.png",
+          "scrollY": 1529,
+          "max": 3763,
+          "zone": "La Forêt et le Lac gelé"
+        },
+        {
+          "nom": "case13",
+          "fichier": "ordinateur-nuit-j24-case13.png",
+          "scrollY": 2070,
+          "max": 3763,
+          "zone": "Le Marché de Noël"
+        },
+        {
+          "nom": "case17",
+          "fichier": "ordinateur-nuit-j24-case17.png",
+          "scrollY": 2620,
+          "max": 3763,
+          "zone": "La Grotte de glace"
+        },
+        {
+          "nom": "case21",
+          "fichier": "ordinateur-nuit-j24-case21.png",
+          "scrollY": 3178,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "case24",
+          "fichier": "ordinateur-nuit-j24-case24.png",
+          "scrollY": 3471,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        },
+        {
+          "nom": "bas",
+          "fichier": "ordinateur-nuit-j24-bas.png",
+          "scrollY": 3763,
+          "max": 3763,
+          "zone": "Le Pôle Nord"
+        }
+      ],
+      "console": [],
+      "sceneMs": 1153,
+      "modeAffiche": "🌙"
+    }
+  ],
+  "planches": [
+    "planche-mobile-jour.jpg",
+    "planche-mobile-nuit.jpg",
+    "planche-ordinateur-jour.jpg",
+    "planche-ordinateur-nuit.jpg"
+  ]
+}

@@ -1,0 +1,6 @@
+# Captures individuelles (lourdes) : régénérées par npm run qa:captures. Les planches JPEG et index.json restent suivis.
+captures/*/*.png
+captures/*/*.html
+# Sorties Playwright
+e2e-resultats/
+e2e-rapport/
