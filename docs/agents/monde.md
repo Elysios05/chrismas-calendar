@@ -102,3 +102,19 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     appliquées à un conteneur dont l'origine est celle du monde, pas celle du traîneau : le moindre
     `scale` le projetait à des centaines de pixels. Corrigé en ancrant un conteneur sur la case et en animant
     un conteneur interne, le traîneau étant dessiné en coordonnées relatives.
+- 18 nov — météo scénarisée, un temps par jour (tâche 5, partiellement) :
+  - Alexandre a choisi le scénario **marqué** : presque chaque jour a son temps, dans `src/world/weather.ts`
+    (24 entrées, avec la tempête du 10 du cahier des charges). `snow`, `wind` et `speed` remplacent la météo
+    du monde ; `fog` et `clouds` la modulent.
+  - Le temps suit **le jour que l'on regarde** en défilant, pas la date : `Scene.dayAt()` lit la position de
+    la caméra et donne un jour continu (10,4 = entre le 10 et le 11), et `weatherAt()` mélange les deux jours
+    voisins. Aucun changement d'API vers l'interface.
+  - `SceneCallbacks.onWeather` (optionnel) expose le libellé du temps (« Tempête sur le lac »), si l'interface
+    veut un jour l'afficher ou faire commenter Pingou. Rien ne l'utilise encore.
+  - Deux réglages après captures : le voile de tempête effaçait tout le décor (coefficient ramené de 0,25 à
+    0,16), et un jour brumeux ne se sentait pas dans un monde clair — d'où un plancher de brouillard et une
+    teinte froide quand `fog` dépasse 1.
+  - **Limite connue** : le brouillard reste discret dans les mondes au sol clair, parce que le voile est un
+    dégradé blanc posé sur le bas de l'écran. Pour un vrai brouillard il faudrait désaturer la scène entière.
+  - Reste de la tâche 5 : le crépuscule doux. Il demande de passer la palette d'un booléen jour/nuit à un
+    facteur continu, donc de toucher à ce que l'interface appelle (`setNight`) — à faire avec le chef de projet.
