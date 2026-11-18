@@ -15,10 +15,12 @@ import { Settings } from "../Settings";
 import { FinalScreen } from "../FinalScreen";
 import { MascotDialog, PenguinPortrait } from "../Mascot";
 import type { Expression } from "../pingou/lines";
-import { fakeBackend } from "./fakeBackend";
+import { DemoBackend } from "../../backend";
 import "../../index.css";
 
-const backend = fakeBackend();
+// le vrai mode démo, celui qu'utilise l'application publique : plus de faux backend d'atelier.
+// Les maquettes se règlent par l'URL, comme l'application : ?jour=N&moi=flavie&rappels=off…
+const backend = new DemoBackend();
 
 /** Faux jeu, juste pour montrer la zone de jeu dans la fenêtre d'une case. */
 const fauxJeu: GameModule = {
@@ -59,7 +61,8 @@ function Maquettes() {
   }
 
   if (vue === "editeur" || vue === "editeur-vide") {
-    const b = vue === "editeur-vide" ? fakeBackend({ prepared: "empty" }) : backend;
+    // ?vue=editeur-vide : on passe par ?vide=1, la démo part alors d'une case préparée vierge
+    const b = backend;
     return (
       <div className="maq-monde maq-centre">
         <div className="maq-feuille">
