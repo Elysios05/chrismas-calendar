@@ -52,6 +52,32 @@ export async function renderAmbience(zone: ZoneId, night: boolean, seconds: numb
   return buf.get() as AudioBuffer;
 }
 
+/**
+ * Test de robustesse (ticket #30) : rejoue `count` fois l'effet `name` en `span` secondes.
+ * Renvoie le nombre d'effets joués, ignorés, et d'exceptions (rattrapées ou non).
+ */
+export async function stressSfx(name: SfxName, count = 50, span = 0.1) {
+  let played = 0;
+  let skipped = 0;
+  let thrown = 0;
+  let caught = 0;
+  await T.Offline(() => {
+    const bank = new SfxBank(T, T.getDestination());
+    for (let k = 0; k < count; k++) {
+      try {
+        // comme dans le jeu : plusieurs appels dans la même image (16 ms) ont la même heure
+        const t = 0.05 + Math.floor((k * span) / count / 0.016) * 0.016;
+        if (bank.play(name, t) === null) skipped++;
+        else played++;
+      } catch {
+        thrown++;
+      }
+    }
+    caught = bank.errors;
+  }, 0.05 + span + 1.5, 1, 22050);
+  return { played, skipped, thrown, caught };
+}
+
 /** AudioBuffer → WAV 16 bits */
 export function toWav(buf: AudioBuffer): Blob {
   const ch = buf.numberOfChannels;
