@@ -289,6 +289,110 @@ button { font-family: inherit; cursor: pointer; }
 .prep-loupe img { max-width: 100%; max-height: 80dvh; border-radius: 10px; border: 9px solid #fff; }
 .prep-loupe .sheet-close { position: absolute; top: 16px; right: 16px; }
 
+/* ---------- écran de fin, le 24 ---------- */
+.final {
+  position: fixed; inset: 0; z-index: 45; overflow: auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(130% 70% at 50% 108%, #fff 0, #cfe1f6 40%, transparent 68%),
+    linear-gradient(180deg, #0a1030 0, #1b2a5c 50%, #44639c 100%);
+}
+.final-ciel { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.feu { position: absolute; width: 0; height: 0; }
+.feu-etincelle {
+  position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--t);
+  rotate: var(--a); box-shadow: 0 0 16px 3px var(--t);
+  animation: eclate 2.6s ease-out infinite;
+}
+@keyframes eclate {
+  0% { transform: translateY(0) scale(.3); opacity: 0; }
+  10% { opacity: 1; }
+  55% { opacity: .9; }
+  100% { transform: translateY(-120px) scale(.15); opacity: 0; }
+}
+.final-carte {
+  position: relative; z-index: 1; width: min(440px, 100%);
+  background: var(--cream); border-radius: 30px; padding: 0 24px 24px; text-align: center;
+  box-shadow: 0 12px 0 rgba(8,14,38,.4), 0 36px 70px rgba(0,0,0,.45);
+  animation: pop .6s cubic-bezier(.2,1.5,.4,1);
+}
+.final-portrait { margin-top: -50px; }
+.final-kicker { margin: 2px 0 0; font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--red); }
+.final-titre { margin: 4px 0 10px; font-size: 32px; line-height: 1.05; }
+.final-sous { margin: 0 0 18px; color: var(--ink-soft); font-size: 15px; line-height: 1.45; }
+.final-compte {
+  display: flex; justify-content: center; gap: 8px; margin: 0 0 20px; padding: 0; list-style: none;
+}
+.final-compte li {
+  flex: 1 1 0; background: #fff; border-radius: 16px; padding: 12px 6px;
+  font-size: 12px; line-height: 1.3; color: var(--ink-soft); box-shadow: 0 4px 0 rgba(27,39,71,.12);
+}
+.final-compte strong { display: block; font-size: 24px; color: var(--red); }
+.final-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.final-actions .btn { flex: 1 1 140px; }
+.final .mascot { position: relative; z-index: 1; width: min(440px, 100%); }
+
+/* ---------- indicateur de la course ---------- */
+.course {
+  background: var(--cream); border-radius: 18px; padding: 10px 14px 12px;
+  box-shadow: 0 5px 0 rgba(27,39,71,.18); min-width: 190px;
+}
+.course-phrase { margin: 0 0 9px; font-size: 13px; font-weight: 600; text-align: center; }
+.course-couloirs { display: flex; flex-direction: column; gap: 7px; }
+.course-couloir { display: grid; grid-template-columns: 54px 1fr 22px; align-items: center; gap: 8px; }
+.course-nom {
+  font-size: 12px; font-weight: 600; color: var(--c);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.course-rail {
+  height: 9px; border-radius: 5px; background: #e9e3d8; overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(27,39,71,.12);
+}
+.course-avance {
+  display: block; height: 100%; border-radius: 5px; background: var(--c);
+  transition: width .6s cubic-bezier(.3,1.2,.4,1);
+}
+.course-jour { font-size: 13px; font-weight: 700; color: var(--c); text-align: right; }
+/* phrase complète pour les lecteurs d'écran, invisible à l'œil */
+.course-lecture {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+.course--compact { padding: 8px 11px 9px; min-width: 160px; }
+.course--compact .course-phrase { font-size: 12px; margin-bottom: 6px; }
+.course--compact .course-couloir { grid-template-columns: 56px 1fr 20px; gap: 6px; }
+.course--compact .course-nom { font-size: 11px; }
+
+/* ---------- réglages ---------- */
+.reg-portrait { display: block; margin-top: 2px; }
+.reg-liste { display: flex; flex-direction: column; gap: 4px; }
+.reg-ligne {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 13px 4px; border-bottom: 1px solid #efe8dc;
+}
+.reg-texte { font-size: 16px; font-weight: 600; cursor: pointer; }
+.reg-aide { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--ink-soft); }
+.reg-switch {
+  flex: none; width: 56px; height: 32px; border: 0; border-radius: 16px; background: #d8d1c5;
+  padding: 3px; transition: background .18s;
+}
+.reg-switch.on { background: var(--green); }
+.reg-bouton {
+  display: block; width: 26px; height: 26px; border-radius: 50%; background: #fff;
+  box-shadow: 0 2px 4px rgba(27,39,71,.3); transition: translate .18s;
+}
+.reg-switch.on .reg-bouton { translate: 24px 0; }
+.reg-switch:focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
+.reg-pied { text-align: center; }
+.reg-demo { margin: 0 0 12px; font-size: 12px; color: var(--ink-soft); }
+.reg-sortie { width: 100%; max-width: 260px; }
+
+/* préférence explicite : plus aucune animation */
+html[data-animations="non"] *, html[data-animations="non"] *::before, html[data-animations="non"] *::after {
+  animation: none !important; transition: none !important;
+}
+
 /* ---------- éditeur de case préparée ---------- */
 .edit { display: flex; flex-direction: column; gap: 10px; }
 .edit-chargement { padding: 40px 10px; text-align: center; color: var(--ink-soft); }
@@ -385,3 +489,5 @@ button { font-family: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+.maq-course { display: flex; flex-direction: column; gap: 16px; align-items: center; }
