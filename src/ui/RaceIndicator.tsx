@@ -2,6 +2,8 @@ import type { Progress, Who } from "../core/contracts";
 
 const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 const COULEUR: Record<Who, string> = { alexandre: "#2f6fd0", flavie: "#d9354b" };
+/** Mêmes couleurs, assombries pour le petit texte : le rouge vif ne tient pas le contraste à 11 px. */
+const COULEUR_TEXTE: Record<Who, string> = { alexandre: "#2a5fb4", flavie: "#a3192f" };
 const TOTAL = 24;
 
 /** Position sur la route = la case ouverte la plus loin. */
@@ -45,13 +47,13 @@ export function RaceIndicator({
         {[me, autre].map((w) => {
           const jour = avancee(progress[w]);
           return (
-            <div key={w} className="course-couloir" style={{ ["--c" as string]: COULEUR[w] }}>
+            <div key={w} className="course-couloir" style={{ ["--c" as string]: COULEUR[w], ["--ct" as string]: COULEUR_TEXTE[w] }}>
               <span className="course-nom">{w === me ? "Toi" : PRENOM[w]}</span>
               <span className="course-rail">
                 <span className="course-avance" style={{ width: `${(jour / TOTAL) * 100}%` }} />
               </span>
               <span className="course-jour">{jour}</span>
-              <span className="course-lecture">{PRENOM[w]} : case {jour} sur {TOTAL}</span>
+              <span className="pour-lecteurs">{PRENOM[w]} : case {jour} sur {TOTAL}</span>
             </div>
           );
         })}

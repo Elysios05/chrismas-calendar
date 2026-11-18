@@ -2,8 +2,28 @@ import { useEffect, useState } from "react";
 import type { PreparedResult, Who } from "../core/contracts";
 import { MascotDialog } from "./Mascot";
 import { PINGOU_CASE, type PingouLine } from "./pingou/lines";
+import { useDialog } from "./useDialog";
 
 const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
+
+/** Photo en grand : fenêtre modale à part entière (focus piégé, Échap, retour du focus). */
+function Loupe({ src, onClose }: { src: string; onClose: () => void }) {
+  const panneau = useDialog<HTMLDivElement>(onClose);
+  return (
+    <div
+      ref={panneau}
+      tabIndex={-1}
+      className="prep-loupe"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Photo en grand"
+      onClick={onClose}
+    >
+      <img src={src} alt="" />
+      <button type="button" className="sheet-close" onClick={onClose} aria-label="Fermer la photo">✕</button>
+    </div>
+  );
+}
 
 type Etape = "enveloppe" | "lettre";
 
@@ -99,12 +119,7 @@ export function PreparedCase({
         </>
       )}
 
-      {agrandie && (
-        <div className="prep-loupe" role="dialog" aria-label="Photo agrandie" onClick={() => setAgrandie(null)}>
-          <img src={agrandie} alt="" />
-          <button type="button" className="sheet-close" onClick={() => setAgrandie(null)} aria-label="Fermer la photo">✕</button>
-        </div>
-      )}
+      {agrandie && <Loupe src={agrandie} onClose={() => setAgrandie(null)} />}
 
       {!onPingou && <MascotDialog key={JSON.stringify(lines)} lines={lines} variant="inline" onDone={() => setLines([])} />}
     </div>
