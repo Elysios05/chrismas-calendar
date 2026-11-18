@@ -1,0 +1,149 @@
+{
+  "date": "2026-11-18T00:13:02.558Z",
+  "cpu": 4,
+  "appareil": "mobile 390×844 DPR 2",
+  "rendu": "SwiftShader (logiciel)",
+  "bundle": {
+    "fichiers": [
+      {
+        "fichier": "index-BoAN3U8n.js",
+        "ko": 546.2,
+        "koGzip": 166.9
+      },
+      {
+        "fichier": "CanvasPool-C_eBOk4i.js",
+        "ko": 114.4,
+        "koGzip": 34.6
+      },
+      {
+        "fichier": "RenderTargetSystem-BsLcze4T.js",
+        "ko": 77.3,
+        "koGzip": 21.7
+      },
+      {
+        "fichier": "browserAll-DBlPNdHO.js",
+        "ko": 42.5,
+        "koGzip": 11
+      },
+      {
+        "fichier": "init-CNICyncV.js",
+        "ko": 15,
+        "koGzip": 4.6
+      },
+      {
+        "fichier": "index-DqbsXe-9.css",
+        "ko": 12.9,
+        "koGzip": 3.7
+      },
+      {
+        "fichier": "getTexelRangeRects-B1C1--S6.js",
+        "ko": 11.1,
+        "koGzip": 2.9
+      },
+      {
+        "fichier": "canvasUtils-BGRZiUN2.js",
+        "ko": 6.1,
+        "koGzip": 2
+      },
+      {
+        "fichier": "getTextureBatchBindGroup-BoX8BtYF.js",
+        "ko": 0.3,
+        "koGzip": 0.3
+      },
+      {
+        "fichier": "webworkerAll-DBJPTgYe.js",
+        "ko": 0.1,
+        "koGzip": 0.1
+      }
+    ],
+    "totalKo": 825.9,
+    "totalGzipKo": 247.8
+  },
+  "chargement": {
+    "domContentLoadedMs": 288,
+    "loadMs": 288,
+    "premierAffichageMs": 404,
+    "sceneMs": 3317,
+    "canvas": "780×1688",
+    "octetsTransferes": 257399,
+    "erreurs": 0
+  },
+  "chargement4G": {
+    "domContentLoadedMs": 1691,
+    "loadMs": 1691,
+    "premierAffichageMs": 1780,
+    "sceneMs": 4344,
+    "canvas": "780×1688",
+    "octetsTransferes": 257399,
+    "erreurs": 0
+  },
+  "cpu4": {
+    "repos": {
+      "images": 6,
+      "ips": 1.8,
+      "medianeMs": 599.9,
+      "p95Ms": 616.6,
+      "maxMs": 616.6,
+      "saccades50ms": 6
+    },
+    "jsParImage": {
+      "images": 9,
+      "moyenneMs": 15.3,
+      "p95Ms": 27
+    },
+    "defilement": {
+      "images": 23,
+      "ips": 1.9,
+      "medianeMs": 516.7,
+      "p95Ms": 699.9,
+      "maxMs": 749.9,
+      "saccades50ms": 23,
+      "dureeMs": 12000,
+      "hauteurPx": 2037,
+      "tachesLongues": 24,
+      "tachesLonguesMaxMs": 743
+    },
+    "basculeNuitMs": 1056,
+    "basculeTachesLonguesMs": [
+      393,
+      351,
+      432,
+      602
+    ],
+    "tasJsMo": 44
+  },
+  "cpu1": {
+    "repos": {
+      "images": 9,
+      "ips": 2.4,
+      "medianeMs": 416.6,
+      "p95Ms": 450,
+      "maxMs": 450,
+      "saccades50ms": 9
+    },
+    "jsParImage": {
+      "images": 13,
+      "moyenneMs": 4.7,
+      "p95Ms": 12.8
+    },
+    "defilement": {
+      "images": 34,
+      "ips": 2.8,
+      "medianeMs": 349.9,
+      "p95Ms": 450,
+      "maxMs": 500,
+      "saccades50ms": 34,
+      "dureeMs": 12000,
+      "hauteurPx": 2037,
+      "tachesLongues": 35,
+      "tachesLonguesMaxMs": 511
+    },
+    "basculeNuitMs": 519,
+    "basculeTachesLonguesMs": [
+      240,
+      147,
+      362
+    ],
+    "tasJsMo": 34
+  }
+}
