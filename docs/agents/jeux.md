@@ -87,6 +87,20 @@ Le chef a branché les jeux lui-même dans `App.tsx` : toucher une case → `cha
   par leurs vraies private jokes.
 - **Comparaison chiffrée** avec l'autre à la fin (score et lettres demandées), comme les jours 1 et 2.
 
+### 18 novembre 2026 — jour 15, le pendu du bonhomme qui fond (branche `jeux/pendu-jour15`)
+
+**Décisions prises avec Alexandre :**
+- **7 morceaux** (chapeau, écharpe, bras, carotte, boutons, tête, corps) : le bonhomme fond au lieu d'un pendu.
+- **3 mots par partie**, le bonhomme se reconstruit entre chaque.
+- **Moitié Noël, moitié « à vous deux »** ; le tirage alterne les deux et suit une graine, donc les deux
+  joueurs ont exactement les mêmes mots.
+- **Pas d'indice au départ** : Pingou le donne après 3 erreurs. Comme ça pénalise les mots personnels,
+  j'affiche au-dessus du mot une étiquette neutre « Mot de Noël » / « À vous deux » — on sait dans quel
+  monde chercher sans que la réponse soit vendue.
+
+Décisions techniques prises seul : accents offerts (taper E révèle É et È), clavier AZERTY à l'écran **et**
+clavier physique sur ordinateur, lettres groupées par mot pour qu'un mot ne se coupe jamais en fin de ligne.
+
 **Reste à faire :**
 - Remplacer le faux backend d'atelier par le vrai mode démo quand `src/backend/` existe.
 - Alexandre : remplacer les 10 questions d'exemple par les vraies.
