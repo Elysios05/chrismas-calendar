@@ -13,6 +13,8 @@ export type Zone = {
   props: { kind: PropKind; weight: number }[];
   landmarks: PropKind[]; // éléments placés en priorité (1 de chaque)
   lake?: boolean;
+  ice?: number; // couleur de la glace du lac
+  paved?: boolean; // rue pavée plutôt que route de montagne
   weather: Weather;
   atmo: Atmo;
 };
@@ -26,7 +28,7 @@ export const ZONES: Zone[] = [
     atmo: { fog: 0.18, fogColor: 0xdfe9f5, clouds: 0.9, tint: 0x8fb4e0, tintAlpha: 0.06, rock: 0x6e789a },
   },
   {
-    id: "saint-nicolas", name: "Le Village de Saint-Nicolas", bgDay: 0xf3c6a5, bgNight: 0x1d1838, ground: 0xfbf3ea,
+    id: "saint-nicolas", name: "Le Village de Saint-Nicolas", paved: true, bgDay: 0xf3c6a5, bgNight: 0x1d1838, ground: 0xfbf3ea,
     props: [{ kind: "house", weight: 4 }, { kind: "tree", weight: 3 }, { kind: "lamp", weight: 2 }, { kind: "treeSmall", weight: 2 }],
     landmarks: ["house", "house", "house", "snowman", "presents"],
     weather: { snow: 0.4, wind: 0, speed: 0.7 },
@@ -36,12 +38,12 @@ export const ZONES: Zone[] = [
     id: "lac", name: "La Forêt et le Lac gelé", bgDay: 0x9fd6c6, bgNight: 0x0f2230, ground: 0xf3f7f6,
     props: [{ kind: "tree", weight: 8 }, { kind: "treeSmall", weight: 4 }, { kind: "deer", weight: 1 }, { kind: "rock", weight: 1 }],
     landmarks: ["skater", "skater", "skater", "deer"],
-    lake: true,
+    lake: true, ice: 0x6fb9df,
     weather: { snow: 1.6, wind: 1.4, speed: 1.8 }, // tempête
     atmo: { fog: 0.6, fogColor: 0xf2f7f8, clouds: 0.5, tint: 0xbfd8e0, tintAlpha: 0.1, rock: 0x8aa0a8 },
   },
   {
-    id: "marche", name: "Le Marché de Noël", bgDay: 0xf4a347, bgNight: 0x2a1530, ground: 0xfff6ea,
+    id: "marche", name: "Le Marché de Noël", paved: true, bgDay: 0xf4a347, bgNight: 0x2a1530, ground: 0xfff6ea,
     props: [{ kind: "stall", weight: 4 }, { kind: "tree", weight: 2 }, { kind: "lamp", weight: 2 }, { kind: "presents", weight: 1 }],
     landmarks: ["bigTree", "wheel", "stall", "stall", "stall"],
     weather: { snow: 0.5, wind: 0.1, speed: 0.8 },
