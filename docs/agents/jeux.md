@@ -101,6 +101,25 @@ Le chef a branché les jeux lui-même dans `App.tsx` : toucher une case → `cha
 Décisions techniques prises seul : accents offerts (taper E révèle É et È), clavier AZERTY à l'écran **et**
 clavier physique sur ordinateur, lettres groupées par mot pour qu'un mot ne se coupe jamais en fin de ligne.
 
+### 18 novembre 2026 — jour 17, mots croisés (branche `jeux/motscroises-jour17`)
+
+**Décisions prises avec Alexandre :** 8 mots sur une grille d'environ 9×9, clavier AZERTY maison
+(comme le pendu), « Vérifier » gratuit et « Une lettre » payée 25 points, contenu moitié Noël
+moitié « à vous deux ».
+
+**Décision technique importante** : la grille n'est pas dessinée, elle est **construite par le code**
+(`src/games/motscroises/grille.ts`) à partir de la liste de mots, en cherchant les croisements.
+Alexandre peut donc remplacer les mots sans rien redessiner. Le générateur essaie une soixantaine
+d'agencements et garde le plus compact et le plus carré (sinon la grille partait en 13×13).
+
+**Deux défauts trouvés en regardant le résultat, puis corrigés :**
+- `TRAIN` se posait **par-dessus** `TRAINEAU` (un mot préfixe d'un autre) : deux définitions pour les
+  mêmes cases. Le générateur refuse maintenant un mot entièrement recouvert, et un mot qui rallongerait
+  un mot déjà posé dans le même sens.
+- Sur ordinateur, la première ligne de la grille était rognée : `.jeu-centre` centrait verticalement un
+  contenu plus haut que la fenêtre. Passé en `justify-content: safe center` dans le cadre commun —
+  ça profite à tous les jeux.
+
 **Reste à faire :**
 - Remplacer le faux backend d'atelier par le vrai mode démo quand `src/backend/` existe.
 - Alexandre : remplacer les 10 questions d'exemple par les vraies.
