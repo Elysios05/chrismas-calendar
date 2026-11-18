@@ -75,3 +75,18 @@ En attendant, l'éditeur traite l'échec comme une page blanche — à confirmer
   en plus de `prefers-reduced-motion` déjà respecté.
 - `FinalScreen` : feu d'artifice en CSS, compte des cases (toi, l'autre, celles faites à deux),
   « Relire vos lettres », et le dernier mot de Pingou.
+
+### Accessibilité (branche `interface/accessibilite`)
+`useDialog` regroupe ce qu'une fenêtre modale doit faire : focus qui entre, Tab qui tourne en boucle
+dedans, Échap qui ferme, focus rendu à l'élément qui a ouvert, page du dessous bloquée.
+Posé sur la fenêtre d'une case, les réglages et la photo en grand.
+
+Autres corrections : la machine à écrire de Pingou est devenue purement visuelle (`aria-hidden`),
+la phrase entière est annoncée une fois dans une zone `aria-live` ; elle s'affiche d'un coup si
+le mouvement est réduit. Repère de focus unique sur tout le site. Cibles tactiles à 44 px.
+Contraste : le rouge vif ne passe pas en dessous de 14 px (4,43:1), d'où `--red-texte` (#a3192f, 7,3:1)
+pour les surtitres et des couleurs assombries pour les noms de la course.
+
+**Vérifié avec axe-core** sur sept écrans en 390×844 : **0 violation** WCAG 2.1 AA, focus bien piégé,
+interrupteurs pilotables au clavier. Script d'audit proposé à l'équipe Qualité dans l'issue
+https://github.com/Elysios05/chrismas-calendar/issues/27.
