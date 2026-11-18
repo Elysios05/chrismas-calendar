@@ -89,3 +89,16 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
        maintenant posés en premier.
   - Le critère de terrain pour bâtir passe de 0,2 à 0,6 de pente : depuis que chaque bâtiment taille sa
     terrasse, refuser les coteaux ne servait qu'à vider les villages.
+- 18 nov — finitions des mondes (en attendant la réponse à l'issue #35 sur l'animation d'ouverture) :
+  - **voûte de la grotte** : le portique à quatre pieds devient une vraie paroi de glace percée d'une arche,
+    orientée dans le sens de la marche (`alongX` sur le décor, lu sur le chemin), cintre en gradins et
+    stalactites sous l'arc ;
+  - **piste damée au pôle Nord** et **traces en travers** sur les chemins qui ne sont ni goudron ni pavés
+    (piste et glace de la grotte) ;
+  - **le traîneau décolle le 24** : la scène détecte que la case 24 est ouverte dans les états qu'elle reçoit,
+    attelle deux rennes au traîneau, lui ajoute une traînée d'étoiles et le fait s'élever. Pas besoin de
+    nouvelle API vers l'Interface : l'information est déjà dans `setStates`.
+  - Piège : le traîneau disparaissait de l'écran dès qu'il décollait. La rotation et l'échelle étaient
+    appliquées à un conteneur dont l'origine est celle du monde, pas celle du traîneau : le moindre
+    `scale` le projetait à des centaines de pixels. Corrigé en ancrant un conteneur sur la case et en animant
+    un conteneur interne, le traîneau étant dessiné en coordonnées relatives.

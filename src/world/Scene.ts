@@ -212,7 +212,16 @@ export class Scene {
         // pas de bande centrale sur les pavés : juste un peu de neige tassée au bord
         if (along) { rect(ax + 0.3, ax + 0.7, ay - hw, ay - hw + 0.045, 0xf1ece4, 0.5); rect(ax + 0.3, ax + 0.7, ay + hw - 0.045, ay + hw, 0xf1ece4, 0.5); }
         else { rect(ax - hw, ax - hw + 0.045, ay + 0.3, ay + 0.7, 0xf1ece4, 0.5); rect(ax + hw - 0.045, ax + hw, ay + 0.3, ay + 0.7, 0xf1ece4, 0.5); }
-      } else if (!onLake && ZONES[a.zone].roadColor === undefined) {
+      } else if (!onLake && ZONES[a.zone].roadColor !== undefined) {
+        // chemin de glace ou piste damée : des traces en travers, pas de bande centrale
+        const m = ZONES[a.zone].roadColor!;
+        const mark = mix(m, 0x000000, 0.08);
+        for (let k = 0; k < 2; k++) {
+          const t0 = 0.18 + k * 0.42, t1 = t0 + 0.1;
+          if (along) rect(ax + t0, ax + t1, ay - hw + 0.03, ay + hw - 0.03, mark, 0.8);
+          else rect(ax - hw + 0.03, ax + hw - 0.03, ay + t0, ay + t1, mark, 0.8);
+        }
+      } else if (!onLake) {
         if (along) quad([[ax + 0.38, ay - 0.04], [ax + 0.62, ay - 0.04], [ax + 0.62, ay + 0.04], [ax + 0.38, ay + 0.04]], 0xf3eee6, 0.75);
         else quad([[ax - 0.04, ay + 0.38], [ax + 0.04, ay + 0.38], [ax + 0.04, ay + 0.62], [ax - 0.04, ay + 0.62]], 0xf3eee6, 0.75);
       } else if (i % 2 === 0) {
@@ -224,7 +233,8 @@ export class Scene {
 
     this.anims = [];
     for (const p of props) {
-      const o = drawProp(p.kind, p.x, p.y, this.pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop });
+      const flying = p.kind === "sleigh" && this.states.get(24) === "opened";
+      const o = drawProp(p.kind, p.x, p.y, this.pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop, alongX: p.alongX, flying });
       if (o.anim) this.anims.push(...o.anim);
       o.y = -p.z * ZH;
       o.zIndex = p.x + p.y + (p.kind === "mountain" ? -1.4 : p.kind === "wheel" || p.kind === "workshop" ? -0.6 : 0.5);
@@ -453,6 +463,14 @@ export class Scene {
       if (a.kind === "wheel") {
         a.hub.rotation += 0.0045 * dt;
         for (const car of a.cars) car.rotation = -a.hub.rotation;
+      } else if (a.kind === "takeoff") {
+        // le traîneau s'arrache du sol une fois, puis file dans le ciel en se balançant
+        a.t = Math.min(1, a.t + 0.004 * dt);
+        const e = a.t * a.t * (3 - 2 * a.t);
+        a.node.x = e * 110;
+        a.node.y = -e * 140 + Math.sin(this.time * 0.03) * 6 * e;
+        a.node.rotation = -e * 0.22;
+        a.node.scale.set(1 - e * 0.18);
       } else {
         a.puffs.forEach((puff, i) => {
           const t = (((this.time * 0.012 + a.phase + i * 0.9) % 3) / 3);
