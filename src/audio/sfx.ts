@@ -31,6 +31,25 @@ export const SFX_LIST: SfxName[] = [
   "tap", "select", "hover", "talk", "pingou", "day", "night", "unlock", "photo", "send", "notify", "jingle", "snow",
 ];
 
+/**
+ * Synthés utilisés par chaque effet, avec le décalage (s) de leur dernière attaque dans l'effet.
+ * Sert à garantir des heures de départ strictement croissantes par synthé (sinon Tone lève
+ * « Start time must be strictly greater than previous start time » quand un effet est rejoué très vite).
+ */
+type Voice = "bell" | "blip" | "noise" | "knock" | "wind" | "chirp" | "jingle";
+const USES: Record<SfxName, [Voice, number][]> = {
+  open: [["bell", 0.22]], good: [["bell", 0.09]], bad: [["blip", 0.24]], pop: [["blip", 0]],
+  win: [["bell", 0.5]], locked: [["knock", 0.13]], step: [["noise", 0]], whoosh: [["wind", 0]],
+  tap: [["knock", 0]], select: [["knock", 0], ["bell", 0.02]], hover: [["bell", 0.06]], talk: [["chirp", 0]],
+  pingou: [["chirp", 0.2]], day: [["bell", 0.27]], night: [["bell", 0.36]], unlock: [["bell", 0.24], ["jingle", 0.3]],
+  photo: [["noise", 0.09], ["knock", 0.01]], send: [["wind", 0], ["bell", 0.3]], notify: [["bell", 0.14]],
+  jingle: [["jingle", 0.35]], snow: [["noise", 0], ["knock", 0]],
+};
+/** Écart minimal entre deux attaques d'un même synthé (s) */
+const GAP = 0.01;
+/** Au-delà de ce retard, on préfère ne pas jouer l'effet (s) */
+const MAX_DELAY = 0.12;
+
 const TALK_NOTES = [76, 79, 81, 84, 86, 88]; // pentatonique : la voix de Pingou reste toujours jolie
 
 export class SfxBank {
@@ -44,6 +63,10 @@ export class SfxBank {
   private windFilter: ToneNS.Filter;
   private stepCount = 0;
   private talkCount = 0;
+  /** dernière attaque programmée, par synthé */
+  private busy: Partial<Record<Voice, number>> = {};
+  /** nombre d'exceptions rattrapées (doit rester à 0 : sert aux tests) */
+  errors = 0;
   private chirp: ToneNS.Synth;
   private jingleNoise: ToneNS.NoiseSynth;
   private jingleFilter: ToneNS.Filter;
@@ -104,7 +127,26 @@ export class SfxBank {
     this.nodes.push(bus, rev, revGain, this.bell, this.blip, this.noise, this.noiseFilter, this.knock, this.wind, this.windFilter);
   }
 
-  play(name: SfxName, t: number) {
+  /**
+   * Joue un effet à l'heure `t` (ou un peu plus tard si un synthé est encore occupé).
+   * Ne lève jamais d'exception ; renvoie l'heure réelle de départ, ou null si l'effet est ignoré.
+   */
+  play(name: SfxName, t: number): number | null {
+    const uses = USES[name];
+    let t0 = t;
+    for (const [v] of uses) t0 = Math.max(t0, (this.busy[v] ?? -Infinity) + GAP);
+    if (t0 - t > MAX_DELAY) return null; // rejoué trop vite : on saute ce coup-ci
+    for (const [v, off] of uses) this.busy[v] = t0 + off;
+    try {
+      this.render(name, t0);
+      return t0;
+    } catch {
+      this.errors++;
+      return null; // filet de sécurité : un effet sonore ne doit jamais casser le jeu
+    }
+  }
+
+  private render(name: SfxName, t: number) {
     const n = (s: string) => hz(midi(s));
     switch (name) {
       case "open": {

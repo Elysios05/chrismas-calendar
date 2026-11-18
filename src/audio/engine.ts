@@ -91,7 +91,11 @@ export class SoundEngine implements SoundApi {
   /** Joue un effet (ceux du contrat, plus ceux de `ExtraSfx`) */
   play(sfx: SfxName): void {
     if (!this.enabled || !this.T || !this.sfx || this.raw?.state !== "running") return;
-    this.sfx.play(sfx, this.T.immediate() + 0.01);
+    try {
+      this.sfx.play(sfx, this.T.immediate() + 0.01);
+    } catch {
+      // jamais d'exception vers l'appelant
+    }
   }
 
   /* ------------------------------ En plus ------------------------------- */
