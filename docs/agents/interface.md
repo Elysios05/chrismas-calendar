@@ -90,3 +90,8 @@ pour les surtitres et des couleurs assombries pour les noms de la course.
 **Vérifié avec axe-core** sur sept écrans en 390×844 : **0 violation** WCAG 2.1 AA, focus bien piégé,
 interrupteurs pilotables au clavier. Script d'audit proposé à l'équipe Qualité dans l'issue
 https://github.com/Elysios05/chrismas-calendar/issues/34.
+
+### À faire quand le socle backend arrivera
+Tous les écrans sont codés contre `BackendApi` et tournent pour l'instant sur le faux backend
+provisoire de `src/ui/dev/`. Le branchement sur `createBackend()` et la **suppression** de ce faux
+sont suivis dans l'issue https://github.com/Elysios05/chrismas-calendar/issues/37.
