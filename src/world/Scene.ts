@@ -72,6 +72,8 @@ export class Scene {
   time = 0;
   boundaries: number[] = [];
   nodeY: number[] = [];
+  slabs: { c: Container; min: number; max: number }[] = [];
+  groundBands: { c: Container; min: number; max: number }[] = [];
   weatherNow = "";
 
   constructor(app: Application, cb: SceneCallbacks, night: boolean) {
@@ -120,7 +122,10 @@ export class Scene {
     this.gifts.clear();
     const { cells, path, props, nodes } = this.terrain;
     const c = this.pal.c;
-    const g = new Graphics();
+    // le terrain est lui aussi découpé en bandes de profondeur : au lieu d'un seul immense dessin
+    // toujours envoyé en entier, on ne dessine que les bandes qui touchent l'écran
+    let g = new Graphics();
+    const bands: Graphics[] = [g];
     const list = [...cells.values()].sort((a, b) => a.x + a.y - (b.x + b.y) || a.x - b.x);
     const V = this.terrain.V;
     const hv = (x: number, y: number) => V.get(key(x, y)) ?? 0;
@@ -167,15 +172,19 @@ export class Scene {
       poly(g, pts.map(([x, y, z]) => P(x, y, z)), c(col));
       g.poly(pts.flatMap(([x, y, z]) => { const q = P(x, y, z); return [q.x, q.y]; }), true).stroke({ width: 0.8, color: c(col) });
     };
+    let bandK = list.length ? list[0].x + list[0].y : 0;
     for (const cell of list) {
       const { x, y } = cell;
+      if (x + y >= bandK + 10) { bandK = x + y; g = new Graphics(); bands.push(g); }
       const A: [number, number, number] = [x, y, hv(x, y)], B: [number, number, number] = [x + 1, y, hv(x + 1, y)];
       const C: [number, number, number] = [x + 1, y + 1, hv(x + 1, y + 1)], D: [number, number, number] = [x, y + 1, hv(x, y + 1)];
       face([A, B, C], cell);
       face([A, C, D], cell);
       if (cell.lake && (x + y) % 3 === 0) poly(g, [P(x + 0.2, y + 0.3, 0), P(x + 0.6, y + 0.1, 0), P(x + 0.65, y + 0.18, 0), P(x + 0.25, y + 0.38, 0)], c(0xeaf8fd));
     }
-    // route posée sur le relief
+    for (const b of bands) this.ground.addChild(b);
+    // route posée sur le relief, dans son propre dessin (fine, et au-dessus de toutes les bandes)
+    g = new Graphics();
     const T = this.terrain;
     const H = (x: number, y: number) => heightAt(T, x, y) + 0.01;
     const quad = (pts: [number, number][], col: number, alpha = 1) => poly(g, pts.map(([x, y]) => P(x, y, H(x, y))), c(col), alpha);
@@ -235,17 +244,38 @@ export class Scene {
       }
     }
     this.ground.addChild(g);
+    this.groundBands = bands.map((b) => { const r = b.getLocalBounds(); return { c: b, min: r.minY, max: r.maxY }; });
 
     this.anims = [];
+    // Les décors sont rangés par tranche de profondeur plutôt qu'un par un : la scène trie et transforme
+    // quelques dizaines de conteneurs au lieu de plusieurs centaines d'objets, et on peut masquer d'un coup
+    // tout ce qui est hors de l'écran.
+    const slabs = new Map<number, Container>();
+    const slabOf = (depth: number) => {
+      const k = Math.floor(depth);
+      let c = slabs.get(k);
+      if (!c) {
+        c = new Container();
+        c.zIndex = k + 0.5;
+        slabs.set(k, c);
+        this.objects.addChild(c);
+      }
+      return c;
+    };
     for (const p of props) {
       const flying = p.kind === "sleigh" && this.states.get(24) === "opened";
       const o = drawProp(p.kind, p.x, p.y, this.pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop, alongX: p.alongX, flying });
       if (o.anim) this.anims.push(...o.anim);
       o.y = -p.z * ZH;
-      o.zIndex = p.x + p.y + (p.kind === "mountain" ? -1.4 : p.kind === "wheel" || p.kind === "workshop" ? -0.6 : 0.5);
-      this.objects.addChild(o);
+      const depth = p.x + p.y + (p.kind === "mountain" ? -1.4 : p.kind === "wheel" || p.kind === "workshop" ? -0.6 : 0.5);
+      slabOf(depth).addChild(o);
     }
     for (const n of nodes) this.objects.addChild(this.makeGift(n));
+    // hauteur occupée par chaque tranche, pour ne dessiner que celles qui entrent dans l'écran
+    this.slabs = [...slabs.values()].map((c) => {
+      const b = c.getLocalBounds();
+      return { c, min: b.minY, max: b.maxY };
+    });
     for (const who of ["alexandre", "flavie"] as Who[]) {
       const p = new Person(who, this.pal);
       this.people[who] = p;
@@ -414,6 +444,16 @@ export class Scene {
     this.camX += (tx - this.camX) * Math.min(1, 0.05 * dt);
     this.world.x = this.camX;
     this.world.y = -this.scrollY + this.padTop - this.minY * this.scale;
+
+    // on ne dessine que les tranches de décor qui touchent l'écran
+    const topY = (-this.world.y) / this.scale - 80;
+    const botY = (innerHeight - this.world.y) / this.scale + 80;
+    for (const s2 of this.slabs) s2.c.visible = s2.max > topY && s2.min < botY;
+    for (const b of this.groundBands) b.c.visible = b.max > topY && b.min < botY;
+    for (const [, cont] of this.gifts) {
+      const gy = cont.y;
+      cont.visible = gy > topY - 120 && gy < botY + 120;
+    }
 
     // ambiance
     const zm = this.zoneMix(fy);
