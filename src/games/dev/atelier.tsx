@@ -4,17 +4,25 @@
  * Ne fait pas partie du site livré (seul index.html est construit).
  */
 
-import { silentSound } from "../../core/silent";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { silentSound } from "../../core/silent";
+import { DemoBackend } from "../../backend";
 import type { GameResult, SoundApi, Who } from "../../core/contracts";
 import { joursAvecJeu } from "../registry";
 import { FenetreJeu } from "../lanceur";
-import { creerBackendAtelier, viderAtelier } from "./backendDemo";
 import "../../index.css";
 import "./atelier.css";
 
 const sonMuet: SoundApi = silentSound;
+
+/** Efface ce que le mode démo a enregistré (scores, réponses, progression) */
+function viderDemo() {
+  try {
+    for (const c of Object.keys(localStorage)) if (c.startsWith("cc-demo:")) localStorage.removeItem(c);
+    for (const c of Object.keys(sessionStorage)) if (c.startsWith("cc-demo:")) sessionStorage.removeItem(c);
+  } catch { /* stockage indisponible */ }
+}
 
 function Atelier() {
   const [jour, setJour] = useState(1);
@@ -22,8 +30,17 @@ function Atelier() {
   const [pingou, setPingou] = useState<string[]>([]);
   const [resultat, setResultat] = useState<GameResult | null>(null);
   const [cle, setCle] = useState(0);
-  const [ouvert, setOuvert] = useState(true);
-  const backend = useMemo(() => creerBackendAtelier(qui), [qui]);
+  const [ouvert, setOuvert] = useState(false);
+  // le vrai mode démo de l'équipe Backend, pas un faux backend à nous
+  const backend = useMemo(() => new DemoBackend(), []);
+
+  // les jeux ont besoin d'un joueur connecté (DemoBackend accepte n'importe quel mot de passe)
+  useEffect(() => {
+    let annule = false;
+    setOuvert(false);
+    void backend.signIn(qui, "atelier").then(() => { if (!annule) setOuvert(true); });
+    return () => { annule = true; };
+  }, [backend, qui, cle]);
 
   const relancer = (changer: () => void) => {
     setOuvert(false); setPingou([]); setResultat(null);
@@ -44,7 +61,7 @@ function Atelier() {
           <button key={w} className={w === qui ? "on" : ""} onClick={() => relancer(() => setQui(w))}>{w === "alexandre" ? "Alexandre" : "Flavie"}</button>
         ))}
         <button onClick={() => relancer(() => setCle((c) => c + 1))}>Relancer</button>
-        <button onClick={() => relancer(() => { viderAtelier(); setCle((c) => c + 1); })}>Effacer les scores</button>
+        <button onClick={() => relancer(() => { viderDemo(); setCle((c) => c + 1); })}>Effacer les scores</button>
         {resultat && <em>terminé · score {resultat.score ?? "—"}</em>}
       </div>
       <div className="atelier-ecran">

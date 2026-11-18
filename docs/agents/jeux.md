@@ -58,6 +58,24 @@ que `src/App.tsx`), et qui fournit `backend` et `sound` à cet endroit. Le terra
 nettoyage) et la marche à suivre dans `src/games/README.md`. L'atelier de test passe par ce même lanceur.
 À noter : `ctx.complete()` signifie « le joueur quitte le jeu » (la fenêtre se ferme), pas « la partie est finie ».
 
+### 18 novembre 2026 — intégration dans la fenêtre de l'Interface (issue #7)
+
+Le chef a branché les jeux lui-même dans `App.tsx` : toucher une case → `chargerJeu(jour)` →
+`<DayWindow game={module} … />`. Il m'a confié le ménage et la vérification. Fait :
+- **Les jeux débordaient de la fenêtre** : `.jeu` est en `position: absolute`, or `.sheet-game` est une
+  simple div de 180 px — le jeu se calait sur l'écran entier et masquait l'en-tête et la croix de la case.
+  `monterReact` pose maintenant sa propre boîte (`.jeu-boite`) dans l'élément prêté, qui se donne une
+  hauteur jouable (`min(68vh, 560px)`) si l'hôte n'en impose pas. Mesuré : hôte 350×560 au lieu de 350×180.
+- **Remontage** : cette boîte évite aussi qu'un « Revoir la case » crée une deuxième racine React sur le même
+  nœud pendant que l'ancienne se démonte. Vérifié : « Revoir la case » relance bien le jeu à chaque fois.
+- **Ménage** : `src/games/dev/backendDemo.ts` supprimé, l'atelier utilise le vrai `DemoBackend` de
+  `src/backend/` (avec `signIn`, car les jeux ont besoin d'un joueur connecté) ; le son muet vient de
+  `src/core/silent.ts` (le chef l'avait déjà fait).
+- **Sémantique de `complete()`** : identique des deux côtés — « le joueur quitte le jeu ». `DayWindow` affiche
+  alors son écran « Case terminée ». Les jeux ne l'appellent qu'au bouton « Fermer », donc « Encore une
+  descente » reste interne au jeu.
+- Vu dans le vrai site, téléphone et ordinateur : jours 1 et 2 jouables depuis la carte, aucune erreur console.
+
 **Reste à faire :**
 - Remplacer le faux backend d'atelier par le vrai mode démo quand `src/backend/` existe.
 - Alexandre : remplacer les 10 questions d'exemple par les vraies.
