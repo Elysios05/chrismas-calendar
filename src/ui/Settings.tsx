@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { BackendApi, SoundApi, Who } from "../core/contracts";
 import { PenguinPortrait } from "./Mascot";
 import { useDialog } from "./useDialog";
+import { RemindersRow } from "./Reminders";
 
 const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
@@ -110,6 +111,7 @@ export function Settings({
             aide="À couper si le mouvement te gêne."
             on={animations} onChange={changerAnimations}
           />
+          <RemindersRow backend={backend} />
         </div>
 
         <div className="reg-pied">

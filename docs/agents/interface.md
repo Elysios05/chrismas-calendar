@@ -95,3 +95,20 @@ https://github.com/Elysios05/chrismas-calendar/issues/34.
 Tous les écrans sont codés contre `BackendApi` et tournent pour l'instant sur le faux backend
 provisoire de `src/ui/dev/`. Le branchement sur `createBackend()` et la **suppression** de ce faux
 sont suivis dans l'issue https://github.com/Elysios05/chrismas-calendar/issues/37.
+
+### Rappels, vrai backend et en-tête (branche `interface/rappels-et-vrai-backend`)
+Tickets #17 et #25.
+- `Reminders.tsx` : bloc « Rappels sur cet appareil » dans les réglages. `enableReminders()` est
+  appelé **avant tout `await`** dans le gestionnaire de clic, sinon les navigateurs refusent la
+  demande d'autorisation. Les cinq états du contrat ont chacun leur texte ; `denied`,
+  `needs-install` et `unsupported` expliquent quoi faire plutôt que d'afficher un bouton inutile.
+- `src/ui/dev/fakeBackend.ts` **supprimé** : les maquettes utilisent maintenant `DemoBackend`,
+  le vrai mode démo, et se règlent par l'URL comme l'application.
+- Le pansement `localStorage` du « rester connecté·e » est retiré : `signIn` porte l'option
+  depuis l'issue #4.
+- Styles d'intégration du chef repris à ma main (`.boot`, `.who-badge`, `.rappel-host`, `.edit-host`).
+- En-tête sur téléphone : la pastille du monde devient crème et permanente, et elle flotte sous
+  l'en-tête au lieu d'y ajouter une rangée ; l'indicateur de la course passe en version réduite.
+  De 166 px à 135 px de haut.
+- Fond de page de nuit : écrit sous `html[data-nuit="oui"]`, en attente de la ligne correspondante
+  dans `App.tsx` (demandée au chef dans l'issue #25).
