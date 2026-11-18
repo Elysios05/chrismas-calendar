@@ -47,7 +47,18 @@ export function DayWindow({
   );
   const zone = useRef<HTMLDivElement>(null);
   // focus piégé, Échap, et retour du focus sur la case au moment de fermer
-  const panneau = useDialog<HTMLElement>(onClose);
+  const { panneau, surFond } = useDialog<HTMLElement>(onClose);
+
+  // La progression vient du serveur et peut arriver après l'ouverture de la fenêtre : sans ça,
+  // une case déjà terminée affiche « C'est parti » puis bascule toute seule sous le doigt.
+  useEffect(() => {
+    if (!dejaTerminee) return;
+    setEtape((e) => {
+      if (e !== "intro") return e;        // on ne ramène jamais quelqu'un qui a cliqué « Revoir »
+      setLines(PINGOU_CASE.termine());
+      return "fini";
+    });
+  }, [dejaTerminee]);
 
   // Montage du jeu quand on passe à l'étape « jeu ». Une case préparée n'a pas de jeu.
   useEffect(() => {
@@ -83,7 +94,7 @@ export function DayWindow({
   };
 
   return (
-    <div className="sheet" role="presentation" onClick={onClose}>
+    <div className="sheet" role="presentation" onClick={surFond}>
       <section
         ref={panneau}
         tabIndex={-1}
@@ -139,7 +150,8 @@ export function DayWindow({
                 {resultat?.score !== undefined ? `Ton score : ${resultat.score}` : "Case terminée."}
               </p>
               <div className="sheet-actions">
-                <button className="btn ghost" type="button" onClick={() => { setResultat(null); setEtape("jeu"); }}>
+                {/* Pingou se tait quand le jeu reprend la main : sa bulle ne doit rien recouvrir */}
+                <button className="btn ghost" type="button" onClick={() => { setLines([]); setResultat(null); setEtape("jeu"); }}>
                   Revoir la case
                 </button>
                 <button className="btn" type="button" onClick={onClose}>Retour à la route</button>

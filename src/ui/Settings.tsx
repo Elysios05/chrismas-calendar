@@ -69,7 +69,7 @@ export function Settings({
   const [son, setSon] = useState(() => lire(CLE_SON, true));
   const [animations, setAnimations] = useState(() => lire(CLE_ANIMATIONS, true));
 
-  const panneau = useDialog<HTMLElement>(onClose);
+  const { panneau, surFond } = useDialog<HTMLElement>(onClose);
 
   const changerSon = (v: boolean) => {
     setSon(v); ecrire(CLE_SON, v); sound?.setEnabled(v);
@@ -80,7 +80,7 @@ export function Settings({
   };
 
   return (
-    <div className="sheet" role="presentation" onClick={onClose}>
+    <div className="sheet" role="presentation" onClick={surFond}>
       <section
         ref={panneau}
         tabIndex={-1}

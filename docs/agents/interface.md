@@ -95,3 +95,16 @@ https://github.com/Elysios05/chrismas-calendar/issues/34.
 Tous les écrans sont codés contre `BackendApi` et tournent pour l'instant sur le faux backend
 provisoire de `src/ui/dev/`. Le branchement sur `createBackend()` et la **suppression** de ce faux
 sont suivis dans l'issue https://github.com/Elysios05/chrismas-calendar/issues/37.
+
+### Tickets de l'équipe Qualité (branche `interface/clic-fantome-et-bulle`)
+- **#28, clic fantôme au doigt** : `useDialog` renvoie maintenant `surFond`, qui ignore les clics sur
+  le fond pendant 400 ms après l'ouverture (option retenue par le chef de projet). Posé sur les quatre
+  fenêtres. Un clic à l'intérieur du panneau ne ferme plus non plus.
+- **#31, bulle de Pingou qui recouvre le bouton du jeu** : la cause réelle n'était pas un simple
+  recouvrement. La bulle **grandissait lettre par lettre** ; comme la fenêtre est centrée, toute la
+  carte bougeait pendant qu'on visait un bouton (Playwright : « element is not stable »). La bulle
+  réserve désormais la hauteur de la **phrase la plus longue de la série** (gabarit invisible), donc
+  elle ne change plus jamais de taille. En plus, Pingou se tait quand on clique « Revoir la case ».
+- Trouvé au passage : une case déjà terminée s'ouvrait sur « C'est parti », puis basculait toute seule
+  en « terminée » quand la progression arrivait du serveur. `DayWindow` suit maintenant `dejaTerminee`
+  après le montage.
