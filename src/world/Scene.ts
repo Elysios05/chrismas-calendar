@@ -4,12 +4,15 @@ import { P, ZH, mix, poly, makePalette, type Palette, type Pt } from "./iso";
 import { buildTerrain, heightAt, key, type Terrain, type DayNode } from "./terrain";
 import { drawProp, type AnimPart } from "./props";
 import { ZONES } from "./zones";
+import { weatherAt } from "./weather";
 import { Person, Penguin, type Who } from "./actors";
 
 export type NodeState = "locked" | "available" | "opened";
 export type SceneCallbacks = {
   onNodeTap: (day: number) => void;
   onZone: (zoneIndex: number) => void;
+  /** Le temps qu'il fait là où l'on regarde (« Tempête sur le lac »…), si l'interface veut l'afficher */
+  onWeather?: (label: string) => void;
 };
 
 const GIFT_COLORS = [0xd9354b, 0x2fa37a, 0x3f7fb5, 0xf0a33a, 0x8e4fb5, 0xe0607a];
@@ -68,6 +71,8 @@ export class Scene {
   anims: AnimPart[] = [];
   time = 0;
   boundaries: number[] = [];
+  nodeY: number[] = [];
+  weatherNow = "";
 
   constructor(app: Application, cb: SceneCallbacks, night: boolean) {
     this.app = app;
@@ -249,6 +254,7 @@ export class Scene {
     this.penguin = new Penguin(this.pal);
     this.objects.addChild(this.penguin);
 
+    this.nodeY = nodes.map((n) => P(n.x + 0.5, n.y + 0.5, heightAt(this.terrain, n.x + 0.5, n.y + 0.5)).y);
     const ys = path.map((p) => P(p.x, p.y).y);
     this.minY = Math.min(...ys) - 260;
     this.maxY = Math.max(...ys) + 160;
@@ -371,6 +377,20 @@ export class Scene {
     const wy = P(n.x + 0.5, n.y + 0.5, heightAt(this.terrain, n.x + 0.5, n.y + 0.5)).y;
     return (wy - this.minY) * this.scale + this.padTop - innerHeight * 0.55;
   }
+  /** Le jour que l'on regarde, en continu : 10,4 = entre le 10 et le 11, plus près du 10 */
+  dayAt(wy: number) {
+    const ys = this.nodeY;
+    if (ys.length < 2) return 1;
+    if (wy <= ys[0]) return 1;
+    for (let i = 1; i < ys.length; i++) {
+      if (wy <= ys[i]) {
+        const span = ys[i] - ys[i - 1] || 1;
+        return i + Math.max(0, Math.min(1, (wy - ys[i - 1]) / span));
+      }
+    }
+    return ys.length;
+  }
+
   zoneMix(wy: number) {
     for (let i = 0; i < this.boundaries.length; i++) {
       const b = this.boundaries[i];
@@ -397,6 +417,9 @@ export class Scene {
 
     // ambiance
     const zm = this.zoneMix(fy);
+    // le temps qu'il fait suit le jour que l'on regarde, pas le monde seul
+    const wx = weatherAt(this.dayAt(fy));
+    if (wx.label !== this.weatherNow) { this.weatherNow = wx.label; this.cb.onWeather?.(wx.label); }
     const za = ZONES[zm.a], zb = ZONES[zm.b];
     const lerp = (a: number, b: number) => a + (b - a) * zm.t;
     const zi = zm.t < 0.5 ? zm.a : zm.b;
@@ -429,11 +452,16 @@ export class Scene {
     const night = this.pal.night;
     const tintCol = mix(za.atmo.tint, zb.atmo.tint, zm.t);
     this.tint.clear().rect(0, 0, innerWidth, innerHeight).fill({ color: night ? 0x0b1030 : tintCol, alpha: night ? 0.12 : lerp(za.atmo.tintAlpha, zb.atmo.tintAlpha) });
-    this.fog.tint = night ? 0x2a3566 : mix(za.atmo.fogColor, zb.atmo.fogColor, zm.t);
-    this.fog.alpha = lerp(za.atmo.fog, zb.atmo.fog) * (night ? 0.7 : 1);
+    // un jour de vraie brume tire la couleur du voile vers un gris froid : un voile beige sur un
+    // village beige ne se voit pas
+    const fogCol = mix(za.atmo.fogColor, zb.atmo.fogColor, zm.t);
+    this.fog.tint = night ? 0x2a3566 : mix(fogCol, 0xb6c4d6, Math.max(0, Math.min(0.8, (wx.fog - 1) * 0.6)));
+    // un jour brumeux doit se sentir même dans un monde clair : d'où le plancher
+    const fogBase = lerp(za.atmo.fog, zb.atmo.fog) * wx.fog;
+    this.fog.alpha = Math.min(0.92, Math.max(fogBase, (wx.fog - 1) * 0.32)) * (night ? 0.7 : 1);
     // les nuages passent surtout en altitude (le col des montagnes)
     const alt = Math.min(1, best.z / 3);
-    const cloudAmt = lerp(za.atmo.clouds, zb.atmo.clouds) * (0.35 + alt * 0.65);
+    const cloudAmt = lerp(za.atmo.clouds, zb.atmo.clouds) * wx.clouds * (0.35 + alt * 0.65);
     for (const cl of this.clouds) {
       cl.s.x += cl.v * dt;
       if (cl.s.x > innerWidth + 200) { cl.s.x = -200; cl.base = Math.random() * innerHeight; }
@@ -442,7 +470,7 @@ export class Scene {
       cl.s.tint = night ? 0x55608f : 0xffffff;
     }
     // neige
-    const density = lerp(za.weather.snow, zb.weather.snow), wind = lerp(za.weather.wind, zb.weather.wind), speed = lerp(za.weather.speed, zb.weather.speed);
+    const density = wx.snow, wind = wx.wind, speed = wx.speed;
     const active = Math.floor(Math.min(1, density / 1.6) * this.flakes.length);
     this.flakes.forEach((f, i) => {
       f.s.visible = i < active;
@@ -455,7 +483,7 @@ export class Scene {
       if (f.s.x < -10) f.s.x = innerWidth + 10;
     });
     this.whiteout.clear();
-    const wo = Math.max(0, density - 1) * 0.25;
+    const wo = Math.max(0, density - 1) * 0.16; // voile de tempête : assez pour aveugler, pas pour effacer le décor
     if (wo > 0.01) this.whiteout.rect(0, 0, innerWidth, innerHeight).fill({ color: 0xffffff, alpha: wo });
 
     // décors vivants : la grande roue tourne (nacelles toujours droites), la fumée monte des cheminées
