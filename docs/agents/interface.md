@@ -96,15 +96,19 @@ Tous les écrans sont codés contre `BackendApi` et tournent pour l'instant sur 
 provisoire de `src/ui/dev/`. Le branchement sur `createBackend()` et la **suppression** de ce faux
 sont suivis dans l'issue https://github.com/Elysios05/chrismas-calendar/issues/37.
 
-### Tickets de l'équipe Qualité (branche `interface/clic-fantome-et-bulle`)
-- **#28, clic fantôme au doigt** : `useDialog` renvoie maintenant `surFond`, qui ignore les clics sur
-  le fond pendant 400 ms après l'ouverture (option retenue par le chef de projet). Posé sur les quatre
-  fenêtres. Un clic à l'intérieur du panneau ne ferme plus non plus.
-- **#31, bulle de Pingou qui recouvre le bouton du jeu** : la cause réelle n'était pas un simple
-  recouvrement. La bulle **grandissait lettre par lettre** ; comme la fenêtre est centrée, toute la
-  carte bougeait pendant qu'on visait un bouton (Playwright : « element is not stable »). La bulle
-  réserve désormais la hauteur de la **phrase la plus longue de la série** (gabarit invisible), donc
-  elle ne change plus jamais de taille. En plus, Pingou se tait quand on clique « Revoir la case ».
-- Trouvé au passage : une case déjà terminée s'ouvrait sur « C'est parti », puis basculait toute seule
-  en « terminée » quand la progression arrivait du serveur. `DayWindow` suit maintenant `dejaTerminee`
-  après le montage.
+### Rappels, vrai backend et en-tête (branche `interface/rappels-et-vrai-backend`)
+Tickets #17 et #25.
+- `Reminders.tsx` : bloc « Rappels sur cet appareil » dans les réglages. `enableReminders()` est
+  appelé **avant tout `await`** dans le gestionnaire de clic, sinon les navigateurs refusent la
+  demande d'autorisation. Les cinq états du contrat ont chacun leur texte ; `denied`,
+  `needs-install` et `unsupported` expliquent quoi faire plutôt que d'afficher un bouton inutile.
+- `src/ui/dev/fakeBackend.ts` **supprimé** : les maquettes utilisent maintenant `DemoBackend`,
+  le vrai mode démo, et se règlent par l'URL comme l'application.
+- Le pansement `localStorage` du « rester connecté·e » est retiré : `signIn` porte l'option
+  depuis l'issue #4.
+- Styles d'intégration du chef repris à ma main (`.boot`, `.who-badge`, `.rappel-host`, `.edit-host`).
+- En-tête sur téléphone : la pastille du monde devient crème et permanente, et elle flotte sous
+  l'en-tête au lieu d'y ajouter une rangée ; l'indicateur de la course passe en version réduite.
+  De 166 px à 135 px de haut.
+- Fond de page de nuit : écrit sous `html[data-nuit="oui"]`, en attente de la ligne correspondante
+  dans `App.tsx` (demandée au chef dans l'issue #25).
