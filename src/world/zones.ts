@@ -15,6 +15,7 @@ export type Zone = {
   lake?: boolean;
   ice?: number; // couleur de la glace du lac
   paved?: boolean; // rue pavée plutôt que route de montagne
+  roadColor?: number; // couleur du chemin, quand ce n'est ni du goudron ni des pavés
   weather: Weather;
   atmo: Atmo;
 };
@@ -50,11 +51,13 @@ export const ZONES: Zone[] = [
     atmo: { fog: 0.1, fogColor: 0xffe0b8, clouds: 0.1, tint: 0xff9a3d, tintAlpha: 0.1, rock: 0xa08070 },
   },
   {
-    id: "grotte", name: "La Grotte de glace", bgDay: 0x45c3df, bgNight: 0x0b2236, ground: 0xeefaff,
+    id: "grotte", name: "La Grotte de glace", bgDay: 0x1d6f96, bgNight: 0x0b2236, ground: 0xc3dfee,
+    roadColor: 0x76a7c4,
     props: [{ kind: "crystal", weight: 5 }, { kind: "rock", weight: 2 }, { kind: "treeSmall", weight: 1 }],
     landmarks: ["crystal", "crystal", "mountain"],
     weather: { snow: 0.3, wind: 0, speed: 0.5 },
-    atmo: { fog: 0.3, fogColor: 0xbfefff, clouds: 0, tint: 0x3fb8e0, tintAlpha: 0.16, rock: 0x7fb6d0 },
+    // sous la montagne : lumière basse et franchement bleue
+    atmo: { fog: 0.34, fogColor: 0x5fa6ca, clouds: 0, tint: 0x15446e, tintAlpha: 0.3, rock: 0x5a86aa },
   },
   {
     id: "pole-nord", name: "Le Pôle Nord", bgDay: 0xb8366a, bgNight: 0x1a0f2e, ground: 0xfff5f8,

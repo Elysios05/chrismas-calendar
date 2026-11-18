@@ -5,7 +5,8 @@ import { P, box, onLeft, onRight, gableRoof, pyramid, tree, boulder, poly, shade
 export type PropKind =
   | "tree" | "treeSmall" | "house" | "chalet" | "snowman" | "lamp" | "rock" | "mountain"
   | "stall" | "bigTree" | "wheel" | "crystal" | "presents" | "cane" | "sleigh" | "workshop" | "deer" | "skater"
-  | "bush" | "visitor" | "brazier" | "garland" | "bench" | "sled";
+  | "bush" | "visitor" | "brazier" | "garland" | "bench" | "sled"
+  | "caveMouth" | "icicle" | "iceLantern" | "igloo" | "fence";
 
 /** Parties animées d'un décor, que la scène fait vivre à chaque image */
 export type AnimPart =
@@ -420,6 +421,80 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       const axle = new Graphics().circle(p.x, hy, 6).fill(c(0x2b2f45));
       extra.addChild(hub, axle);
       anim.push({ kind: "wheel", hub, cars });
+      break;
+    }
+    case "caveMouth": {
+      // porche de glace sombre : quatre piliers et un linteau, le chemin s'y enfonce
+      const r = 0.95, hgt = 2.2, t = 0.3;
+      const ice = { top: c(0x9ecfe6), left: c(0x7cb4d2), right: c(0x4d85a8) };
+      for (const [dx, dy] of [[-r, -r], [r, -r], [-r, r], [r, r]] as const) {
+        box(g, cx + dx - t / 2, cy + dy - t / 2, 0, t, t, hgt, ice);
+      }
+      // linteau sur les deux faces visibles, en gradins de glace
+      for (let i = 0; i < 2; i++) {
+        const e = i * 0.12;
+        box(g, cx - r - t / 2 + e, cy + r - t / 2, hgt + i * 0.22, 2 * r + t - 2 * e, t, 0.24, ice);
+        box(g, cx + r - t / 2, cy - r - t / 2 + e, hgt + i * 0.22, t, 2 * r + t - 2 * e, 0.24, ice);
+      }
+      // stalactites accrochées au linteau, et l'ombre du porche sur le sol
+      for (let i = 0; i < 5; i++) {
+        const a = cx - r + 0.12 + i * (2 * r - 0.24) / 4;
+        const q = P(a, cy + r, hgt);
+        poly(g, [{ x: q.x - 5, y: q.y }, { x: q.x + 5, y: q.y }, { x: q.x, y: q.y + 10 + rnd(i) * 16 }], c(0x8fd0e8));
+      }
+      const o = P(cx, cy, 0);
+      g.ellipse(o.x, o.y, 54, 26).fill({ color: 0x0c2740, alpha: 0.3 });
+      break;
+    }
+    case "icicle": {
+      // grappe de stalactites suspendue au-dessus du passage
+      const p = P(cx, cy, 1.6 + rnd(1) * 1.1);
+      for (let i = 0; i < 4; i++) {
+        const dx = (rnd(2 + i) - 0.5) * 34, w = 4 + rnd(6 + i) * 4, len = 14 + rnd(10 + i) * 34;
+        poly(g, [{ x: p.x + dx - w, y: p.y }, { x: p.x + dx + w, y: p.y }, { x: p.x + dx, y: p.y + len }], pal.night ? 0x9fe6ff : c(0xa8dcf0));
+        poly(g, [{ x: p.x + dx, y: p.y }, { x: p.x + dx + w, y: p.y }, { x: p.x + dx, y: p.y + len * 0.8 }], pal.night ? 0x6fc4e4 : c(0x7fbcd8));
+      }
+      break;
+    }
+    case "iceLantern": {
+      // lanterne de glace posée au sol : elle éclaire le chemin
+      const p = P(cx, cy);
+      g.ellipse(p.x, p.y, 15, 6).fill({ color: c(0x1f4c6d), alpha: 0.4 });
+      // socle de blocs de glace empilés, cerclé de sombre pour se détacher de la paroi
+      for (let i = 0; i < 3; i++) {
+        const w = 12 - i * 2.6, z = p.y - 9 - i * 9;
+        g.roundRect(p.x - w, z, w * 2, 10, 2).fill(c(i % 2 ? 0x8ac6e2 : 0xaadcf0));
+        g.roundRect(p.x - w, z, w * 2, 10, 2).stroke({ width: 1.3, color: c(0x3f7899) });
+      }
+      g.circle(p.x, p.y - 42, 30).fill({ color: 0x7fd8ff, alpha: 0.16 });
+      g.circle(p.x, p.y - 42, 16).fill({ color: 0x9fe8ff, alpha: 0.35 });
+      g.circle(p.x, p.y - 42, 8).fill(0xe4fbff);
+      break;
+    }
+    case "igloo": {
+      // igloo : dôme de blocs de neige et porche d'entrée
+      const p = P(cx, cy), r = 30 + rnd(1) * 10;
+      g.ellipse(p.x, p.y, r * 1.15, r * 0.5).fill({ color: c(0x9aa8c8), alpha: 0.3 });
+      g.ellipse(p.x, p.y - r * 0.45, r, r * 0.78).fill(c(0xdfe8f4));
+      g.ellipse(p.x - r * 0.18, p.y - r * 0.5, r * 0.78, r * 0.66).fill(c(0xf6f9fd));
+      g.ellipse(p.x, p.y - r * 0.45, r, r * 0.78).stroke({ width: 1.6, color: c(0xaebfd6) });
+      for (let i = 0; i < 3; i++) {
+        const ry = p.y - r * 0.2 - i * r * 0.3;
+        g.moveTo(p.x - r * (0.95 - i * 0.22), ry).lineTo(p.x + r * (0.95 - i * 0.22), ry).stroke({ width: 1.4, color: c(0xd8e2ee) });
+      }
+      g.moveTo(p.x - r * 0.95, p.y - r * 0.2).lineTo(p.x + r * 0.95, p.y - r * 0.2).stroke({ width: 1.4, color: c(0xc3d2e4) });
+      g.roundRect(p.x - 11, p.y - 20, 22, 20, 9).fill(c(0xeef3f9));
+      g.roundRect(p.x - 11, p.y - 20, 22, 20, 9).stroke({ width: 1.5, color: c(0xaebfd6) });
+      g.ellipse(p.x, p.y - 4, 8, 9).fill(c(0x3a4d6b));
+      if (pal.night) g.ellipse(p.x, p.y - 4, 18, 14).fill({ color: 0xffd46b, alpha: 0.22 });
+      break;
+    }
+    case "fence": {
+      // barrière de bois : enclos des rennes
+      const p = P(cx, cy);
+      for (const dx of [-22, 22]) g.rect(p.x + dx - 2, p.y - 26, 4.5, 26).fill(c(0x6b4328));
+      for (const dz of [8, 18]) g.rect(p.x - 24, p.y - dz - 4, 48, 4.5).fill(c(0x8a5a33));
+      g.rect(p.x - 24, p.y - 30, 48, 3).fill(c(0xf7f5f0));
       break;
     }
     case "crystal": {
