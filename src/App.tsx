@@ -17,7 +17,19 @@ import { FinalScreen } from "./ui/FinalScreen";
 import { PINGOU_ROUTE, type PingouLine } from "./ui/pingou/lines";
 import { aUnJeu, chargerJeu } from "./games/registry";
 
-const isNightNow = () => { const h = new Date().getHours(); return h >= 17 || h < 7; };
+/** Heure locale en heures décimales ; ?heure=17:30 pour simuler (captures, tests) */
+function hourNow() {
+  const q = new URLSearchParams(location.search).get("heure");
+  if (q) { const [h, m = "0"] = q.split(":"); return Number(h) + Number(m) / 60; }
+  const d = new Date(); return d.getHours() + d.getMinutes() / 60;
+}
+/** Lumière 0 = plein jour, 1 = nuit noire, avec crépuscule (décembre : coucher ≈ 17 h, lever ≈ 8 h) */
+function lightAt(h: number) {
+  const ramp = (a: number, b: number) => Math.min(1, Math.max(0, (h - a) / (b - a)));
+  if (h >= 12) return ramp(16.25, 17.75);       // le soir : de 16 h 15 à 17 h 45
+  return 1 - ramp(7.5, 8.75);                   // le matin : de 7 h 30 à 8 h 45
+}
+const isNightNow = () => lightAt(hourNow()) >= 0.5;
 const other = (w: Who): Who => (w === "alexandre" ? "flavie" : "alexandre");
 const EMPTY: Progress = { opened: [], completed: [] };
 const PREPARED_DAYS = [4, 8, 12, 16, 20, 24];
@@ -56,6 +68,13 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
   const [height, setHeight] = useState(3000);
   const [zone, setZone] = useState(0);
   const [night, setNight] = useState(isNightNow());
+  const [light, setLight] = useState(() => lightAt(hourNow()));
+  const [forced, setForced] = useState(false); // le bouton ☀️/🌙 force jour ou nuit jusqu'au rechargement
+  useEffect(() => {
+    if (forced) return;
+    const t = setInterval(() => { const l = lightAt(hourNow()); setLight(l); setNight(l >= 0.5); }, 60_000);
+    return () => clearInterval(t);
+  }, [forced]);
   const [today, setToday] = useState(0);
   const [progress, setProgress] = useState<Record<Who, Progress>>({ alexandre: EMPTY, flavie: EMPTY });
   const [open, setOpen] = useState<{ day: number; game?: GameModule } | null>(null);
@@ -136,7 +155,14 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, today]);
 
-  useEffect(() => { if (ready) { sceneRef.current?.setNight(night); } }, [ready, night]);
+  // lumière : continue si la scène sait faire un crépuscule (setLight), sinon jour/nuit
+  useEffect(() => {
+    document.documentElement.dataset.nuit = night ? "oui" : "non";
+    const s = sceneRef.current as (Scene & { setLight?: (amount: number) => void }) | null;
+    if (!ready || !s) return;
+    if (typeof s.setLight === "function") s.setLight(light);
+    else s.setNight(night);
+  }, [ready, night, light]);
 
   // ouverture directe depuis une notification de rappel : ?case=N
   useEffect(() => {
@@ -194,7 +220,7 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
     setLines([...PINGOU_ROUTE.ouverture(day), ...(diff > 0 ? PINGOU_ROUTE.avance(diff, name) : diff < 0 ? PINGOU_ROUTE.retard(-diff, name) : PINGOU_ROUTE.egalite(name))]);
   };
 
-  const toggleNight = () => { sound.play(night ? "day" : "night"); setNight(!night); };
+  const toggleNight = () => { sound.play(night ? "day" : "night"); setForced(true); setLight(night ? 0 : 1); setNight(!night); };
   const goToday = () => { sound.play("tap"); const s = sceneRef.current; if (s && today) scrollTo({ top: s.scrollForDay(Math.min(24, today)), behavior: "smooth" }); };
 
   return (
