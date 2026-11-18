@@ -43,6 +43,7 @@ export class Scene {
   ground = new Container();
   objects = new Container();
   tint = new Graphics();
+  aurora = new Graphics();
   fog = new Sprite();
   clouds: { s: Sprite; v: number; base: number }[] = [];
   cloudLayer = new Container();
@@ -85,7 +86,7 @@ export class Scene {
       this.cloudLayer.addChild(s);
       this.clouds.push({ s, v: 0.15 + Math.random() * 0.35, base: s.y });
     }
-    app.stage.addChild(this.world, this.tint, this.fog, this.cloudLayer, this.whiteout, this.snowLayer);
+    app.stage.addChild(this.world, this.aurora, this.tint, this.fog, this.cloudLayer, this.whiteout, this.snowLayer);
     const flakeTex = app.renderer.generateTexture(new Graphics().circle(6, 6, 6).fill(0xffffff));
     for (let i = 0; i < 260; i++) {
       const s = new Sprite(flakeTex);
@@ -192,7 +193,7 @@ export class Scene {
       const a = path[i], b = path[i + 1];
       const onLake = cells.get(key(a.x, a.y))?.lake;
       const paved = !onLake && !!ZONES[a.zone].paved;
-      const col = onLake ? 0x8fcde6 : ROAD;
+      const col = onLake ? 0x8fcde6 : ZONES[a.zone].roadColor ?? ROAD;
       const ax = a.x + 0.5, ay = a.y + 0.5;
       if (paved) pave(ax - hw, ax + hw, ay - hw, ay + hw, 3, 3, i);
       else quad([[ax - hw, ay - hw], [ax + hw, ay - hw], [ax + hw, ay + hw], [ax - hw, ay + hw]], col);
@@ -211,7 +212,7 @@ export class Scene {
         // pas de bande centrale sur les pavés : juste un peu de neige tassée au bord
         if (along) { rect(ax + 0.3, ax + 0.7, ay - hw, ay - hw + 0.045, 0xf1ece4, 0.5); rect(ax + 0.3, ax + 0.7, ay + hw - 0.045, ay + hw, 0xf1ece4, 0.5); }
         else { rect(ax - hw, ax - hw + 0.045, ay + 0.3, ay + 0.7, 0xf1ece4, 0.5); rect(ax + hw - 0.045, ax + hw, ay + 0.3, ay + 0.7, 0xf1ece4, 0.5); }
-      } else if (!onLake) {
+      } else if (!onLake && ZONES[a.zone].roadColor === undefined) {
         if (along) quad([[ax + 0.38, ay - 0.04], [ax + 0.62, ay - 0.04], [ax + 0.62, ay + 0.04], [ax + 0.38, ay + 0.04]], 0xf3eee6, 0.75);
         else quad([[ax - 0.04, ay + 0.38], [ax + 0.04, ay + 0.38], [ax + 0.04, ay + 0.62], [ax - 0.04, ay + 0.62]], 0xf3eee6, 0.75);
       } else if (i % 2 === 0) {
@@ -390,6 +391,31 @@ export class Scene {
     const lerp = (a: number, b: number) => a + (b - a) * zm.t;
     const zi = zm.t < 0.5 ? zm.a : zm.b;
     if (zi !== this.zoneNow) { this.zoneNow = zi; this.cb.onZone(zi); }
+    // aurores boréales : des voiles qui ondulent et teintent la neige, seulement au pôle Nord
+    const polarForce = (ZONES[zm.a].id === "pole-nord" ? 1 - zm.t : 0) + (ZONES[zm.b].id === "pole-nord" ? zm.t : 0);
+    this.aurora.clear();
+    if (polarForce > 0.01) {
+      // en plein jour un voile additif se perdrait dans la neige : on teinte, et on n'ajoute que la nuit
+      this.aurora.blendMode = this.pal.night ? "add" : "normal";
+      const boost = this.pal.night ? 1.6 : 1;
+      const H = innerHeight * 0.62, N = 10;
+      const cols = [0x4ef0a8, 0x8f7cf0, 0xf06fb0];
+      for (let b = 0; b < 3; b++) {
+        const base = ((b + 0.5) / 3) * innerWidth;
+        for (let layer = 0; layer < 2; layer++) {
+          const halfW = (90 - layer * 42) * (0.8 + 0.3 * Math.sin(this.time * 0.004 + b));
+          const left: Pt[] = [], right: Pt[] = [];
+          for (let i = 0; i <= N; i++) {
+            const y = (i / N) * H;
+            const dx = Math.sin(y * 0.012 + this.time * 0.008 + b * 2.1) * 70 + Math.sin(y * 0.03 - this.time * 0.004) * 22;
+            const taper = 1 - (i / N) * 0.75; // le voile s'efface en descendant vers le sol
+            left.push({ x: base + dx - halfW * taper, y });
+            right.push({ x: base + dx + halfW * taper, y });
+          }
+          poly(this.aurora, [...left, ...right.reverse()], cols[b], (0.17 - layer * 0.06) * polarForce * boost);
+        }
+      }
+    }
     const night = this.pal.night;
     const tintCol = mix(za.atmo.tint, zb.atmo.tint, zm.t);
     this.tint.clear().rect(0, 0, innerWidth, innerHeight).fill({ color: night ? 0x0b1030 : tintCol, alpha: night ? 0.12 : lerp(za.atmo.tintAlpha, zb.atmo.tintAlpha) });
