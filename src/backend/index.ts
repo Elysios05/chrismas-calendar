@@ -9,6 +9,7 @@ import { DemoBackend } from "./demo";
 
 export { DemoBackend };
 export * from "./config";
+export { LiveGame, joinLive, dayRoomId, LEADER, type LiveOptions, type LivePhase } from "./realtime";
 
 /**
  * Méthodes EN PLUS du contrat (facultatives), implémentées par les deux backends :
