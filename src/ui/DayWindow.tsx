@@ -4,6 +4,7 @@ import { PLANNING, KIND_LABEL } from "../data/planning";
 import { MascotDialog } from "./Mascot";
 import { PreparedCase } from "./PreparedCase";
 import { PINGOU_CASE, type PingouLine } from "./pingou/lines";
+import { useDialog } from "./useDialog";
 
 const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
@@ -44,15 +45,8 @@ export function DayWindow({
     dejaTerminee ? PINGOU_CASE.termine() : PINGOU_CASE.avantJeu(info.title),
   );
   const zone = useRef<HTMLDivElement>(null);
-  const fermer = useRef<HTMLButtonElement>(null);
-
-  // Échap ferme la fenêtre ; le focus part sur la croix à l'ouverture.
-  useEffect(() => {
-    fermer.current?.focus();
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // focus piégé, Échap, et retour du focus sur la case au moment de fermer
+  const panneau = useDialog<HTMLElement>(onClose);
 
   // Montage du jeu quand on passe à l'étape « jeu ». Une case préparée n'a pas de jeu.
   useEffect(() => {
@@ -90,6 +84,8 @@ export function DayWindow({
   return (
     <div className="sheet" role="presentation" onClick={onClose}>
       <section
+        ref={panneau}
+        tabIndex={-1}
         className="sheet-panel"
         role="dialog"
         aria-modal="true"
@@ -105,7 +101,7 @@ export function DayWindow({
               {estPreparee ? `Une lettre de ${PRENOM[partner]}` : info.title}
             </h2>
           </div>
-          <button ref={fermer} className="sheet-close" type="button" onClick={onClose} aria-label="Fermer la case">✕</button>
+          <button className="sheet-close" type="button" onClick={onClose} aria-label="Fermer la case">✕</button>
         </header>
 
         <div className="sheet-body">

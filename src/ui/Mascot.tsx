@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { faceOf, textOf, type Expression, type PingouLine } from "./pingou/lines";
+import { mouvementReduit } from "./useDialog";
 
 export const MASCOT_NAME = "Pingou";
 
@@ -88,8 +89,10 @@ export function MascotDialog({
 
   useEffect(() => { setI(0); }, [lines]);
   useEffect(() => {
+    if (!text) { setShown(""); return; }
+    // moins de mouvement demandé : la phrase s'affiche d'un coup
+    if (mouvementReduit()) { setShown(text); return; }
     setShown("");
-    if (!text) return;
     let k = 0;
     const t = setInterval(() => { k++; setShown(text.slice(0, k)); if (k >= text.length) clearInterval(t); }, 22);
     return () => clearInterval(t);
@@ -109,14 +112,17 @@ export function MascotDialog({
       type="button"
       className={`mascot mascot--${variant}`}
       onClick={next}
-      aria-live="polite"
-      aria-label={complete ? (last ? "Fermer" : "Suite") : "Afficher la suite du texte"}
+      aria-label={complete ? (last ? "Fermer" : "Phrase suivante") : "Afficher la phrase en entier"}
     >
       <span className="mascot-portrait"><PenguinPortrait expression={face} /></span>
       <span className="mascot-bubble">
         <span className="mascot-name">{MASCOT_NAME}</span>
-        <span className="mascot-text">{shown}<span className="caret" style={{ opacity: complete ? 0 : 1 }} /></span>
-        <span className="mascot-next">{complete ? (last ? "✓" : "▶") : ""}</span>
+        {/* la machine à écrire est purement visuelle ; la phrase entière est annoncée une seule fois */}
+        <span className="mascot-text" aria-hidden="true">
+          {shown}<span className="caret" style={{ opacity: complete ? 0 : 1 }} />
+        </span>
+        <span className="pour-lecteurs" aria-live="polite">{MASCOT_NAME} dit : {text}</span>
+        <span className="mascot-next" aria-hidden="true">{complete ? (last ? "✓" : "▶") : ""}</span>
       </span>
     </button>
   );

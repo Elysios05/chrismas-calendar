@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { BackendApi, SoundApi, Who } from "../core/contracts";
 import { PenguinPortrait } from "./Mascot";
+import { useDialog } from "./useDialog";
 
 const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
@@ -68,11 +69,7 @@ export function Settings({
   const [son, setSon] = useState(() => lire(CLE_SON, true));
   const [animations, setAnimations] = useState(() => lire(CLE_ANIMATIONS, true));
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const panneau = useDialog<HTMLElement>(onClose);
 
   const changerSon = (v: boolean) => {
     setSon(v); ecrire(CLE_SON, v); sound?.setEnabled(v);
@@ -85,6 +82,8 @@ export function Settings({
   return (
     <div className="sheet" role="presentation" onClick={onClose}>
       <section
+        ref={panneau}
+        tabIndex={-1}
         className="sheet-panel reg"
         role="dialog"
         aria-modal="true"
