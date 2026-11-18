@@ -65,3 +65,27 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - Piège rencontré : la fumée était bien dessinée mais invisible (blanc sur neige, bouffées minuscules). Vérifié
     en la coloriant en magenta et en comptant les pixels : 0 d'abord, puis 40 — donc rendue mais trop discrète.
     Corrigé en gris bleuté, bouffées plus grosses et plus opaques.
+- 18 nov — grotte de glace et pôle Nord, les deux mondes restés au niveau prototype :
+  - **grotte** : parois resserrées sur le chemin (le mur démarre à 1,7 case au lieu de 2,2 et monte plus vite),
+    porche de glace à l'entrée et à la sortie (quatre piliers, linteau en gradins, stalactites et ombre portée),
+    chemin de glace au lieu du goudron (`roadColor` sur la zone), pénombre franchement bleue, stalactites
+    suspendues, lanternes de glace le long du passage ;
+  - **pôle Nord** : aurores boréales — trois voiles qui ondulent dans un calque au-dessus du monde, teinte franche
+    de jour et additive la nuit, leur force suivant la proximité de la zone ; plus un village : igloos, enclos de
+    rennes, piles de cadeaux, lampions et promeneurs ;
+  - Deux corrections après captures : les igloos, blancs sur neige, étaient invisibles (ajout d'un flanc ombré et
+    d'un contour froid) ; les aurores en mode additif se perdaient en plein jour (teinte normale de jour).
+  - Reste à faire pour ces mondes : le traîneau qui décolle le 24, et l'entrée de la grotte mériterait une vraie
+    voûte percée plutôt qu'un portique.
+  - **Outil** : un petit script qui compte les décors posés par monde (bundle esbuild de `buildTerrain`, sans
+    PixiJS) a été décisif. Les captures ne disaient pas pourquoi la grotte semblait vide ; le comptage, si :
+    elle ne contenait que 22 décors et **aucune** lanterne, parce que les parois resserrées rendaient toutes
+    les cellules voisines du chemin trop pentues et que le filtre « pas de décor sur les falaises » les écartait.
+  - Deux régressions trouvées au passage par ce comptage, invisibles sur les captures prises jusque-là :
+    1. le dégradé de densité aux frontières de monde (8 cases de chaque côté) était si large qu'il vidait les
+       mondes courts sur toute leur longueur — ramené à 4 ;
+    2. les repères uniques (chalet, grande roue, atelier, traîneau, cabanes du lac) étaient posés **après** le
+       décor courant, qui leur avait pris toutes les places libres : plusieurs avaient disparu. Ils sont
+       maintenant posés en premier.
+  - Le critère de terrain pour bâtir passe de 0,2 à 0,6 de pente : depuis que chaque bâtiment taille sa
+    terrasse, refuser les coteaux ne servait qu'à vider les villages.

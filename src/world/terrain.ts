@@ -109,8 +109,9 @@ export function buildTerrain(seed = 2026): Terrain {
         h += front ? Math.min(wall * 0.25, 1.2) : wall * (0.32 + n * 0.3);
         h = Math.min(h, best.z + 5.5);
       } else if (zdef.id === "grotte") {
-        const wall = Math.max(0, bd - 2.2);
-        h += front ? Math.min(wall * 0.3, 1.2) : wall * 0.7;
+        // parois resserrées : le passage se referme sur la route, mais ses abords restent plats
+        const wall = Math.max(0, bd - 2);
+        h += front ? Math.min(Math.pow(wall, 1.3) * 0.5, 2) : Math.pow(wall, 1.3) * 0.95;
       } else {
         h += bd > 3 ? (n - 0.5) * 0.35 : 0;
       }
@@ -280,15 +281,36 @@ export function buildTerrain(seed = 2026): Terrain {
 
   // rangs du chemin où l'on change de monde
   const zoneEdges = path.filter((p, i) => i > 0 && p.zone !== path[i - 1].zone).map((p) => p.i);
+  // repères uniques — posés avant le reste, sinon le décor dense leur prend la place
+  /** `prefer` : emplacement idéal si on en trouve un, sinon on se rabat sur le premier venu */
+  const landmark = (kind: PropKind, zid: string, pick: (c: Cell) => boolean, r = 1, prefer?: (c: Cell) => boolean) => {
+    const z = ZONES.findIndex((zz) => zz.id === zid);
+    const cands = all.filter((c) => c.zone === z && !c.road && pick(c) && free(c.x, c.y, r));
+    const c = (prefer && cands.find(prefer)) ?? cands[0];
+    if (c) place(kind, c, r);
+  };
+  // le chalet s'installe sur un replat, pas au bord d'une falaise
+  landmark("chalet", "montagnes", (c) => !c.front && c.d > 2 && c.d < 3.5 && c.h > 2, 1, (c) => slopeOf(c) < 0.55);
+  landmark("snowman", "saint-nicolas", (c) => c.d > 1.2 && c.d < 2, 0);
+  // deux cabanes de pêcheur, au bord de la glace
+  const nearLake = (c: Cell) => !c.lake && [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [0, 2]].some(([dx, dy]) => cells.get(key(c.x + dx, c.y + dy))?.lake);
+  for (let i = 0; i < 2; i++) landmark("house", "lac", (c) => c.d > 1.6 && nearLake(c));
+  landmark("bigTree", "marche", (c) => !c.front && c.d > 2.5 && c.d < 4);
+  landmark("wheel", "marche", (c) => !c.front && c.d > 4 && c.d < 7);
+  landmark("workshop", "pole-nord", (c) => !c.front && c.d > 2.5 && c.d < 4.5);
+  landmark("sleigh", "pole-nord", (c) => c.d > 1.5 && c.d < 2.5, 0);
+
   for (const c of all) {
     if (c.road || taken.has(key(c.x, c.y))) continue;
     const z = ZONES[c.zone];
-    const flatAround = (r: number) => { for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) { const o = cells.get(key(c.x + dx, c.y + dy)); if (!o || slopeOf(o) > 0.2 || o.road || o.lake) return false; } return true; };
+    // `max` : pente tolérée. Depuis que les bâtiments taillent leur terrasse, on peut bâtir sur un terrain
+    // nettement plus accidenté qu'avant — sinon les villages se vident sur les coteaux.
+    const flatAround = (r: number, max = 0.2) => { for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) { const o = cells.get(key(c.x + dx, c.y + dy)); if (!o || slopeOf(o) > max || o.road || o.lake) return false; } return true; };
     const steep = slopeOf(c);
     if (steep > 0.9) continue; // falaises : pas de décor
     const d = c.d;
     // près d'une frontière de monde, les constructions se raréfient : chaque monde s'éteint avant le suivant
-    const edge = Math.min(1, Math.min(...zoneEdges.map((b) => Math.abs(c.pi - b))) / 8);
+    const edge = Math.min(1, Math.min(...zoneEdges.map((b) => Math.abs(c.pi - b))) / 4);
     if (c.lake) { if (z.id === "lac" && d > 1.2 && R() < 0.05) place("skater", c); continue; }
     switch (z.id) {
       case "montagnes": {
@@ -301,9 +323,9 @@ export function buildTerrain(seed = 2026): Terrain {
       case "saint-nicolas": {
         // un vrai bourg : des rangées de maisons serrées de part et d'autre de la rue
         const row = (d > 1.55 && d < 3.2 ? 0.95 : d > 3.6 && d < 5.4 ? 0.85 : d > 5.8 && d < 8.5 ? 0.6 : 0) * edge;
-        if (row && R() < row && flatAround(0) && free(c.x, c.y, 1)) place("house", c, 1);
+        if (row && R() < row && flatAround(0, 0.6) && free(c.x, c.y, 1)) place("house", c, 1);
         // guirlandes tendues au-dessus de la chaussée, et lampadaires le long des trottoirs
-        else if (d > 1 && d < 1.6 && R() < 0.4 * edge) place(R() < 0.55 ? "lamp" : "garland", c);
+        else if (d > 1 && d < 2.2 && R() < 0.5 * edge) place(R() < 0.5 ? "lamp" : "garland", c);
         // du mobilier de rue : bancs, luges contre les murs, sapins décorés, badauds
         else if (d > 1.4 && d < 4.5 && R() < 0.16 * edge) {
           const k = R();
@@ -326,41 +348,37 @@ export function buildTerrain(seed = 2026): Terrain {
         // deux allées d'échoppes collées les unes aux autres, guirlandes au-dessus de la rue
         const aisle = (d > 1.6 && d < 2.6) || (d > 3.6 && d < 4.6);
         if (aisle && R() < 0.72 * edge && free(c.x, c.y, 0)) place("stall", c);
-        else if (d > 1 && d < 1.6 && R() < 0.45 * edge) place(R() < 0.5 ? "lamp" : "garland", c);
+        else if (d > 1 && d < 2.2 && R() < 0.5 * edge) place(R() < 0.45 ? "lamp" : "garland", c);
         else if (d > 1.2 && d < 5 && R() < 0.4 * edge) {
           const k = R();
           place(k < 0.45 ? "visitor" : k < 0.68 ? "brazier" : k < 0.84 ? "presents" : "bench", c);
         }
-        else if (d > 5 && d < 9 && R() < 0.55 * edge && flatAround(0) && free(c.x, c.y, 1)) place("house", c, 1);
+        else if (d > 5 && d < 9 && R() < 0.55 * edge && flatAround(0, 0.6) && free(c.x, c.y, 1)) place("house", c, 1);
         else if (d > 5 && R() < 0.22) place(R() < 0.55 ? "tree" : R() < 0.8 ? "treeSmall" : "bush", c);
         break;
       }
-      case "grotte":
-        if (d > 1.3 && R() < (c.front ? 0.12 : 0.3)) place("crystal", c);
+      case "grotte": {
+        // lanternes de glace le long du chemin, cristaux et stalactites sur les parois
+        if (d > 1 && d < 2.6 && R() < 0.3) place("iceLantern", c);
+        else if (d > 1.3 && R() < (c.front ? 0.45 : 0.8) * edge) {
+          const k = R();
+          place(k < 0.52 ? "crystal" : k < 0.84 ? "icicle" : "rock", c);
+        }
         break;
-      case "pole-nord":
-        if (d > 1.3 && R() < 0.12) place(["cane", "presents", "tree", "deer"][Math.floor(R() * 4)] as PropKind, c);
+      }
+      case "pole-nord": {
+        // le village du Père Noël : igloos, enclos de rennes, piles de cadeaux et lampions
+        if (d > 2 && d < 7 && R() < 0.14 * edge && flatAround(0) && free(c.x, c.y, 1)) place("igloo", c, 1);
+        else if (d > 1 && d < 1.7 && R() < 0.3 * edge) place(R() < 0.6 ? "lamp" : "cane", c);
+        else if (d > 1.8 && d < 5.5 && R() < 0.3 * edge) {
+          const k = R();
+          place(k < 0.3 ? "deer" : k < 0.5 ? "fence" : k < 0.72 ? "presents" : k < 0.88 ? "visitor" : "tree", c);
+        }
+        else if (d > 1.3 && R() < 0.14) place(R() < 0.45 ? "cane" : R() < 0.75 ? "tree" : "treeSmall", c);
         break;
+      }
     }
   }
-  // repères uniques
-  /** `prefer` : emplacement idéal si on en trouve un, sinon on se rabat sur le premier venu */
-  const landmark = (kind: PropKind, zid: string, pick: (c: Cell) => boolean, r = 1, prefer?: (c: Cell) => boolean) => {
-    const z = ZONES.findIndex((zz) => zz.id === zid);
-    const cands = all.filter((c) => c.zone === z && !c.road && pick(c) && free(c.x, c.y, r));
-    const c = (prefer && cands.find(prefer)) ?? cands[0];
-    if (c) place(kind, c, r);
-  };
-  // le chalet s'installe sur un replat, pas au bord d'une falaise
-  landmark("chalet", "montagnes", (c) => !c.front && c.d > 2 && c.d < 3.5 && c.h > 2, 1, (c) => slopeOf(c) < 0.55);
-  landmark("snowman", "saint-nicolas", (c) => c.d > 1.2 && c.d < 2, 0);
-  // deux cabanes de pêcheur, au bord de la glace
-  const nearLake = (c: Cell) => !c.lake && [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [0, 2]].some(([dx, dy]) => cells.get(key(c.x + dx, c.y + dy))?.lake);
-  for (let i = 0; i < 2; i++) landmark("house", "lac", (c) => c.d > 1.6 && nearLake(c));
-  landmark("bigTree", "marche", (c) => !c.front && c.d > 2.5 && c.d < 4);
-  landmark("wheel", "marche", (c) => !c.front && c.d > 4 && c.d < 7);
-  landmark("workshop", "pole-nord", (c) => !c.front && c.d > 2.5 && c.d < 4.5);
-  landmark("sleigh", "pole-nord", (c) => c.d > 1.5 && c.d < 2.5, 0);
 
   /* ---------- place centrale du village (jeu du 6) ---------- */
   const n6 = nodes.find((n) => n.day === 6);
@@ -379,6 +397,15 @@ export function buildTerrain(seed = 2026): Terrain {
     put("snowman", -2, 1);
     for (const [dx, dy] of [[3, -1], [-1, 3], [-3, -1], [1, -3]] as const) put("lamp", dx, dy);
     for (const [dx, dy] of [[2, -2], [-2, 2], [3, 2], [-2, -2]] as const) put("visitor", dx, dy);
+  }
+
+  // porche d'entrée et de sortie de la grotte, à cheval sur le chemin
+  const caveZone = ZONES.findIndex((z) => z.id === "grotte");
+  if (caveZone >= 0) {
+    const cz = path.filter((p) => p.zone === caveZone);
+    if (cz.length > 2) for (const p of [cz[0], cz[cz.length - 1]]) {
+      props.push({ kind: "caveMouth", x: p.x, y: p.y, z: p.z, zone: caveZone, seed: Math.floor(R() * 1e6), drop: 0 });
+    }
   }
 
   T0.props = props;
