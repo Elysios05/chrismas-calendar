@@ -1,10 +1,17 @@
 // Décors isométriques dessinés en vectoriel plat
-import { Graphics } from "pixi.js";
+import { Container, Graphics } from "pixi.js";
 import { P, box, onLeft, onRight, gableRoof, pyramid, tree, boulder, poly, shade, type Palette, type TreeKind } from "./iso";
 
 export type PropKind =
   | "tree" | "treeSmall" | "house" | "chalet" | "snowman" | "lamp" | "rock" | "mountain"
-  | "stall" | "bigTree" | "wheel" | "crystal" | "presents" | "cane" | "sleigh" | "workshop" | "deer" | "skater";
+  | "stall" | "bigTree" | "wheel" | "crystal" | "presents" | "cane" | "sleigh" | "workshop" | "deer" | "skater"
+  | "bush" | "visitor" | "brazier" | "garland" | "bench" | "sled";
+
+/** Parties animées d'un décor, que la scène fait vivre à chaque image */
+export type AnimPart =
+  | { kind: "wheel"; hub: Container; cars: Container[] }
+  | { kind: "smoke"; puffs: Graphics[]; phase: number };
+export type PropNode = Container & { anim?: AnimPart[] };
 
 const SNOW = { top: 0xf7f5f0, left: 0xe4e1dc, right: 0xcfccd0 };
 const STONE = { top: 0x9a9286, left: 0xa7a093, right: 0x7d7667 };
@@ -40,8 +47,14 @@ const HOUSE_STYLE: Record<string, HouseStyle> = {
   "pole-nord": "colombages",
 };
 
-function drawHouse(g: Graphics, cx: number, cy: number, pal: Palette, rnd: Rnd, style: HouseStyle, drop: number) {
-  const c = pal.c, win = pal.window;
+function drawHouse(
+  g: Graphics, cx: number, cy: number, pal: Palette, rnd: Rnd, style: HouseStyle, drop: number,
+  hearth?: { extra: Container; anim: AnimPart[] },
+) {
+  const c = pal.c;
+  // une maison sur deux a de la lumière derrière ses carreaux, même en plein jour : le village paraît habité
+  const lit = rnd(50) < 0.5;
+  const win = pal.night || lit ? 0xffd46b : pal.window;
   const dim = {
     chalet: { w: 1.5, d: 1.15, h: 0.85, rh: 0.5, over: 0.32 },
     colombages: { w: 1.1, d: 0.9, h: 0.95, rh: 0.62, over: 0 },
@@ -88,7 +101,7 @@ function drawHouse(g: Graphics, cx: number, cy: number, pal: Palette, rnd: Rnd, 
   } else if (style === "colombages") {
     const walls = 0xf4ead7;
     const beam = 0x6b4328;
-    const roofCol = [0xc8362f, 0x3f6fa5, 0x2f7f5c, 0xd98a2b][Math.floor(rnd(2) * 4)];
+    const roofCol = [0xc8362f, 0x3f6fa5, 0x2f7f5c, 0xd98a2b, 0x8a4fa0, 0xb5763f][Math.floor(rnd(23) * 6)];
     box(g, x0, y0, 0, w, d, h, { top: c(walls), left: c(walls), right: c(shade(walls, -0.14)) });
     // colombages : poteaux verticaux et deux sablières
     for (let i = 0; i <= 4; i++) {
@@ -167,15 +180,44 @@ function drawHouse(g: Graphics, cx: number, cy: number, pal: Palette, rnd: Rnd, 
     box(g, x0 + w * 0.6, y0 + d * 0.2, h, 0.15, 0.15, 0.42, { top: c(0x5a4a48), left: c(0x8a5a4a), right: c(0x6e463a) });
     gableRoof(g, x0, y0, h, w, d, rh, c(SNOW.left), c(SNOW.top), c(shade(walls, -0.3)), over);
   }
+  // couronne de houx sur la porte
+  if (style !== "cabane") {
+    const q = P(x0 + w, y0 + d * 0.5, h * 0.44);
+    g.circle(q.x, q.y, 6.5).stroke({ width: 3.5, color: c(0x2b6f52) });
+    g.circle(q.x + 4, q.y - 4, 2).fill(c(0xd9354b));
+    g.circle(q.x - 3, q.y + 4, 1.8).fill(c(0xd9354b));
+  }
+  // fumée à la cheminée : trois bouffées que la scène fait monter
+  const flue: Record<HouseStyle, [number, number, number] | null> = {
+    chalet: [0.68, 0.1, 0.6], colombages: [0.2, 0.2, 0.5], pignon: [0.6, 0.2, 0.42], cabane: null,
+  };
+  const f = flue[style];
+  if (hearth && f && lit) {
+    const sp = P(x0 + w * f[0] + 0.08, y0 + d * f[1] + 0.08, h + f[2] + 0.06);
+    // les bouffées vivent dans un conteneur posé sur la cheminée : la scène n'a qu'à les faire monter
+    const stack = new Container();
+    stack.position.set(sp.x, sp.y);
+    const puffs: Graphics[] = [];
+    for (let i = 0; i < 3; i++) {
+      const puff = new Graphics().circle(0, 0, 11 + i * 3).fill(0xc6cfe0); // gris bleuté : le blanc se perdrait dans la neige
+      stack.addChild(puff);
+      puffs.push(puff);
+    }
+    hearth.extra.addChild(stack);
+    hearth.anim.push({ kind: "smoke", puffs, phase: rnd(51) * 6 });
+  }
   if (pal.night) { const p = P(cx, y0 + d, h * 0.3); g.ellipse(p.x, p.y + 6, 44, 14).fill({ color: 0xffd46b, alpha: 0.18 }); }
 }
 
-export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, seed: number, opts: { zone?: string; drop?: number } = {}): Graphics {
+export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, seed: number, opts: { zone?: string; drop?: number } = {}): PropNode {
   const g = new Graphics();
   const c = pal.c;
   const cx = x + 0.5, cy = y + 0.5;
   const drop = opts.drop ?? 0;
   const rnd = (n: number) => { const s = Math.sin(seed * 9301 + n * 49297) * 233280; return s - Math.floor(s); };
+  // parties animées éventuelles : la scène les anime, le reste est dessiné une fois pour toutes
+  const anim: AnimPart[] = [];
+  const extra = new Container();
 
   switch (kind) {
     case "tree":
@@ -191,7 +233,7 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
     case "chalet": {
       // le chalet est toujours un chalet ; les autres maisons suivent l'architecture du monde
       const style = kind === "chalet" ? "chalet" : HOUSE_STYLE[opts.zone ?? ""] ?? "colombages";
-      drawHouse(g, cx, cy, pal, rnd, style, drop);
+      drawHouse(g, cx, cy, pal, rnd, style, drop, { extra, anim });
       break;
     }
     case "snowman": {
@@ -229,18 +271,111 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       break;
     }
     case "stall": {
-      const x0 = cx - 0.6, y0 = cy - 0.4;
-      socle(g, x0, y0, 1.2, 0.8, drop, pal, rnd);
-      box(g, x0, y0, 0, 1.2, 0.8, 0.5, { top: c(0xc8a06a), left: c(0xb5763f), right: c(0x8f5a2e) });
-      onLeft(g, y0 + 0.8, x0 + 0.1, x0 + 1.1, 0.3, 0.5, c(0xf2d7a8));
-      for (const px of [x0 + 0.05, x0 + 1.1]) box(g, px, y0 + 0.65, 0.5, 0.06, 0.06, 0.45, { top: c(0x6b3b22), left: c(0x6b3b22), right: c(0x4e2a18) });
-      // toit rayé
-      const z = 0.95;
-      for (let i = 0; i < 6; i++) {
-        const a = x0 - 0.1 + i * 0.233, b = a + 0.233;
-        poly(g, [P(a, y0 + 1, z - 0.2), P(b, y0 + 1, z - 0.2), P(b, y0 + 0.35, z + 0.2), P(a, y0 + 0.35, z + 0.2)], c(i % 2 ? 0xffffff : 0xd9354b));
+      // trois modèles d'échoppe : auvent rayé, chalet de bois, stand ouvert habillé de sapinage.
+      // Toutes font un peu moins d'une case de large : deux voisines se touchent sans se chevaucher.
+      const W = 0.98, D = 0.72;
+      const x0 = cx - W / 2, y0 = cy - D / 2;
+      const model = rnd(30) < 0.5 ? 0 : rnd(31) < 0.55 ? 1 : 2;
+      socle(g, x0, y0, W, D, drop, pal, rnd);
+      const counter = () => {
+        box(g, x0, y0, 0, W, D, 0.5, { top: c(0xc8a06a), left: c(0xb5763f), right: c(0x8f5a2e) });
+        onLeft(g, y0 + D, x0 + 0.08, x0 + W - 0.08, 0.3, 0.5, c(0xf2d7a8));
+      };
+      // marchandises posées sur le comptoir
+      const goods = () => {
+        const cols = [0xd9354b, 0x2fa37a, 0xe0a63a, 0xf2e6d2];
+        for (let i = 0; i < 3; i++) {
+          const s = 0.1 + rnd(32 + i) * 0.06;
+          box(g, x0 + 0.12 + i * 0.28, y0 + D * 0.5, 0.5, s, s, s * 0.8,
+            { top: c(shade(cols[(i + Math.floor(rnd(33) * 4)) % 4], 0.12)), left: c(cols[(i + 1) % 4]), right: c(shade(cols[i % 4], -0.2)) });
+        }
+      };
+
+      if (model === 0) {
+        counter();
+        goods();
+        for (const px of [x0 + 0.04, x0 + W - 0.1]) box(g, px, y0 + D * 0.82, 0.5, 0.06, 0.06, 0.45, { top: c(0x6b3b22), left: c(0x6b3b22), right: c(0x4e2a18) });
+        // auvent rayé, débordant un peu sur l'allée
+        const z = 0.95, ox = 0.08, oy = 0.18;
+        const stripes = 5, sw = (W + 2 * ox) / stripes;
+        for (let i = 0; i < stripes; i++) {
+          const a = x0 - ox + i * sw, b = a + sw;
+          poly(g, [P(a, y0 + D + oy, z - 0.2), P(b, y0 + D + oy, z - 0.2), P(b, y0 + D * 0.45, z + 0.2), P(a, y0 + D * 0.45, z + 0.2)], c(i % 2 ? 0xffffff : 0xd9354b));
+        }
+        poly(g, [P(x0 - ox, y0 + D + oy, z - 0.2), P(x0 + W + ox, y0 + D + oy, z - 0.2), P(x0 + W + ox, y0 + D + oy, z - 0.32), P(x0 - ox, y0 + D + oy, z - 0.32)], c(0xb02a3c));
+      } else if (model === 1) {
+        // chalet de vin chaud : murs de bois, toit à deux pans enneigé, guichet éclairé, cheminée qui fume
+        const wood = 0x8a5a33;
+        box(g, x0, y0, 0, W, D, 0.78, { top: c(wood), left: c(shade(wood, 0.1)), right: c(shade(wood, -0.22)) });
+        for (let i = 0; i < 6; i++) onLeft(g, y0 + D, x0 + 0.03 + i * (W - 0.06) / 6, x0 + 0.045 + i * (W - 0.06) / 6, 0, 0.78, c(shade(wood, -0.3)));
+        onLeft(g, y0 + D, x0 + 0.16, x0 + W - 0.16, 0.34, 0.6, pal.night ? 0xffd46b : c(0xffe6a8));
+        box(g, x0 + 0.1, y0 + D - 0.02, 0.3, W - 0.2, 0.1, 0.05, { top: c(0xd6a86a), left: c(0xa5713f), right: c(0x8a5a33) });
+        box(g, x0 + W * 0.68, y0 + D * 0.2, 0.78, 0.12, 0.12, 0.3, { top: c(0x5a4a48), left: c(0x8a5a4a), right: c(0x6e463a) });
+        gableRoof(g, x0, y0, 0.78, W, D, 0.38, c(SNOW.left), c(SNOW.top), c(shade(wood, -0.3)), 0.14);
+        // fumée : trois bouffées que la scène fait monter
+        const sp = P(x0 + W * 0.74, y0 + D * 0.26, 1.08);
+        const stack = new Container();
+        stack.position.set(sp.x, sp.y);
+        const puffs: Graphics[] = [];
+        for (let i = 0; i < 3; i++) {
+          const puff = new Graphics().circle(0, 0, 8 + i * 2.2).fill(0xd3dae8);
+          stack.addChild(puff);
+          puffs.push(puff);
+        }
+        extra.addChild(stack);
+        anim.push({ kind: "smoke", puffs, phase: rnd(34) * 6 });
+      } else {
+        // stand ouvert : comptoir, quatre poteaux, toit de planches, sapinage et lanternes
+        counter();
+        goods();
+        const z = 0.9;
+        for (const px of [x0 + 0.03, x0 + W - 0.09]) for (const py of [y0 + 0.02, y0 + D - 0.08]) {
+          box(g, px, py, 0.5, 0.06, 0.06, z - 0.5, { top: c(0x6b3b22), left: c(0x6b3b22), right: c(0x4e2a18) });
+        }
+        box(g, x0 - 0.06, y0 - 0.06, z, W + 0.12, D + 0.12, 0.07, { top: c(SNOW.top), left: c(0x6b4328), right: c(0x53341f) });
+        // guirlande de sapinage sur le fronton, avec des baies rouges
+        const fy = y0 + D + 0.06;
+        for (let i = 0; i < 7; i++) {
+          const a = x0 - 0.04 + i * (W + 0.08) / 7;
+          const dip = Math.sin((i / 6) * Math.PI) * 0.045;
+          poly(g, [P(a, fy, z - dip), P(a + 0.14, fy, z - dip - 0.01), P(a + 0.14, fy, z - dip - 0.075), P(a, fy, z - dip - 0.065)], c(i % 2 ? 0x2b6f52 : 0x225c45));
+          if (i % 2 === 0) { const q = P(a + 0.07, fy, z - dip - 0.05); g.circle(q.x, q.y, 2.2).fill(c(0xd9354b)); }
+        }
+        for (const px of [x0 + 0.02, x0 + W - 0.02]) {
+          const q = P(px, fy, z - 0.04);
+          g.roundRect(q.x - 4, q.y, 8, 10, 2).fill(pal.night ? 0xffd46b : c(0xf4e6b0));
+          if (pal.night) g.circle(q.x, q.y + 5, 16).fill({ color: 0xffd46b, alpha: 0.18 });
+        }
       }
-      poly(g, [P(x0 - 0.1, y0 + 1, z - 0.2), P(x0 + 1.3, y0 + 1, z - 0.2), P(x0 + 1.3, y0 + 1, z - 0.32), P(x0 - 0.1, y0 + 1, z - 0.32)], c(0xb02a3c));
+      break;
+    }
+    case "bench": {
+      // banc enneigé
+      const p = P(cx, cy);
+      for (const dx of [-16, 10]) g.rect(p.x + dx, p.y - 12, 5, 12).fill(c(0x5a3c25));
+      g.roundRect(p.x - 20, p.y - 16, 40, 6, 2).fill(c(0x8a5a33));
+      g.roundRect(p.x - 20, p.y - 19, 40, 4, 2).fill(c(0xf7f5f0));
+      g.roundRect(p.x - 20, p.y - 30, 40, 5, 2).fill(c(0x7a4a2b));
+      for (const dx of [-19, 14]) g.rect(p.x + dx, p.y - 31, 5, 16).fill(c(0x6b3b22));
+      break;
+    }
+    case "sled": {
+      // luge de bois posée de profil, patins recourbés à l'avant
+      const p = P(cx, cy), col = [0xd9354b, 0x3f7fb5, 0x2fa37a][Math.floor(rnd(1) * 3)];
+      g.ellipse(p.x, p.y, 15, 5).fill({ color: c(0x9aa3b8), alpha: 0.28 });
+      // patins : une barre basse qui remonte en crosse devant
+      for (const dy of [0, -4]) {
+        g.moveTo(p.x - 15, p.y - 3 + dy).lineTo(p.x + 9, p.y - 3 + dy)
+          .arc(p.x + 9, p.y - 9 + dy, 6, Math.PI / 2, -Math.PI / 4, true)
+          .stroke({ width: 2.6, color: c(0x7a4a2b) });
+      }
+      // montants et plateau de lattes
+      for (const dx of [-11, 2]) g.rect(p.x + dx, p.y - 11, 2.4, 8).fill(c(0x8a5a33));
+      g.roundRect(p.x - 14, p.y - 15, 26, 5, 2).fill(c(0xd6a86a));
+      for (let i = 0; i < 4; i++) g.rect(p.x - 13 + i * 6.4, p.y - 15, 1.4, 5).fill(c(0xa5713f));
+      // dossier incliné, peint
+      g.roundRect(p.x - 15, p.y - 26, 5, 12, 2).fill(c(col));
+      g.roundRect(p.x - 15, p.y - 26, 20, 4, 2).fill(c(shade(col, -0.18)));
       break;
     }
     case "bigTree": {
@@ -258,19 +393,33 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       break;
     }
     case "wheel": {
+      // grande roue qui tourne : les montants sont fixes, la roue tourne, les nacelles restent droites
       const p = P(cx, cy), r = 62, hy = p.y - 86;
       poly(g, [{ x: p.x - 30, y: p.y }, { x: p.x, y: hy }, { x: p.x - 24, y: p.y }], c(0x8a93a8));
       poly(g, [{ x: p.x + 30, y: p.y }, { x: p.x, y: hy }, { x: p.x + 24, y: p.y }], c(0x6b7489));
-      g.circle(p.x, hy, r).stroke({ width: 5, color: c(0xd9354b) });
-      g.circle(p.x, hy, r - 12).stroke({ width: 2, color: c(0xe8a0a8) });
+      const hub = new Container();
+      hub.position.set(p.x, hy);
+      const rim = new Graphics();
+      rim.circle(0, 0, r).stroke({ width: 5, color: c(0xd9354b) });
+      rim.circle(0, 0, r - 12).stroke({ width: 2, color: c(0xe8a0a8) });
+      const cars: Container[] = [];
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2;
-        g.moveTo(p.x, hy).lineTo(p.x + Math.cos(a) * r, hy + Math.sin(a) * r).stroke({ width: 2, color: c(0xb9c0cf) });
+        rim.moveTo(0, 0).lineTo(Math.cos(a) * r, Math.sin(a) * r).stroke({ width: 2, color: c(0xb9c0cf) });
+        const car = new Container();
+        car.position.set(Math.cos(a) * r, Math.sin(a) * r);
+        const cg = new Graphics();
         const col = [0xffc85a, 0x3f7fb5, 0x2fa37a, 0xffffff][i % 4];
-        g.roundRect(p.x + Math.cos(a) * r - 7, hy + Math.sin(a) * r, 14, 12, 3).fill(c(col));
-        if (pal.night) g.circle(p.x + Math.cos(a) * r, hy + Math.sin(a) * r, 3).fill(0xffd46b);
+        cg.roundRect(-7, 0, 14, 12, 3).fill(c(col));
+        if (pal.night) cg.circle(0, 6, 3).fill(0xffd46b);
+        car.addChild(cg);
+        cars.push(car);
+        hub.addChild(car);
       }
-      g.circle(p.x, hy, 6).fill(c(0x2b2f45));
+      hub.addChildAt(rim, 0);
+      const axle = new Graphics().circle(p.x, hy, 6).fill(c(0x2b2f45));
+      extra.addChild(hub, axle);
+      anim.push({ kind: "wheel", hub, cars });
       break;
     }
     case "crystal": {
@@ -331,6 +480,69 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       g.moveTo(p.x + 14, p.y - 46).lineTo(p.x + 8, p.y - 58).lineTo(p.x + 2, p.y - 60).moveTo(p.x + 10, p.y - 53).lineTo(p.x + 16, p.y - 60).stroke({ width: 2.5, color: d });
       break;
     }
+    case "bush": {
+      // buisson enneigé : trois touffes basses coiffées de neige
+      const p = P(cx, cy);
+      const s = 0.55 + rnd(1) * 0.4;
+      for (const [dx, dy, r] of [[-7, 0, 11], [7, -2, 10], [0, -6, 12]] as const) {
+        const bx = p.x + dx * s, by = p.y + dy * s, br = r * s;
+        g.ellipse(bx, by - br * 0.4, br, br * 0.75).fill(c(rnd(2) > 0.5 ? 0x2b6f52 : 0x225c45));
+        g.ellipse(bx - br * 0.2, by - br * 0.85, br * 0.6, br * 0.3).fill(c(0xf7f5f0));
+      }
+      break;
+    }
+    case "visitor": {
+      // promeneur emmitouflé
+      const p = P(cx, cy);
+      const coat = [0xd9354b, 0x3f7fb5, 0x2fa37a, 0x8e4fb5, 0xe0a63a, 0xc8463b][Math.floor(rnd(3) * 6)];
+      const hat = [0xd9354b, 0xffffff, 0x2b2f45][Math.floor(rnd(4) * 3)];
+      g.ellipse(p.x, p.y, 10, 4).fill({ color: c(0x9aa3b8), alpha: 0.3 });
+      g.rect(p.x - 5, p.y - 12, 4, 12).fill(c(0x2b2f45));
+      g.rect(p.x + 1, p.y - 12, 4, 12).fill(c(0x2b2f45));
+      g.roundRect(p.x - 8, p.y - 30, 16, 20, 6).fill(c(coat));
+      g.rect(p.x - 8, p.y - 32, 16, 5).fill(c(rnd(5) > 0.5 ? 0xf2e6d2 : 0xd9354b)); // écharpe
+      g.circle(p.x, p.y - 37, 6.5).fill(c(0xf2c9a6));
+      g.circle(p.x, p.y - 41, 6.5).fill(c(hat));
+      g.circle(p.x, p.y - 47, 2.6).fill(c(0xffffff));
+      break;
+    }
+    case "brazier": {
+      // brasero : un feu autour duquel on se réchauffe
+      const p = P(cx, cy);
+      for (const dx of [-7, 0, 7]) g.rect(p.x + dx - 1, p.y - 16, 2.5, 16).fill(c(0x3d4152));
+      g.ellipse(p.x, p.y - 18, 13, 6).fill(c(0x4d5265));
+      g.ellipse(p.x, p.y - 20, 11, 5).fill(c(0x2b2f45));
+      for (let i = 0; i < 3; i++) {
+        const fx = p.x + (rnd(6 + i) - 0.5) * 9, fh = 10 + rnd(9 + i) * 12;
+        poly(g, [{ x: fx, y: p.y - 20 - fh }, { x: fx - 5, y: p.y - 19 }, { x: fx + 5, y: p.y - 19 }], i === 0 ? 0xffb03a : i === 1 ? 0xff7a2f : 0xffd96b);
+      }
+      g.circle(p.x, p.y - 26, pal.night ? 40 : 24).fill({ color: 0xffa83a, alpha: pal.night ? 0.22 : 0.1 });
+      break;
+    }
+    case "garland": {
+      // guirlande lumineuse tendue entre deux mâts
+      const a = P(cx - 0.75, cy - 0.75), b = P(cx + 0.75, cy + 0.75);
+      const top = 1.55; // au-dessus des toits d'échoppes
+      const pa = P(cx - 0.75, cy - 0.75, top), pb = P(cx + 0.75, cy + 0.75, top);
+      g.rect(a.x - 1.6, pa.y, 3.2, a.y - pa.y).fill(c(0x3d4152));
+      g.rect(b.x - 1.6, pb.y, 3.2, b.y - pb.y).fill(c(0x3d4152));
+      const sag = 16, cols = [0xffd46b, 0xd9354b, 0x7fe3ff, 0x9af2b0];
+      for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        const x = pa.x + (pb.x - pa.x) * t;
+        const y = pa.y + (pb.y - pa.y) * t + Math.sin(t * Math.PI) * sag;
+        if (i > 0) {
+          const t0 = (i - 1) / 10;
+          const x0 = pa.x + (pb.x - pa.x) * t0;
+          const y0 = pa.y + (pb.y - pa.y) * t0 + Math.sin(t0 * Math.PI) * sag;
+          g.moveTo(x0, y0).lineTo(x, y).stroke({ width: 1.6, color: c(0x4a4f63) });
+        }
+        const col = cols[i % 4];
+        g.circle(x, y + 3, 3.8).fill(pal.night ? col : c(col));
+        if (pal.night) g.circle(x, y + 3, 10).fill({ color: col, alpha: 0.18 });
+      }
+      break;
+    }
     case "skater": {
       const p = P(cx, cy), col = [0xd9354b, 0x3f7fb5, 0x2fa37a][Math.floor(rnd(6) * 3)];
       g.ellipse(p.x, p.y, 10, 4).fill({ color: 0x5f86a8, alpha: 0.35 });
@@ -342,5 +554,9 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       break;
     }
   }
-  return g;
+  if (!anim.length && !extra.children.length) return g;
+  const node: PropNode = new Container();
+  node.addChild(g, extra);
+  node.anim = anim;
+  return node;
 }
