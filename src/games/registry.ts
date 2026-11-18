@@ -10,19 +10,22 @@
 import type { DayNumber, GameModule } from "../core/contracts";
 import { QUIZ_JOUR1 } from "../data/games/quiz-jour1";
 import { LUGE_JOUR2 } from "../data/games/luge-jour2";
+import { REBUS_JOUR7 } from "../data/games/rebus-jour7";
 
 type Chargeur = () => Promise<GameModule>;
 
 const JEUX: Partial<Record<DayNumber, Chargeur>> = {
   1: () => import("./quiz/index").then((m) => m.quizJour1),
   2: () => import("./luge/index").then((m) => m.lugeJour2),
-  // 3 → 24 : à venir (défis photo, en direct, pendu, mots croisés…)
+  7: () => import("./rebus/index").then((m) => m.rebusJour7),
+  // les autres jours : à venir (défis photo, en direct, pendu, mots croisés…)
 };
 
 /** Contenu par défaut d'un jour (src/data), à passer dans `GameContext.content`. */
 const CONTENU: Partial<Record<DayNumber, unknown>> = {
   1: QUIZ_JOUR1,
   2: LUGE_JOUR2,
+  7: REBUS_JOUR7,
 };
 
 export const joursAvecJeu = (): DayNumber[] => Object.keys(JEUX).map(Number).sort((a, b) => a - b);
