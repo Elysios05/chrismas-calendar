@@ -76,6 +76,17 @@ Le chef a branché les jeux lui-même dans `App.tsx` : toucher une case → `cha
   descente » reste interne au jeu.
 - Vu dans le vrai site, téléphone et ordinateur : jours 1 et 2 jouables depuis la carte, aucune erreur console.
 
+### 18 novembre 2026 — jour 7, rébus en emojis (branche `jeux/rebus-jour7`)
+
+**Décisions prises avec Alexandre :**
+- On **tape** la réponse (pas de QCM : le jour 1 utilise déjà ce mécanisme), avec correction tolérante —
+  accents, majuscules, article, tirets et apostrophes pardonnés (`src/games/rebus/reponse.ts`).
+- **Indices illimités** : Pingou révèle une lettre à la demande, chaque lettre coûte 20 points
+  (minimum 20 points par rébus trouvé). La première lettre demandée déclenche aussi l'indice écrit.
+- **Contenu moitié-moitié** : 4 énigmes de Noël, 4 « à vous deux » — ce sont celles qu'Alexandre remplacera
+  par leurs vraies private jokes.
+- **Comparaison chiffrée** avec l'autre à la fin (score et lettres demandées), comme les jours 1 et 2.
+
 **Reste à faire :**
 - Remplacer le faux backend d'atelier par le vrai mode démo quand `src/backend/` existe.
 - Alexandre : remplacer les 10 questions d'exemple par les vraies.
