@@ -112,3 +112,17 @@ dans les deux backends (pas d'appel immédiat : seulement aux changements).
   cases préparées d'exemple jusqu'au jour simulé inclus ; au jour 1, tout est neuf. La progression est aussi filtrée à `≤ ?jour`
   (revenir à un jour antérieur masque les cases ouvertes plus tard).
 - Tests : 48 vérifications dans `demo_backend_test.py`.
+
+### 19 novembre 2026 — lot 3 (branche `backend/lot-3`)
+- **Jeux en direct** : `src/backend/realtime.ts` (`LiveGame` / `joinLive`).
+  - Salle `room:jour-N`, présence, « prêt ? », départ synchronisé sur l'horloge d'Alexandre (décalage estimé par ping-pong).
+  - État partagé (dernier écrit gagne) ; reprise via `getGameState(jour, "live:partie")`.
+  - Mode d'emploi : `src/backend/README.md`. Test à deux pages, horloge de Flavie décalée de 5 s : `realtime_test.py` (19 vérifications).
+- **Hors ligne** : `public/sw.js` garde la page (réseau d'abord, 3 s max), les scripts, les icônes et les polices, jamais les données Supabase.
+  - Un cache par version (racine et `/demo/`). Enregistré au démarrage par `createBackend()`, en production seulement (`offline.ts`).
+  - Testé serveur coupé dans `pwa_test.py` (22 vérifications).
+- **Souvenirs** : `exportSouvenirs(backend)` / `downloadSouvenirs(backend)` (`src/backend/souvenirs.ts`).
+  - Page HTML autonome avec les lettres des deux côtés et les photos intégrées, disponible à partir du 24.
+- Incident : les remises `git stash` sont communes à toutes les `wt-*`, et un `stash pop` simultané a échangé mon travail avec celui
+  de l'équipe Audio. Ma copie est réparée et les deux patchs sont dans `/home/claude/recuperation-stash/`. Signalé dans l'issue #52.
+  **Ne plus utiliser `git stash`.**
