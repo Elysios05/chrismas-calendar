@@ -87,3 +87,16 @@ Sources des notes : « Il est né » et « God Rest Ye » vérifiés sur le code
 Niveaux mesurés : mondes de jour ≈ -16 LUFS, nuits ≈ -19, ambiances ≈ -24 (tempête ≈ -18,5), aucun clic aux raccords.
 Dans l'appli, avec les volumes par défaut : musique ≈ -22 LUFS, ambiance ≈ -28, effets au-dessus de la musique.
 Extraits renouvelés dans `/home/claude/previews-audio/` (+ `ambiance-<monde>.mp3`, `ambiance-tempete.mp3`).
+
+### 2026-11-19 — Lot 3 (branche `audio/lot-3`)
+- **Jingles d'arrivée** (`pieces/jingles.ts`, `sound.playJingle(zone)`) : 2 à 3 s sur le début de l'air du monde, puis un accord
+  qui résonne. Joués sur le bus des effets ; la musique descend à 30 % le temps du jingle.
+- **Effets animaux, personnages, présence** (`CharacterSfx` dans `sfx.ts`) : fox, hare, owl, squirrel, reindeer, seal, bear,
+  elf-laugh, elf-hammer, elf-hop, snowball, skate, ski, lift, partner-in, partner-out. Pic momentané -17 à -21 LUFS (comme les autres).
+- **Musiques de jeux en direct** : `duel` (« Deck the Halls », 152 bpm, batterie et grelots) et `cosy` (« We Wish You » en valse douce,
+  célesta, chœur, feu de cheminée qui crépite). Les deux à -16 LUFS.
+- Voix de Pingou (`talk`) et cri (`pingou`) inchangés à l'oreille (vélocités compensées après la hausse du synthé partagé).
+- Test anti-exceptions étendu aux 28 effets (`tests/e2e/audio-sfx.spec.ts`).
+- « Saint Nicolas, patron des écoliers » : l'air vient du « Galop des tambours » de J.-B.-J. Tolbecque (1839, domaine public,
+  source RTBF), mais aucune partition lisible trouvée : le village reste sur « Il est né ».
+- Extraits : `/home/claude/previews-audio/lot3/`.
