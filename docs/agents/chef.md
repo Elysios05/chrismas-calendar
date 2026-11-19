@@ -66,6 +66,7 @@ vent. HUD : badge joueur, ✏️ prochaine case préparée (`PreparedEditor`), �
 - Fin du monde : **scène finale** (traîneau qui décolle le 24). Nom du monde : **pastille crème permanente**.
 - **Une seule équipe Jeux** (pas de deuxième). Souvenirs : **page HTML imprimable en PDF**.
 - Allumage progressif des fenêtres : **pas pour le 30**.
+- **Outil de capture commun** (19 nov, 20 h 53) : la Qualité ajoute `npm run capture` (sur `tests/qa/commun.mjs`, connexion démo, mobile + ordinateur) ; ensuite règle dans `CLAUDE.md` « n'écris pas ton propre script de capture ». Pas de mise en commun du reste du code (doublons négligeables). Scripts Python du Backend laissés tels quels.
 - Économie : sessions qui se vident (`/clear` après chaque tâche, voir `CLAUDE.md`), surveillance toutes les 15 min.
 
 ## Où on en est (19 nov, 14 h)
@@ -111,4 +112,5 @@ l'environnement cloud de l'ancien chef ; si le nouveau chef tourne ailleurs, rec
 ## Journal
 - 17 nov : terrain continu retenu ; organisation en 6 équipes ; backend démo + Supabase ; audio ; assemblage d'`App.tsx`.
 - 18 nov : rappels push, relance, éditeur, réglages, course, souvenirs, hors ligne, temps réel ; incident `git stash` (règle ajoutée).
+- 19 nov (soir) : Qualité relancée (`qualite/e2e-integre`) ; PR #63, #64, #65 fusionnées ; hauteur de page : on garde le `resize` (#9) ; outil de capture commun décidé.
 - 19 nov : ouverture animée + crépuscule branchés, navigation au doigt fusionnée, passage de relais écrit.
