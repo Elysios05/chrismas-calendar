@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "capture": "node tests/qa/capture.mjs",
     "qa:captures": "node tests/qa/captures.mjs",
     "qa:e2e": "playwright test -c tests/playwright.config.ts",
     "qa:perf": "node tests/qa/perf.mjs",

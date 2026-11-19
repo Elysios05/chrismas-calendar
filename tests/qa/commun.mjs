@@ -2,7 +2,7 @@
 // Aucun code de l'application n'est modifié : on s'appuie sur le crochet officiel des outils de dév PixiJS
 // (globalThis.__PIXI_APP_INIT__) pour récupérer l'Application et viser les cadeaux dessinés dans le canvas.
 import { execSync } from "node:child_process";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, statSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,6 +29,17 @@ export function construire() {
   if (process.env.QA_SANS_BUILD) return;
   console.log("› npm run build");
   execSync("npm run build", { cwd: RACINE, stdio: "inherit" });
+}
+
+/** Vrai si dist/ existe et est plus récent que tout le code source (src/, index.html, package.json). */
+export function buildRecent() {
+  const dist = path.join(RACINE, "dist/index.html");
+  if (!existsSync(dist)) return false;
+  const t = statSync(dist).mtimeMs;
+  let plusRecent = Math.max(...["index.html", "package.json", "vite.config.ts"].map((f) => { try { return statSync(path.join(RACINE, f)).mtimeMs; } catch { return 0; } }));
+  const visite = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const f = path.join(d, e.name); if (e.isDirectory()) visite(f); else plusRecent = Math.max(plusRecent, statSync(f).mtimeMs); } };
+  for (const d of ["src", "public"]) if (existsSync(path.join(RACINE, d))) visite(path.join(RACINE, d));
+  return t >= plusRecent;
 }
 
 async function repond() {
@@ -202,9 +213,32 @@ export async function ouvrirDemo(page, { jour, moi = "alexandre", reset = true }
   const q = new URLSearchParams();
   if (jour !== undefined) q.set("jour", String(jour));
   q.set("moi", moi);
-  let url = `./?${q}`;
+  let url = `${BASE}?${q}`;
   if (reset) url += "&demo-reset";
   await page.goto(url);
   await attendreScene(page);
   await page.waitForTimeout(1500); // défilement automatique vers la case du jour
+}
+
+/**
+ * Amène la caméra à sa position finale sans attendre : SwiftShader ne fait qu'~1 image/s et la caméra
+ * se lisse sur ~20 images. On coupe le rendu, on fait tourner le ticker par pas de 50 ms simulées, puis on rétablit.
+ */
+export async function avancerCamera(page, pas = 40) {
+  await page.evaluate((pas) => {
+    const app = globalThis.__qaApp; const r = app.renderer; const rendu = r.render;
+    r.render = () => {};
+    try { let t = app.ticker.lastTime; for (let i = 0; i < pas; i++) { t += 50; app.ticker.update(t); } }
+    finally { r.render = rendu; }
+  }, pas);
+  await attendreImages(page, 2);
+}
+
+/** Coupe / rétablit le rendu Pixi : les clics et lectures du DOM deviennent instantanés (SwiftShader est lent). */
+export async function renduActif(page, actif) {
+  await page.evaluate((actif) => {
+    const r = globalThis.__qaApp.renderer;
+    if (!r.__rendu) r.__rendu = r.render;
+    r.render = actif ? r.__rendu : () => {};
+  }, actif);
 }
