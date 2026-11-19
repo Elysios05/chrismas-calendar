@@ -129,6 +129,8 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
         onNodeTap: (day) => dispatchEvent(new CustomEvent("node-tap", { detail: day })),
         onZone: setZone,
       }, isNightNow());
+      // sons des animaux et personnages touchés dans le décor (#11)
+      sceneRef.current.setSound(sound);
       setReady(true);
     })();
     return () => { cancelled = true; sceneRef.current = null; try { app.destroy(true, { children: true }); } catch { /* pas encore initialisée */ } };
