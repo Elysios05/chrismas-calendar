@@ -79,6 +79,26 @@ vent. HUD : badge joueur, ✏️ prochaine case préparée (`PreparedEditor`), �
 - Priorités Monde : voir #29 (dernier commentaire). Interface : #51 (en-tête). Qualité : #34 + lot `qualite/e2e-integre` en cours.
 - Lot en cours : Backend `backend/souvenirs-pdf` (bouton « Enregistrer en PDF »).
 
+## Équipes en arrière-plan : état au passage de relais (19 nov, 14 h 30)
+L'ancien chef ne peut pas transmettre ses agents (ils sont rattachés à sa conversation). **Le nouveau chef relance
+une instance neuve** par lot (outil Agent, `subagent_type` = `backend` / `audio` / `qualite`, `model` adapté), en
+lui donnant le worktree, la branche et la consigne ci-dessous. Les worktrees `/home/claude/wt-*` existent dans
+l'environnement cloud de l'ancien chef ; si le nouveau chef tourne ailleurs, recréer les worktrees
+(`git worktree add ../wt-<équipe> <branche>` puis `npm install`).
+- **Backend** — rien en cours. Tout est fusionné (dernier : PR #62, décors dans les souvenirs). Prochaines tâches
+  possibles : rien d'urgent ; aider à brancher Supabase quand Alexandre créera le projet (`docs/supabase.md`).
+- **Audio** — rien en cours. Tout est fusionné (PR #53 : jingles, musiques `duel`/`cosy`, 16 effets d'animaux et de
+  personnages). « Saint Nicolas, patron des écoliers » non ajouté faute de partition fiable. Prochaine tâche possible :
+  retours d'Alexandre à l'écoute des extraits du lot 3 (pas encore donnés).
+- **Qualité** — **en cours, non terminé** : branche `qualite/e2e-integre` (poussée, commit e02b132 « travail en
+  cours »), **pas encore de PR**. Contenu : tests adaptés au parcours réel (connexion → carte, quiz, luge, cases
+  préparées, rappel, deux onglets), audit axe-core (#34), captures. À relancer avec cette consigne : rebase sur
+  `origin/main`, finir les tests (faire échouer tout script qui ne voit pas la carte après connexion ; retirer les
+  `test.fail` de la luge et du « 1er décembre » qui doivent passer), relancer captures et rapport, ouvrir la PR,
+  un ticket par bug trouvé. Modèle conseillé : `sonnet`.
+- **PR ouverte au moment du relais** : #63 (`interface/journal`) à relire et fusionner.
+- La surveillance des tickets de l'ancien chef est **arrêtée** (« arrête » d'Alexandre, 19 nov 14 h 19).
+
 ## Échéancier
 | Date | Jalon |
 |---|---|
