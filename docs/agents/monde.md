@@ -137,3 +137,22 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     donc rien à trier. Il est gardé parce qu'il évite d'envoyer au processeur graphique les milliers de polygones
     hors écran — ce qui compte sur un vrai téléphone, mais reste à confirmer sur appareil.
   - Reste à faire : la mesure sur un vrai téléphone, seule à pouvoir valider l'objectif de 60 i/s.
+- 18 nov — animation d'ouverture et fin des reconstructions (priorités 1 et 2 de l'issue #29) :
+  - **`playOpen(day)`** (contrat décidé par le chef dans l'issue #35, option A) : la caméra s'approche de la
+    case, le couvercle saute et retombe à côté, des confettis partent, puis la caméra revient. Environ 1,2 s,
+    ou 0,27 s sans confettis quand `document.documentElement.dataset.animations === "non"`. La promesse se
+    résout à la fin, pour que l'interface ouvre ensuite sa fenêtre.
+  - **`setStates` ne reconstruit plus toute la scène** (issue #23) : seules les cases dont l'état a changé sont
+    redessinées. Mesuré dans le même binaire : reconstruction complète 69 à 103 ms, mise à jour ciblée 0 ms.
+    Exception assumée : si la case 24 change d'état, tout est refait une fois, car le traîneau en dépend.
+  - **`setLight(amount)`** : lumière continue, voile doré en fin d'après-midi qui vire au bleu profond.
+    La palette n'est reconstruite qu'au passage du seuil de nuit (0,4), pas à chaque minute.
+  - **Temps écoulé partout** : la marche des personnages et l'animation d'ouverture étaient comptées en images.
+    Sur un écran à 120 Hz le personnage allait deux fois trop vite, et l'ouverture se serait éternisée sur un
+    téléphone lent. Le pas d'animation est aussi borné, sans quoi la neige et les confettis faisaient un bond
+    quand une image durait longtemps.
+  - **Crochet de test** `window.__calendrier` (`giftScreenPos`, `giftState`, `scrollForDay`, `playOpen`),
+    en développement et en simulation de jour seulement, pour que la Qualité ne dépende plus de la structure
+    interne des cadeaux.
+  - Piège : l'application a maintenant un écran de connexion, et tous mes scripts de capture photographiaient
+    silencieusement la page de login. Ils passent désormais par « Voir la démo sans compte ».
