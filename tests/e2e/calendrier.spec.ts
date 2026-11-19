@@ -74,7 +74,8 @@ test("connexion démo : choisir Alexandre, mot de passe quelconque", async ({ pa
   await expect(page.locator(".brand-kicker")).toContainText("démo");
   expect(await diversite(page), "le canvas semble vide").toBeGreaterThan(20);
   expect(erreurs(), JSON.stringify(erreurs(), null, 1)).toEqual([]);
-  // déconnexion → retour à l'écran de connexion
+  // déconnexion (dans les réglages) → retour à l'écran de connexion
+  await page.getByRole("button", { name: "Réglages" }).click();
   await page.getByRole("button", { name: "Se déconnecter" }).click();
   await expect(page.locator(".login-card")).toBeVisible();
 });
@@ -240,14 +241,60 @@ test.fixme("jeu en direct à deux onglets (?moi=alexandre / ?moi=flavie)", async
   // Dès qu'un jeu « direct » existe : deux pages du même contexte, joinRoom, une action d'un côté visible de l'autre.
 });
 
-// BUG CONNU (ticket #32 [Backend]) : les données d'exemple de la démo contiennent une progression (cases 1 à 6/7
-// ouvertes) indépendante du jour simulé. Avec ?jour=1&demo-reset, la case 1 est déjà ouverte et terminée,
-// et les personnages sont posés aux cases 6 et 7, devant des cases verrouillées.
-// test.fail : passera au rouge (« unexpectedly passed ») une fois corrigé ; enlever alors test.fail.
-test("?jour=1&demo-reset : rien n'est déjà ouvert ni joué", async ({ page }) => {
-  test.fail(true, "#32 : progression d'exemple de la démo indépendante de ?jour");
-  await C.ouvrirDemo(page, { jour: 1 });
+test("1er décembre : connexion puis carte, rien n'est déjà ouvert ni joué", async ({ page }) => {
+  await page.goto("./?jour=1&demo-reset");
+  await page.getByRole("button", { name: "Alexandre" }).click();
+  await page.locator("#mdp").fill("x");
+  await page.getByRole("button", { name: "Entrer" }).click();
+  await C.attendreScene(page);
   expect((await C.positionCadeau(page, 1)).etat).toBe("available");
-  const prog = await page.evaluate(() => Object.values(localStorage).find((v) => v.includes("progress")) ?? "");
-  expect(prog).not.toMatch(/"opened":\[1,2/);
+  for (const d of [2, 6, 24]) expect((await C.positionCadeau(page, d)).etat).toBe("locked");
+  await ouvrirCase(page, 1);
+  await expect(page.getByRole("button", { name: "C'est parti" })).toBeVisible(); // pas « Revoir la case »
 });
+
+for (const jour of [7, 15]) {
+  test(`jour ${jour} : le jeu se lance sans erreur`, async ({ page }) => {
+    await C.ouvrirDemo(page, { jour });
+    await ouvrirCase(page, jour);
+    await lancerCase(page);
+    await fermerBulleInline(page);
+    const regles = page.locator(".jeu-btn").last();
+    if (await regles.isVisible().catch(() => false)) await regles.click().catch(() => {});
+    await expect(page.locator(".sheet-game .jeu-centre, .sheet-game canvas").first()).toBeVisible();
+    await page.waitForTimeout(1500);
+    expect(erreurs(), JSON.stringify(erreurs(), null, 1)).toEqual([]);
+  });
+}
+
+test("réglages : l'interrupteur du son se pilote au clavier", async ({ page }) => {
+  await C.ouvrirDemo(page, { jour: 9 });
+  await C.fermerPingou(page);
+  await page.getByRole("button", { name: "Réglages" }).click();
+  const son = page.locator("#reg-son");
+  const avant = await son.getAttribute("aria-checked");
+  await son.focus();
+  await page.keyboard.press("Space");
+  await expect(son).not.toHaveAttribute("aria-checked", avant!);
+});
+
+test("24 décembre : ouvrir la dernière case mène à l'écran final", async ({ page }) => {
+  test.setTimeout(400_000);
+  await C.ouvrirDemo(page, { jour: 24 });
+  // on avance Alexandre jusqu'à la case 23 dans les données de démo, pour que la marche finale soit courte
+  await page.evaluate(() => {
+    // stockage de la démo : seules les actions de l'utilisateur (src/backend/demo.ts, « cc-demo:data-v2 »)
+    const k = "cc-demo:data-v2";
+    const d = JSON.parse(localStorage.getItem(k) ?? "null") ?? { progress: { alexandre: { opened: [], completed: [] }, flavie: { opened: [], completed: [] } }, prepared: [], gameState: {} };
+    d.progress.alexandre.opened = Array.from({ length: 23 }, (_, i) => i + 1);
+    localStorage.setItem(k, JSON.stringify(d));
+  });
+  await C.ouvrirDemo(page, { jour: 24, reset: false });
+  await ouvrirCase(page, 24);
+  await lancerCase(page);
+  await page.locator(".prep-enveloppe").click({ timeout: 5000 }).catch(() => { /* pas de lettre d’exemple le 24 */ });
+  await page.getByRole("button", { name: "Fermer la case" }).click();
+  await expect(page.locator(".final")).toBeVisible({ timeout: 300_000 });
+  await expect(page.locator(".final-titre")).toHaveText("Vous y êtes");
+});
+
