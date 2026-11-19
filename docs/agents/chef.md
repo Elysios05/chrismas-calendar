@@ -1,16 +1,88 @@
-# Chef de projet
+# Chef de projet — passage de relais
 
-**Rôle** : découper le travail, tenir le planning, garder la cohérence entre équipes, relire et fusionner les pull requests, arbitrer.
-**Dossiers** : `src/core/` (contrats), `src/App.tsx` (assemblage), `CLAUDE.md`, `docs/`.
+> **Session neuve ? Lis ce fichier en entier, puis `CLAUDE.md`, `docs/cahier-des-charges.md` et les issues ouvertes.**
+> Tout ce qu'il faut pour reprendre est ici. Mets-le à jour à chaque décision.
 
-## Échéancier (cible)
+**Rôle** : découper le travail, garder la cohérence entre équipes, relire et fusionner les PR, arbitrer, être le seul
+canal entre Alexandre et les équipes en arrière-plan. **Dossiers** : `src/core/` (contrats), `src/App.tsx`
+(assemblage), `CLAUDE.md`, `docs/`. Échéance : **tout en ligne le 30 novembre au soir**.
+
+## Organisation
+- **En direct avec Alexandre** (ses propres sessions Claude Code, sur son ordinateur) : **Monde**, **Interface**, **Jeux**.
+  Ils parlent au chef **uniquement par issues GitHub** (préfixe `**Équipe X**`).
+- **En arrière-plan, lancées par le chef** : **Backend**, **Audio**, **Qualité**. Chacune a sa copie de travail :
+  `/home/claude/wt-backend`, `/home/claude/wt-audio`, `/home/claude/wt-qualite` (worktrees du dépôt principal
+  `/home/claude/chrismas-calendar`, `npm install` séparé dans chacune). Le lancement d'agents avec isolation
+  automatique est refusé : passer par ces worktrees.
+- **Lancer une équipe** : outil Agent avec `subagent_type` = `backend` / `audio` / `qualite` (définis dans `.claude/agents/`),
+  une **nouvelle** instance par lot (contexte propre), consigne courte : worktree, branche depuis `origin/main`,
+  commit en français avec les deux lignes de fin, push, PR via l'API REST, rapport en quelques lignes.
+- Leurs questions pour Alexandre arrivent dans leurs rapports : les lui poser avec **AskUserQuestion**, préfixées `[@equipe]`.
+- **Limite d'utilisation de 5 h** partagée : les agents s'arrêtent avec « You've hit your 5-hour limit · resets HH:MM ».
+  Leur travail est conservé ; les relancer après l'heure indiquée.
+
+## Procédures
+- **GitHub** : `gh` marche en **REST** (`gh api repos/Elysios05/chrismas-calendar/...`) ; GraphQL et `gh pr/issue` sont bloqués.
+  Clone superficiel : `git fetch --depth=80 origin <branche>:refs/remotes/origin/<branche>` avant de fusionner.
+- **Fusionner une PR** : `git pull --depth=50 origin main`, `git merge --no-ff origin/<branche>`, `npx tsc -b`, `npm run build`,
+  test rapide si ça touche l'assemblage, `git -c push.negotiate=true push origin main`. GitHub marque la PR fusionnée
+  toute seule ; si sa base n'est pas `main` (PR empilée), commenter puis fermer.
+  Conflits fréquents : `src/index.css` (garder les deux côtés), journaux `docs/agents/*.md` (garder la version de l'équipe).
+- **Surveillance** : `send_later` toutes les **15 min** (choix d'Alexandre) ; date de la dernière vérification dans
+  `/home/claude/.last-gh-check` ; lister `issues?state=all&since=…` et `issues/comments?since=…` en ignorant les
+  commentaires qui commencent par `**Chef de projet**`. Rien de nouveau → ne rien dire à Alexandre.
+- **Commits** : signés `Claude <noreply@anthropic.com>`, message en français, deux lignes de fin
+  `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` et `Claude-Session: https://claude.ai/code/session_015RYyqMthd65N9EWeRX49J2`.
+- **Test d'assemblage** : `npx vite preview --port 4173` puis Playwright Python avec `/usr/bin/google-chrome`
+  (`--use-gl=swiftshader --enable-unsafe-swiftshader`) : `?jour=N&demo-reset&heure=HH:MM`, bouton « Alexandre »,
+  mot de passe quelconque, Entrée, puis `dispatchEvent(new CustomEvent('node-tap', {detail: N}))`.
+
+## Ce que fait `App.tsx` (assemblé par le chef)
+`createBackend()` → `LoginScreen` → `Calendar` : scène PixiJS (`Scene`), progression des deux joueurs, états des cases,
+toucher une case → (si pas encore ouverte) `walkTo` → `playOpen` → son `open` → `DayWindow` avec le jeu chargé
+par `chargerJeu(jour)` ; au retour, Pingou commente la course. Lumière continue `lightAt(heure)` → `scene.setLight`
+(`?heure=` pour simuler), `data-nuit` sur `<html>`, bouton ☀️/🌙 qui force. Son : `sound` (`src/audio`), zone, météo,
+vent. HUD : badge joueur, ✏️ prochaine case préparée (`PreparedEditor`), 📍 aujourd'hui, 📜 souvenirs (à partir du 24),
+⚙️ `Settings`, `RaceIndicator`, bandeau `RappelVeille`, `FinalScreen` après la case 24, `?case=N` depuis une notification.
+
+## Décisions d'Alexandre (à respecter)
+- Terrain **continu** en facettes (pas d'îlots), 6 mondes, route qui descend ; style isométrique vectoriel plat.
+- Mascotte **Pingou** (pingouin). Chacun **sa position** sur la route (petite course). Navigation au doigt / souris / flèches,
+  **mur de brouillard** au-delà de la dernière case ouverte.
+- Ouverture des cases à **7 h** (Paris), rattrapage possible. Cases préparées 4, 8, 12, 16, 20, 24 : **les deux** préparent
+  (mot doux + photos), **figée** dès que l'autre l'a ouverte.
+- **Vraies adresses e-mail** (en variables d'environnement, jamais dans le dépôt). Mot de passe oublié via **Brevo**,
+  expéditeur : son Hotmail ; e-mail de Pingou validé tel quel.
+- Rappel par **notification push à 20 h** + **relance 22 h 30** ; textes validés tels quels ; icône d'application **Pingou** (#18).
+- Photos compressées à **2000 px**. Démo publique dans **/demo/**, version privée à la racine. Un seul workflow (`deploy.yml`).
+- Musique : **airs de Noël du domaine public** par monde ; volume musique **50 %**, effets **60 %** ; bruitages d'ambiance ;
+  pas de chanson protégée.
+- Fin du monde : **scène finale** (traîneau qui décolle le 24). Nom du monde : **pastille crème permanente**.
+- **Une seule équipe Jeux** (pas de deuxième). Souvenirs : **page HTML imprimable en PDF**.
+- Allumage progressif des fenêtres : **pas pour le 30**.
+- Économie : sessions qui se vident (`/clear` après chaque tâche, voir `CLAUDE.md`), surveillance toutes les 15 min.
+
+## Où on en est (19 nov, 14 h)
+- Fait et fusionné : monde complet (6 mondes, météo par jour, crépuscule, ouverture animée, navigation, perfs),
+  connexion, fenêtres des cases, éditeur de case préparée, rappels (côté serveur, non testés en vrai), réglages, course,
+  écran du 24, souvenirs, hors ligne, outillage temps réel (`joinLive`), audio complet (ambiances, jingles, 30+ effets),
+  jeux **1 quiz, 2 luge, 7 rébus, 15 pendu, 17 mots croisés**, outils Qualité (captures, e2e, perf).
+- **Reste le plus risqué** : 13 jeux (10, 22 à score ; 5, 6, 11, 13, 18, 21 en direct ; 3, 19 photo ; 9 dessin ; 14, 23 synchro).
+  Si retard le 24–25 nov, proposer à Alexandre de simplifier certains jeux.
+- **Jamais testé en vrai** : Supabase (Alexandre doit créer le projet en suivant `docs/supabase.md`), notifications, sur vrai téléphone.
+- Priorités Monde : voir #29 (dernier commentaire). Interface : #51 (en-tête). Qualité : #34 + lot `qualite/e2e-integre` en cours.
+- Lot en cours : Backend `backend/souvenirs-pdf` (bouton « Enregistrer en PDF »).
+
+## Échéancier
 | Date | Jalon |
 |---|---|
-| 19 nov | Contrats figés, mode démo du backend, cadre des jeux, direction artistique du monde validée |
-| 22 nov | Monde complet (6 mondes), ouverture des cases, Pingou scénarisé, connexion + éditeur |
-| 26 nov | Tous les jeux jouables (solo, score, différé, direct) en mode démo |
-| 28 nov | Supabase en place, musique, contenu d'exemple complet |
-| 30 nov | Tests sur vrais téléphones, corrections, mise en ligne |
+| 22 nov | Jeux à score (10, 22) + 2 jeux en direct ; en-tête refait ; mouvement dans le décor |
+| 25 nov | Tous les jeux jouables en démo |
+| 27 nov | Supabase créé et branché par Alexandre (guide), tests à deux sur vrais téléphones |
+| 29 nov | Contenu réel (questions, souvenirs) remplacé par Alexandre, corrections |
+| 30 nov | Mise en ligne finale |
 
 ## Journal
-- 17 nov : terrain continu en facettes retenu (au lieu des îlots). Organisation en 6 équipes.
+- 17 nov : terrain continu retenu ; organisation en 6 équipes ; backend démo + Supabase ; audio ; assemblage d'`App.tsx`.
+- 18 nov : rappels push, relance, éditeur, réglages, course, souvenirs, hors ligne, temps réel ; incident `git stash` (règle ajoutée).
+- 19 nov : ouverture animée + crépuscule branchés, navigation au doigt fusionnée, passage de relais écrit.
