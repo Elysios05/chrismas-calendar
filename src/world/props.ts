@@ -6,7 +6,8 @@ export type PropKind =
   | "tree" | "treeSmall" | "house" | "chalet" | "snowman" | "lamp" | "rock" | "mountain"
   | "stall" | "bigTree" | "wheel" | "crystal" | "presents" | "cane" | "sleigh" | "workshop" | "deer" | "skater"
   | "bush" | "visitor" | "brazier" | "garland" | "bench" | "sled"
-  | "caveMouth" | "icicle" | "iceLantern" | "igloo" | "fence";
+  | "caveMouth" | "icicle" | "iceLantern" | "igloo" | "fence"
+  | "cloudBank" | "signpost" | "ridge" | "deepWood";
 
 /** Parties animées d'un décor, que la scène fait vivre à chaque image */
 export type AnimPart =
@@ -542,6 +543,54 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       for (const dx of [-22, 22]) g.rect(p.x + dx - 2, p.y - 26, 4.5, 26).fill(c(0x6b4328));
       for (const dz of [8, 18]) g.rect(p.x - 24, p.y - dz - 4, 48, 4.5).fill(c(0x8a5a33));
       g.rect(p.x - 24, p.y - 30, 48, 3).fill(c(0xf7f5f0));
+      break;
+    }
+    case "cloudBank": {
+      // banc de nuages posé dans le décor : c'est lui qui ferme la carte, pas un voile sur l'écran
+      const p = P(cx, cy);
+      const s2 = 1 + rnd(1) * 0.5;
+      // ombre portée sur la neige, pour qu'il appartienne vraiment au monde
+      g.ellipse(p.x, p.y + 6, 120 * s2, 34 * s2).fill({ color: c(0x9aa8c8), alpha: 0.22 });
+      const bulles: [number, number, number][] = [
+        [-78, -6, 40], [-34, -26, 54], [16, -34, 60], [64, -20, 48], [100, -2, 36], [-104, 4, 30],
+      ];
+      // trois couches : la plus sombre derrière, la plus claire devant
+      for (const [k, col] of [[1.18, 0xdfe6f2], [1.06, 0xeef2f9], [0.9, 0xffffff]] as const) {
+        for (const [dx, dy, r] of bulles) {
+          g.ellipse(p.x + dx * s2 * k, p.y + dy * s2 * k - 18, r * s2 * k * 0.92, r * s2 * k * 0.74).fill(c(col));
+        }
+      }
+      break;
+    }
+    case "signpost": {
+      // panneau de bois planté au bord du chemin : « la suite, demain »
+      const p = P(cx, cy);
+      g.ellipse(p.x, p.y, 16, 6).fill({ color: c(0x9aa3b8), alpha: 0.3 });
+      g.rect(p.x - 3, p.y - 54, 6, 54).fill(c(0x7a4a2b));
+      g.roundRect(p.x - 34, p.y - 82, 68, 30, 5).fill(c(0xc89a5e));
+      g.roundRect(p.x - 34, p.y - 82, 68, 30, 5).stroke({ width: 2.5, color: c(0x8a5a33) });
+      g.roundRect(p.x - 30, p.y - 78, 60, 7, 3).fill(c(0xf7f5f0));
+      // deux lignes gravées, et une étoile : lisible même tout petit
+      for (const [yy, w] of [[-66, 44], [-60, 30]] as const) g.roundRect(p.x - w / 2, p.y + yy, w, 3.5, 2).fill(c(0x8a5a33));
+      g.star(p.x, p.y - 88, 5, 7, 3).fill(c(0xffd46b));
+      break;
+    }
+    case "ridge": {
+      // crête de montagne en lisière : masque le bord du terrain
+      const h = 4.5 + rnd(2) * 3;
+      pyramid(g, cx, cy, 2.6 + rnd(3) * 1.2, h, c(0x6e789a), c(0x515b7d), c(0xf2f5fb), c(0xd9e0ec), 0.5);
+      break;
+    }
+    case "deepWood": {
+      // futaie serrée en lisière : plusieurs sapins hauts les uns derrière les autres
+      for (let i = 0; i < 5; i++) {
+        const dx = (rnd(10 + i) - 0.5) * 1.5, dy = (rnd(20 + i) - 0.5) * 1.2;
+        tree(g, P(cx + dx, cy + dy), 1.15 + rnd(30 + i) * 0.5, pal, {
+          kind: rnd(40 + i) < 0.6 ? "epicea" : "sapin",
+          variant: Math.floor(rnd(50 + i) * 4),
+          snowAmount: rnd(60 + i),
+        });
+      }
       break;
     }
     case "crystal": {
