@@ -254,7 +254,7 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
           <button className="round" onClick={toggleNight} title="Jour / nuit" aria-label="Basculer jour / nuit">{night ? "🌙" : "☀️"}</button>
           <button className="round" onClick={goToday} title="Aller à aujourd'hui" aria-label="Aller à la case du jour">📍</button>
           {today >= 24 && (
-            <button className="round" onClick={() => { sound.play("tap"); void downloadSouvenirs(backend); }} title="Garder nos souvenirs" aria-label="Télécharger nos lettres et nos photos">📜</button>
+            <button className="round" onClick={() => { sound.play("tap"); { const sc = sceneRef.current as (Scene & { snapshotAround?: (d: number, w: number, h: number) => Promise<string> }) | null; void downloadSouvenirs(backend, undefined, { decor: sc?.snapshotAround ? (d: number) => sc.snapshotAround!(d, 1200, 520).catch(() => null) : undefined }); } }} title="Garder nos souvenirs" aria-label="Télécharger nos lettres et nos photos">📜</button>
           )}
           <button className="round" onClick={() => { sound.play("tap"); setSettings(true); }} title="Réglages" aria-label="Réglages">⚙️</button>
         </div>
