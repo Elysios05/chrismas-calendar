@@ -179,10 +179,13 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - **Forme de la lisière** (demande d'Alexandre) : une seule droite dans le sens de la carte, comme le bord du
     lac — elle part du milieu en bas et monte vers la droite (x constant). Essayés puis écartés : une ligne
     plate à l'écran (« quel est l'intérêt ? ») et un chevron. Tout ce qui est au-delà est pavé de nuages.
-  - **Bords latéraux** (choix d'Alexandre : « varier selon la zone ») : crêtes en montagne et dans la grotte,
-    futaie serrée en forêt et au village, nuages au marché et au pôle Nord. Près de la fin, des nuages débordent
-    aussi hors du monde, sinon le vide apparaissait dans le coin.
+  - **Bords latéraux (issue #13)** : Alexandre a demandé de suivre la recommandation de l'issue — des tuiles
+    sur toute la largeur de l'écran et des décors très denses aux bords. Les nuages en lisière rendaient mal et
+    sont retirés. Le terrain passe de 17 à **30 tuiles** de demi-largeur (le chemin s'écarte du centre de
+    l'écran, 25 laissait encore un coin vide en fin de carte). Bords : crêtes en montagne et dans la grotte,
+    **forêt serrée** partout ailleurs, avec une bande d'arbres derrière la lisière. Les parois de la grotte sont
+    plafonnées (elles montaient sans fin avec la largeur). Coût mesuré au profileur : aucun écart visible.
   - **Corrections trouvées en route** : la route était dessinée d'un seul tenant et dépassait les nuages
     (découpée en tranches) ; une tranche de sol de trop restait visible ; les décors et cadeaux verrouillés au-delà
     sont masqués ; le défilement s'arrête quand les nuages atteignent le bas de l'écran, sans vide derrière.
-  - Reste : un mince liseré du bord du monde visible tout à gauche sur ordinateur, plus haut sur la carte.
+  - À regarder plus tard : dans la grotte, le cadeau 20 est en partie caché par un bloc de glace (proche de #50).
