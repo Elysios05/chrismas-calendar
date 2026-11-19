@@ -1,7 +1,7 @@
 // Outils partagés par les scripts Qualité : build, serveur de prévisualisation, navigateur, crochets de test.
 // Aucun code de l'application n'est modifié : on s'appuie sur le crochet officiel des outils de dév PixiJS
 // (globalThis.__PIXI_APP_INIT__) pour récupérer l'Application et viser les cadeaux dessinés dans le canvas.
-import { execSync } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -34,15 +34,24 @@ export function construire() {
 async function repond() {
   try { const r = await fetch(`http://127.0.0.1:${PORT}/`); return r.ok; } catch { return false; }
 }
-/** Sert dist/ sur le port Qualité dans ce processus Node (voir serveur.mjs). */
+function demarrer() {
+  const proc = spawn("npx", ["vite", "preview", "--port", String(PORT), "--strictPort", "--host", "127.0.0.1"], { cwd: RACINE, stdio: "ignore", detached: true });
+  proc.unref();
+  return proc;
+}
+/**
+ * Lance `vite preview` sur le port Qualité et attend qu'il réponde.
+ * `assurer()` le relance s'il est tombé en cours de route (vu une fois pendant une longue série de captures).
+ */
 export async function servir() {
   if (await repond()) { console.log(`› serveur déjà présent sur ${BASE}`); return { stop() {}, assurer: async () => {} }; }
-  const { demarrerServeur } = await import("./serveur.mjs");
-  let srv = await demarrerServeur(PORT);
-  console.log(`› dist/ servi sur ${BASE}`);
+  let proc = demarrer();
+  const attendre = async () => { for (let i = 0; i < 100 && !(await repond()); i++) await new Promise((r) => setTimeout(r, 200)); };
+  await attendre();
+  console.log(`› vite preview sur ${BASE}`);
   return {
-    async assurer() { if (!(await repond())) { console.log("› serveur tombé : relance"); srv.close(); srv = await demarrerServeur(PORT); } },
-    stop() { srv.close(); srv.closeAllConnections?.(); },
+    async assurer() { if (!(await repond())) { console.log("› serveur tombé : relance"); proc = demarrer(); await attendre(); } },
+    stop() { try { process.kill(-proc.pid); } catch { /* déjà arrêté */ } },
   };
 }
 
@@ -88,27 +97,16 @@ export function collecterConsole(page) {
   return msgs;
 }
 
-/**
- * Attend que la carte soit là (scène Pixi construite, 24 cadeaux) et que la police soit prête.
- * Échoue EXPLICITEMENT si on est resté sur l'écran de connexion (ou tout autre écran sans carte) :
- * aucune capture ni mesure ne doit se faire en silence sur le mauvais écran.
- */
+/** Attend que la scène Pixi soit construite (cadeaux présents) et que la police soit prête. */
 export async function attendreScene(page, timeout = 30000) {
-  try {
-    await page.waitForFunction(() => {
-      const app = globalThis.__qaApp;
-      if (!app?.stage || !document.querySelector(".hud")) return false;
-      let n = 0;
-      const visit = (c) => { if (c.meta && c.eventMode === "static") n++; for (const k of c.children ?? []) visit(k); };
-      visit(app.stage);
-      return n >= 24;
-    }, null, { timeout });
-  } catch (e) {
-    const login = await page.locator(".login-card").count().catch(() => 0);
-    throw new Error(login
-      ? `Carte non atteinte : la page est restée sur l'écran de connexion (${page.url()}).`
-      : `Carte non atteinte en ${timeout} ms (${page.url()}) : ${e.message.split("\n")[0]}`);
-  }
+  await page.waitForFunction(() => {
+    const app = globalThis.__qaApp;
+    if (!app?.stage) return false;
+    let n = 0;
+    const visit = (c) => { if (c.meta && c.eventMode === "static") n++; for (const k of c.children ?? []) visit(k); };
+    visit(app.stage);
+    return n >= 24;
+  }, null, { timeout });
   await page.evaluate(() => document.fonts.ready);
 }
 
@@ -128,21 +126,16 @@ export async function fermerPingou(page) {
  */
 export async function positionCadeau(page, day) {
   return page.evaluate((day) => {
-    // crochet de test fourni par l'équipe Monde (Scene.ts, présent avec ?jour= ou en dev)
-    const h = globalThis.__calendrier;
     const app = globalThis.__qaApp;
     const gifts = [];
     const visit = (c) => { if (c.meta && c.eventMode === "static") gifts.push(c); for (const k of c.children ?? []) visit(k); };
     visit(app.stage);
+    // le numéro du jour est le seul Text du cadeau (pastille) ; l'ordre des enfants est trié par profondeur
     const jourDe = (c) => { let t = null; const v = (k) => { if (t === null && typeof k.text === "string") t = k.text; for (const e of k.children ?? []) v(e); }; v(c); return Number(t); };
     const g = gifts.find((c) => jourDe(c) === day);
-    if (!g && !h) return null;
-    // centre du paquet : on vise le corps (hors pastille) ; à défaut, le point fourni par le crochet
-    let x, y, w = 0, hh = 0;
-    if (g) { const b = g.meta.inner.children[0].getBounds(); x = b.x + b.width / 2; y = b.y + b.height / 2; w = b.width; hh = b.height; }
-    else { const p = h.giftScreenPos(day); x = p.x; y = p.y; }
-    const etat = h ? h.giftState(day) : g.meta.st;
-    return { x, y, w, h: hh, etat, n: gifts.length };
+    if (!g) return null;
+    const b = g.meta.inner.children[0].getBounds(); // corps du paquet (hors pastille)
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2, w: b.width, h: b.height, etat: g.meta.st, n: gifts.length };
   }, day);
 }
 
@@ -184,27 +177,4 @@ export async function attendreCamera(page, max = 40) {
     };
     app.ticker.add(f);
   }), max);
-}
-
-/** Touche (mobile) ou clique (ordinateur) le paquet cadeau du jour donné, après l'avoir centré. */
-export async function toucherCadeau(page, day, tactile = false) {
-  await defilerVersCadeau(page, day);
-  await attendreCamera(page);
-  const p = await positionCadeau(page, day);
-  if (!p) throw new Error(`cadeau ${day} introuvable dans la scène`);
-  if (tactile) await page.touchscreen.tap(p.x, p.y);
-  else await page.mouse.click(p.x, p.y);
-  return p;
-}
-
-/** Ouvre le calendrier en mode démo, session forcée (?moi=) et données remises à zéro. */
-export async function ouvrirDemo(page, { jour, moi = "alexandre", reset = true } = {}) {
-  const q = new URLSearchParams();
-  if (jour !== undefined) q.set("jour", String(jour));
-  q.set("moi", moi);
-  let url = `./?${q}`;
-  if (reset) url += "&demo-reset";
-  await page.goto(url);
-  await attendreScene(page);
-  await page.waitForTimeout(1500); // défilement automatique vers la case du jour
 }

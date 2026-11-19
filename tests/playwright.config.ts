@@ -27,7 +27,7 @@ export default defineConfig({
     { name: "ordinateur", use: { viewport: { width: 1280, height: 800 } } },
   ],
   webServer: {
-    command: `npm run build && node tests/qa/serveur.mjs`,
+    command: `npm run build && npx vite preview --port ${PORT} --strictPort`,
     cwd: "..",
     url: `http://localhost:${PORT}/`,
     reuseExistingServer: true,
