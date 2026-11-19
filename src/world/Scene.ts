@@ -138,19 +138,6 @@ export class Scene {
         giftState: (day: number) => this.states.get(day) ?? "locked",
         scrollForDay: (day: number) => this.scrollForDay(day),
         playOpen: (day: number) => this.playOpen(day),
-        __limites: () => {
-          const n = (d: number) => { const nd = this.terrain.nodes[d - 1]; return nd ? nd.x + nd.y : -1; };
-          return { last: this.lastOpenDay, limiteDepth: this.limiteDepth, slabs: this.slabs.length,
-            visibles: this.slabs.filter((x) => x.c.visible).length,
-            profondeurs: [1, 2, 6, 7, 12].map((d) => `${d}:${n(d)}`).join(" "),
-            etats: [1, 2, 6, 7, 12].map((d) => `${d}:${this.states.get(d) ?? "?"}`).join(" ") };
-        },
-        __pano: () => {
-          const sg = this.panneauFin.children[0];
-          if (!sg) return null;
-          const b = sg.getBounds();
-          return { x: b.x, y: b.y, w: b.width, h: b.height, visible: sg.visible, enfants: this.finCarte.children.length };
-        },
       };
     }
   }
@@ -599,13 +586,13 @@ export class Scene {
     const bords = new Map<number, [number, number]>();
     for (const c of this.terrain.cells.values()) {
       const k = c.x + c.y, col = c.x - c.y;
-      if (k < nd.x + nd.y - 8 || k > this.limiteDepth + 2) continue;
+      if (k < nd.x + nd.y + 3 || k > this.limiteDepth + 2) continue; // seulement après la dernière case
       const b = bords.get(k);
       bords.set(k, b ? [Math.min(b[0], col), Math.max(b[1], col)] : [col, col]);
     }
     for (const [k, [cMin, cMax]] of bords) {
       if (k % 2 !== 0) continue;
-      for (const col of [cMin - 1.5, cMin - 4.5, cMax + 1.5, cMax + 4.5]) {
+      for (const col of [cMin - 3, cMin - 6.5, cMax + 3, cMax + 6.5]) { // hors du monde : la forêt du bord reste visible
         const gx = (k + col) / 2, gy = (k - col) / 2;
         const n = drawProp("cloudBank", gx, gy, this.pal, Math.floor(k * 131 + col * 17 + 3), {});
         n.zIndex = k;
