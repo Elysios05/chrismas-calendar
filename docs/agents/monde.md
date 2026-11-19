@@ -189,3 +189,17 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     (découpée en tranches) ; une tranche de sol de trop restait visible ; les décors et cadeaux verrouillés au-delà
     sont masqués ; le défilement s'arrête quand les nuages atteignent le bas de l'écran, sans vide derrière.
   - À regarder plus tard : dans la grotte, le cadeau 20 est en partie caché par un bloc de glace (proche de #50).
+- 19 nov — fin de carte, troisième passe (retours d'Alexandre : « sois plus pointilleux ») :
+  - **Rôle des nuages** (précisé par Alexandre) : ils ne cachent pas le cadeau suivant, ils empêchent de
+    parcourir toute la carte et d'en découvrir les décors dès le premier jour. La lisière laisse donc six pas de
+    chemin libres après la case du jour, et englobe la case de demain si elle est proche (entre deux mondes le
+    chemin est long : l'attendre repoussait les nuages hors de l'écran). Le cadeau de demain reste visible.
+  - **Dessin** : comparé sur captures, nuages **ronds** retenus par Alexandre (dessous bleuté, corps, reflet en
+    haut à gauche) plutôt qu'à facettes (qui ressemblaient à un champ de roches). Le mur court d'un bord à
+    l'autre du monde, sur dix rangées.
+  - **Défilement** (choix d'Alexandre) : on s'arrête **juste sous la case du jour**. Sur ordinateur, on ne voit
+    donc qu'un coin de la barrière — accepté.
+  - **Pas de clôture en bois** (choix d'Alexandre) : les nuages suffisent.
+  - **Panneau « route barrée »** redessiné : deux poteaux, planche large avec un flocon, bandes rouges et
+    blanches, lanterne toujours allumée (halo la nuit). Planté en travers du chemin, au dernier point qui reste
+    dans l'écran d'un téléphone (là où la route entre dans les nuages, il sortait souvent de l'écran).

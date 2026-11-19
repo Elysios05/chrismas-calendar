@@ -546,33 +546,57 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       break;
     }
     case "cloudBank": {
-      // banc de nuages posé dans le décor : c'est lui qui ferme la carte, pas un voile sur l'écran
+      // Banc de nuages posé dans le décor : c'est lui qui ferme la carte, pas un voile sur l'écran.
+      // Les bulles s'alignent le long de la lisière (axe y de la carte, sauf `alongX`), et se
+      // chevauchent avec celles des bancs voisins : de loin, on lit un seul mur continu.
       const p = P(cx, cy);
-      const s2 = 1 + rnd(1) * 0.5;
-      // ombre portée sur la neige, pour qu'il appartienne vraiment au monde
-      g.ellipse(p.x, p.y + 6, 120 * s2, 34 * s2).fill({ color: c(0x9aa8c8), alpha: 0.22 });
-      const bulles: [number, number, number][] = [
-        [-78, -6, 40], [-34, -26, 54], [16, -34, 60], [64, -20, 48], [100, -2, 36], [-104, 4, 30],
-      ];
-      // trois couches : la plus sombre derrière, la plus claire devant
-      for (const [k, col] of [[1.18, 0xdfe6f2], [1.06, 0xeef2f9], [0.9, 0xffffff]] as const) {
-        for (const [dx, dy, r] of bulles) {
-          g.ellipse(p.x + dx * s2 * k, p.y + dy * s2 * k - 18, r * s2 * k * 0.92, r * s2 * k * 0.74).fill(c(col));
-        }
+      const ax = opts.alongX ? P(1, 0) : P(0, 1); // pas d'une case le long de la lisière, à l'écran
+      const o0 = P(0, 0);
+      const ux = ax.x - o0.x, uy = ax.y - o0.y;
+      // ombre portée sur la neige, étirée le long du mur
+      for (let t = -1.5; t <= 1.5; t += 1.5) g.ellipse(p.x + ux * t, p.y + uy * t + 8, 70, 22).fill({ color: c(0x7f8db6), alpha: 0.3 });
+      const puffs: [number, number, number][] = [];
+      for (let i = 0; i < 5; i++) {
+        const t = (i - 2) * 0.75 + (rnd(10 + i) - 0.5) * 0.3;
+        const r = (48 + rnd(20 + i) * 26) * (i === 2 ? 1.15 : 1);
+        puffs.push([p.x + ux * t, p.y + uy * t - r * 0.35 - 6, r]);
       }
+      // une rangée basse plus petite devant, pour que le pied du mur soit épais et non découpé
+      for (let i = 0; i < 4; i++) {
+        const t = (i - 1.5) * 0.9 + (rnd(40 + i) - 0.5) * 0.3;
+        const r = 32 + rnd(50 + i) * 14;
+        puffs.push([p.x + ux * t, p.y + uy * t + 10, r]);
+      }
+      // bulles arrondies (choix d'Alexandre) : dessous ombré, corps, puis un reflet en haut à gauche
+      // le dessous est franchement bleuté : sur la neige en plein jour, sinon, le mur se fondait au sol
+      const BLANC = 0xffffff, CLAIR = 0xe9eef8, DESSOUS = 0x95a4ca;
+      for (const [x, y, r] of puffs) g.ellipse(x + r * 0.05, y + r * 0.16, r * 0.98, r * 0.66).fill(c(DESSOUS));
+      for (const [x, y, r] of puffs) g.ellipse(x, y, r * 0.95, r * 0.7).fill(c(CLAIR));
+      for (const [x, y, r] of puffs) g.ellipse(x - r * 0.18, y - r * 0.16, r * 0.66, r * 0.46).fill(c(BLANC));
       break;
     }
     case "signpost": {
-      // panneau de bois planté au bord du chemin : « la suite, demain »
+      // Panneau « route barrée » planté au pied des nuages : deux poteaux, une planche large, une
+      // lanterne. Il doit se lire de loin, de jour comme de nuit.
       const p = P(cx, cy);
-      g.ellipse(p.x, p.y, 16, 6).fill({ color: c(0x9aa3b8), alpha: 0.3 });
-      g.rect(p.x - 3, p.y - 54, 6, 54).fill(c(0x7a4a2b));
-      g.roundRect(p.x - 34, p.y - 82, 68, 30, 5).fill(c(0xc89a5e));
-      g.roundRect(p.x - 34, p.y - 82, 68, 30, 5).stroke({ width: 2.5, color: c(0x8a5a33) });
-      g.roundRect(p.x - 30, p.y - 78, 60, 7, 3).fill(c(0xf7f5f0));
-      // deux lignes gravées, et une étoile : lisible même tout petit
-      for (const [yy, w] of [[-66, 44], [-60, 30]] as const) g.roundRect(p.x - w / 2, p.y + yy, w, 3.5, 2).fill(c(0x8a5a33));
-      g.star(p.x, p.y - 88, 5, 7, 3).fill(c(0xffd46b));
+      const bois = c(0x8a5530), boisClair = c(0xd9a868), bord = c(0x6b3f22);
+      g.ellipse(p.x, p.y + 2, 46, 13).fill({ color: c(0x7d89aa), alpha: 0.35 });
+      for (const dx of [-30, 30]) g.rect(p.x + dx - 3.5, p.y - 70, 7, 72).fill(bois);
+      // planche principale, avec ses lattes
+      g.roundRect(p.x - 52, p.y - 92, 104, 42, 6).fill(boisClair).stroke({ width: 3, color: bord });
+      for (const yy of [-78, -64]) g.rect(p.x - 50, p.y + yy, 100, 1.6).fill({ color: bord, alpha: 0.35 });
+      // bandes rouges et blanches de barrière, au-dessous
+      g.roundRect(p.x - 46, p.y - 40, 92, 12, 3).fill(c(0xffffff)).stroke({ width: 2, color: bord });
+      for (let i = 0; i < 4; i++) poly(g, [{ x: p.x - 44 + i * 24, y: p.y - 39 }, { x: p.x - 34 + i * 24, y: p.y - 39 }, { x: p.x - 42 + i * 24, y: p.y - 29 }, { x: p.x - 52 + i * 24, y: p.y - 29 }].map((q) => ({ x: Math.max(p.x - 45, Math.min(p.x + 45, q.x)), y: q.y })), c(0xd23b3b));
+      // un flocon peint au centre de la planche : « on repasse demain »
+      for (let k = 0; k < 3; k++) {
+        const a = (k * Math.PI) / 3;
+        g.moveTo(p.x - Math.cos(a) * 11, p.y - 71 - Math.sin(a) * 11).lineTo(p.x + Math.cos(a) * 11, p.y - 71 + Math.sin(a) * 11).stroke({ width: 3, color: c(0x3b6fb6) });
+      }
+      // lanterne : toujours allumée, c'est elle qu'on repère de nuit
+      g.rect(p.x + 26, p.y - 108, 8, 16).fill(c(0x3a3a46));
+      g.roundRect(p.x + 24, p.y - 104, 12, 11, 2).fill(0xffd46b);
+      g.circle(p.x + 30, p.y - 99, pal.night ? 40 : 18).fill({ color: 0xffd46b, alpha: pal.night ? 0.22 : 0.12 });
       break;
     }
     case "ridge": {
