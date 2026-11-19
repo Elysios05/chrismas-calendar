@@ -172,3 +172,17 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - **Limite** : la hauteur de la page est calculée par l'interface au montage et au redimensionnement. Quand
     une case s'ouvre, la carte s'allonge : faute de canal dédié, la scène émet un `resize` pour que l'interface
     recalcule. Un `onHeight` serait plus propre — demandé au chef dans l'issue #9.
+- 19 nov — fin de carte, deuxième version (issues #9 et #13) :
+  - **Brouillard abandonné** : Alexandre l'a jugé « moche, ça ne fait pas vrai ». Comme dans les jeux du même
+    genre, la carte se ferme maintenant par des éléments du décor : un **banc de nuages** et un **panneau**
+    planté au bord du chemin (choix d'Alexandre : « les deux »).
+  - **Forme de la lisière** (demande d'Alexandre) : une seule droite dans le sens de la carte, comme le bord du
+    lac — elle part du milieu en bas et monte vers la droite (x constant). Essayés puis écartés : une ligne
+    plate à l'écran (« quel est l'intérêt ? ») et un chevron. Tout ce qui est au-delà est pavé de nuages.
+  - **Bords latéraux** (choix d'Alexandre : « varier selon la zone ») : crêtes en montagne et dans la grotte,
+    futaie serrée en forêt et au village, nuages au marché et au pôle Nord. Près de la fin, des nuages débordent
+    aussi hors du monde, sinon le vide apparaissait dans le coin.
+  - **Corrections trouvées en route** : la route était dessinée d'un seul tenant et dépassait les nuages
+    (découpée en tranches) ; une tranche de sol de trop restait visible ; les décors et cadeaux verrouillés au-delà
+    sont masqués ; le défilement s'arrête quand les nuages atteignent le bas de l'écran, sans vide derrière.
+  - Reste : un mince liseré du bord du monde visible tout à gauche sur ordinateur, plus haut sur la carte.
