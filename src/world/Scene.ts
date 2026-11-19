@@ -52,7 +52,6 @@ export class Scene {
   cloudLayer = new Container();
   snowLayer = new Container();
   whiteout = new Graphics();
-  endFog = new Graphics();
   pal: Palette;
   scale = 1;
   minY = 0;
@@ -72,6 +71,14 @@ export class Scene {
   light = 0;
   retirerNavigation: (() => void) | null = null;
   marcheScriptee = false;
+  finCarte = new Container();
+  /** Le panneau vit à part : il se range parmi les décors, à sa propre profondeur */
+  panneauFin = new Container();
+  limiteDepth = Infinity;
+  /** Profondeur au-delà de laquelle aucun cadeau ne se montre */
+  limiteCadeaux = Infinity;
+  /** Ordonnée, dans le monde, du banc de nuages qui ferme la carte (null = carte entière ouverte) */
+  yFin: number | null = null;
   focus: { x: number; y: number; zoom: number } | null = null;
   confetti: { g: Graphics; vx: number; vy: number; rot: number; life: number }[] = [];
   confettiLayer = new Container();
@@ -79,8 +86,8 @@ export class Scene {
   time = 0;
   boundaries: number[] = [];
   nodeY: number[] = [];
-  slabs: { c: Container; min: number; max: number }[] = [];
-  groundBands: { c: Container; min: number; max: number }[] = [];
+  slabs: { c: Container; min: number; max: number; k: number }[] = [];
+  groundBands: { c: Container; min: number; max: number; k: number }[] = [];
   weatherNow = "";
 
   constructor(app: Application, cb: SceneCallbacks, night: boolean) {
@@ -100,7 +107,7 @@ export class Scene {
       this.cloudLayer.addChild(s);
       this.clouds.push({ s, v: 0.15 + Math.random() * 0.35, base: s.y });
     }
-    app.stage.addChild(this.world, this.aurora, this.tint, this.fog, this.endFog, this.cloudLayer, this.whiteout, this.confettiLayer, this.snowLayer);
+    app.stage.addChild(this.world, this.aurora, this.tint, this.fog, this.cloudLayer, this.whiteout, this.confettiLayer, this.snowLayer);
     const flakeTex = app.renderer.generateTexture(new Graphics().circle(6, 6, 6).fill(0xffffff));
     for (let i = 0; i < 260; i++) {
       const s = new Sprite(flakeTex);
@@ -131,6 +138,19 @@ export class Scene {
         giftState: (day: number) => this.states.get(day) ?? "locked",
         scrollForDay: (day: number) => this.scrollForDay(day),
         playOpen: (day: number) => this.playOpen(day),
+        __limites: () => {
+          const n = (d: number) => { const nd = this.terrain.nodes[d - 1]; return nd ? nd.x + nd.y : -1; };
+          return { last: this.lastOpenDay, limiteDepth: this.limiteDepth, slabs: this.slabs.length,
+            visibles: this.slabs.filter((x) => x.c.visible).length,
+            profondeurs: [1, 2, 6, 7, 12].map((d) => `${d}:${n(d)}`).join(" "),
+            etats: [1, 2, 6, 7, 12].map((d) => `${d}:${this.states.get(d) ?? "?"}`).join(" ") };
+        },
+        __pano: () => {
+          const sg = this.panneauFin.children[0];
+          if (!sg) return null;
+          const b = sg.getBounds();
+          return { x: b.x, y: b.y, w: b.width, h: b.height, visible: sg.visible, enfants: this.finCarte.children.length };
+        },
       };
     }
   }
@@ -147,7 +167,12 @@ export class Scene {
   /** Défilement maximal autorisé : un peu au-delà de la dernière case ouverte */
   get maxScroll() {
     const d = Math.min(24, this.lastOpenDay);
-    return Math.max(0, this.scrollForDay(d) + innerHeight * 0.15);
+    const parCase = this.scrollForDay(d) + innerHeight * 0.15;
+    if (this.yFin === null) return Math.max(0, parCase);
+    // on s'arrête quand le banc de nuages arrive au bas de l'écran : pas de vide derrière lui
+    const parNuages = (this.yFin - this.minY) * this.scale + this.padTop - innerHeight * 0.88;
+    // ... sans jamais empêcher d'amener la dernière case au centre de l'écran
+    return Math.max(0, this.scrollForDay(d), Math.min(parCase, parNuages));
   }
   setNight(night: boolean) { this.setLight(night ? 1 : 0); }
   /** Ne redessine que les cases dont l'état a changé : reconstruire toute la scène gelait l'image */
@@ -158,6 +183,7 @@ export class Scene {
     // une case de plus = la carte s'allonge. L'interface recalcule la hauteur de page sur `resize` ;
     // on le lui signale ainsi, faute d'un canal dédié (proposé au chef de projet dans l'issue #9).
     if (limiteAvant >= 0 && Math.abs(this.maxScroll - limiteAvant) > 1) {
+      this.majFinDeCarte();
       setTimeout(() => dispatchEvent(new Event("resize")), 0);
     }
     if (!this.gifts.size) { this.build(); return; }
@@ -238,9 +264,10 @@ export class Scene {
       g.poly(pts.flatMap(([x, y, z]) => { const q = P(x, y, z); return [q.x, q.y]; }), true).stroke({ width: 0.8, color: c(col) });
     };
     let bandK = list.length ? list[0].x + list[0].y : 0;
+    const bandKs: number[] = [bandK];
     for (const cell of list) {
       const { x, y } = cell;
-      if (x + y >= bandK + 10) { bandK = x + y; g = new Graphics(); bands.push(g); }
+      if (x + y >= bandK + 10) { bandK = x + y; g = new Graphics(); bands.push(g); bandKs.push(bandK); }
       const A: [number, number, number] = [x, y, hv(x, y)], B: [number, number, number] = [x + 1, y, hv(x + 1, y)];
       const C: [number, number, number] = [x + 1, y + 1, hv(x + 1, y + 1)], D: [number, number, number] = [x, y + 1, hv(x, y + 1)];
       face([A, B, C], cell);
@@ -268,8 +295,15 @@ export class Scene {
         rect(a0, a1, b0, b1, COBBLE[Math.floor(hash(seed * 3 + i, j) * COBBLE.length)]);
       }
     };
+    // la route est découpée en tranches comme le terrain : sinon elle continuait toute seule
+    // au-delà du banc de nuages qui ferme la carte
+    const roads: Graphics[] = [g];
+    const roadKs: number[] = [path.length ? path[0].x + path[0].y : 0];
     for (let i = 0; i < path.length; i++) {
       const a = path[i], b = path[i + 1];
+      if (a.x + a.y >= roadKs[roadKs.length - 1] + 10) {
+        g = new Graphics(); roads.push(g); roadKs.push(a.x + a.y);
+      }
       const onLake = cells.get(key(a.x, a.y))?.lake;
       const paved = !onLake && !!ZONES[a.zone].paved;
       const col = onLake ? 0x8fcde6 : ZONES[a.zone].roadColor ?? ROAD;
@@ -308,8 +342,11 @@ export class Scene {
         g.moveTo(p1.x, p1.y).lineTo(p2.x, p2.y).stroke({ width: 1.5, color: c(0xffffff), alpha: 0.8 });
       }
     }
-    this.ground.addChild(g);
-    this.groundBands = bands.map((b) => { const r = b.getLocalBounds(); return { c: b, min: r.minY, max: r.maxY }; });
+    for (const r of roads) this.ground.addChild(r);
+    this.groundBands = [
+      ...bands.map((b, i) => ({ c: b, k: bandKs[i] })),
+      ...roads.map((r, i) => ({ c: r, k: roadKs[i] })),
+    ].map(({ c: b, k }) => { const r = b.getLocalBounds(); return { c: b, min: r.minY, max: r.maxY, k }; });
 
     this.anims = [];
     // Les décors sont rangés par tranche de profondeur plutôt qu'un par un : la scène trie et transforme
@@ -336,10 +373,13 @@ export class Scene {
       slabOf(depth).addChild(o);
     }
     for (const n of nodes) this.objects.addChild(this.makeGift(n));
+    this.finCarte.sortableChildren = true;
+    this.objects.addChild(this.finCarte, this.panneauFin);
+    this.majFinDeCarte();
     // hauteur occupée par chaque tranche, pour ne dessiner que celles qui entrent dans l'écran
-    this.slabs = [...slabs.values()].map((c) => {
+    this.slabs = [...slabs.entries()].map(([k, c]) => {
       const b = c.getLocalBounds();
-      return { c, min: b.minY, max: b.maxY };
+      return { c, min: b.minY, max: b.maxY, k };
     });
     for (const who of ["alexandre", "flavie"] as Who[]) {
       const p = new Person(who, this.pal);
@@ -513,6 +553,64 @@ export class Scene {
     });
   }
 
+  /** Ferme la carte après la dernière case ouverte : le monde s'arrête dans un banc de nuages,
+   *  et un panneau planté au bord du chemin dit que la suite est pour demain. */
+  majFinDeCarte() {
+    this.finCarte.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.panneauFin.removeChildren().forEach((c) => c.destroy({ children: true }));
+    const L = this.terrain.path;
+    const dernier = Math.min(24, this.lastOpenDay);
+    if (dernier >= 24) { this.limiteDepth = Infinity; this.limiteCadeaux = Infinity; this.yFin = null; return; } // tout est ouvert : plus rien à cacher
+    const iDernier = this.nodeIndex(dernier);
+    const nd = this.terrain.nodes[dernier - 1];
+    const colCase = nd.x - nd.y;
+
+    // La lisière de nuages est une seule droite, à x constant, comme le bord du lac : elle part du
+    // bas de l'écran, au milieu, et monte vers la droite. Tout ce qui est au-delà (x plus grand)
+    // est sous les nuages ; elle est placée juste après tout ce qu'on a déjà le droit de voir.
+    const vus = L.slice(0, Math.min(L.length, iDernier + 4));
+    const xLis = Math.max(...vus.map((p) => p.x)) + 2;
+    // jusqu'où on peut descendre : là où le chemin entre dans les nuages, ou quelques pas après
+    // la dernière case s'il file le long de la lisière ; le bas de l'écran fait le reste
+    const iCroise = L.findIndex((p, k) => k > iDernier && p.x >= xLis);
+    const iFin = Math.min(L.length - 1, iCroise >= 0 ? Math.min(iCroise, iDernier + 5) : iDernier + 5);
+    const bout = L[iFin];
+    const profondeur = bout.x + bout.y;
+    // sol et décors un peu au-delà du bas de l'écran (le défilement s'arrête avant) ;
+    // les cadeaux encore verrouillés, eux, s'arrêtent net après la dernière case
+    this.limiteDepth = profondeur + 14;
+    this.limiteCadeaux = profondeur + 1;
+    // les nuages passent devant tout : une ligne en diagonale ne se range pas dans une tranche de profondeur
+    this.finCarte.zIndex = 1e6;
+    this.yFin = P(bout.x + 0.5, bout.y + 0.5, heightAt(this.terrain, bout.x + 0.5, bout.y + 0.5)).y;
+
+    // pavage de la zone cachée : la première rangée dessine la lisière, les suivantes remplissent
+    for (let rang = 0; rang < 6; rang++) {
+      for (let t = -30; t <= 30; t += 3) {
+        const gx = xLis + 0.6 + rang * 3 + (rang === 0 ? Math.sin(t * 1.7) * 0.25 : 0);
+        const gy = nd.y + t + (rang % 2) * 1.5;
+        const n = drawProp("cloudBank", gx, gy, this.pal, Math.floor(Math.abs(t) * 7919 + rang * 101 + 7), {});
+        n.zIndex = gx + gy;
+        this.finCarte.addChild(n);
+      }
+    }
+    // le panneau, juste après la dernière case ouverte et sur le bas-côté : plus loin, les nuages l'avalent
+    const pano = L[Math.min(L.length - 1, iDernier + 3)];
+    const suite = L[Math.min(L.length - 1, iDernier + 4)];
+    // Décalé perpendiculairement au chemin : planté dessus, il se cachait derrière le cadeau de la
+    // dernière case. Le côté est choisi pour le ramener vers la colonne de cette case, qui est
+    // celle que la caméra cadre : sur téléphone, l'autre côté sortait de l'écran.
+    const versX = suite.x !== pano.x;
+    const d = 1.3;
+    // en projection iso, la colonne vaut x - y : +y la diminue, +x l'augmente
+    const trop = pano.x - pano.y > colCase;
+    const ec = versX ? (trop ? d : -d) : (trop ? -d : d);
+    const sg = drawProp("signpost", pano.x + (versX ? 0 : ec), pano.y + (versX ? ec : 0), this.pal, 4242, {});
+    sg.y = -pano.z * ZH;
+    this.panneauFin.zIndex = pano.x + pano.y + ec + 0.6;
+    this.panneauFin.addChild(sg);
+  }
+
   /* ---------------------------- navigation --------------------------- */
   /** Doigt, souris et clavier. Le défilement de la page reste le maître : on ne fait que l'alimenter. */
   private installerNavigation(canvas: HTMLCanvasElement) {
@@ -634,11 +732,16 @@ export class Scene {
     // on ne dessine que les tranches de décor qui touchent l'écran
     const topY = (-this.world.y) / this.scale - 80;
     const botY = (innerHeight - this.world.y) / this.scale + 80;
-    for (const s2 of this.slabs) s2.c.visible = s2.max > topY && s2.min < botY;
-    for (const b of this.groundBands) b.c.visible = b.max > topY && b.min < botY;
+    // les décors s'arrêtent un peu avant le banc de nuages : sinon un toit émerge de la brume
+    const limiteDecor = this.limiteDepth === Infinity ? Infinity : this.limiteDepth - 4;
+    for (const s2 of this.slabs) s2.c.visible = s2.k <= limiteDecor && s2.max > topY && s2.min < botY;
+    // une tranche commence à `k` et court sur 10 : celle qui contient la limite reste visible,
+    // juste assez pour porter le banc de nuages, et rien derrière
+    for (const b of this.groundBands) b.c.visible = b.k <= this.limiteDepth && b.max > topY && b.min < botY;
     for (const [, cont] of this.gifts) {
       const gy = cont.y;
-      cont.visible = gy > topY - 120 && gy < botY + 120;
+      // un cadeau encore verrouillé au-delà des nuages flotterait au-dessus du vide
+      cont.visible = cont.zIndex <= this.limiteCadeaux && gy > topY - 120 && gy < botY + 120;
     }
 
     // ambiance
@@ -720,19 +823,6 @@ export class Scene {
       if (f.s.x < -10) f.s.x = innerWidth + 10;
     });
     // mur de brouillard : au-delà de la dernière case ouverte, la suite du chemin se perd dans le blanc
-    this.endFog.clear();
-    // le brouillard se cale sur la dernière case ouverte : juste en dessous, on ne doit plus rien distinguer
-    const yCase = this.scrollForDay(Math.min(24, this.lastOpenDay)) - this.scrollY + innerHeight * 0.55;
-    const debut = yCase + 95, plein = yCase + 330;
-    if (debut < innerHeight) {
-      const n = 16;
-      for (let i = 0; i < n; i++) {
-        const y0 = debut + ((innerHeight - debut) * i) / n;
-        const y1 = debut + ((innerHeight - debut) * (i + 1)) / n + 1;
-        const t = Math.max(0, Math.min(1, (y0 - debut) / Math.max(1, plein - debut)));
-        this.endFog.rect(0, y0, innerWidth, y1 - y0).fill({ color: night ? 0x8f9ec4 : 0xf4f8ff, alpha: Math.min(1, t * 1.25) });
-      }
-    }
     this.whiteout.clear();
     const wo = Math.max(0, density - 1) * 0.16; // voile de tempête : assez pour aveugler, pas pour effacer le décor
     if (wo > 0.01) this.whiteout.rect(0, 0, innerWidth, innerHeight).fill({ color: 0xffffff, alpha: wo });

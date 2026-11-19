@@ -281,6 +281,33 @@ export function buildTerrain(seed = 2026): Terrain {
 
   // rangs du chemin où l'on change de monde
   const zoneEdges = path.filter((p, i) => i > 0 && p.zone !== path[i - 1].zone).map((p) => p.i);
+  /* ---------- lisières : ce qui ferme la carte à gauche et à droite ---------- */
+  // Sans cela, les tuiles s'arrêtent net sur un bord carré (issue #13). Chaque monde ferme avec
+  // ce qui lui ressemble : crêtes en montagne et dans la grotte, futaie serrée en forêt et au
+  // village, bancs de nuages au marché et au pôle Nord.
+  const LISIERE: Record<string, PropKind> = {
+    montagnes: "ridge", grotte: "ridge",
+    lac: "deepWood", "saint-nicolas": "deepWood",
+    marche: "cloudBank", "pole-nord": "cloudBank",
+  };
+  const parRangee = new Map<number, Cell[]>();
+  for (const c of cells.values()) {
+    const k = c.x + c.y;
+    if (!parRangee.has(k)) parRangee.set(k, []);
+    parRangee.get(k)!.push(c);
+  }
+  for (const [, rang] of parRangee) {
+    rang.sort((a, b) => (a.x - a.y) - (b.x - b.y));
+    for (const c of [rang[0], rang[rang.length - 1]]) {
+      if (!c || c.road || c.lake) continue;
+      const kind = LISIERE[ZONES[c.zone].id];
+      if (!kind) continue;
+      // une rangée sur deux : assez pour fermer sans alourdir
+      if ((c.x + c.y) % 2 !== 0) continue;
+      place(kind, c);
+    }
+  }
+
   // repères uniques — posés avant le reste, sinon le décor dense leur prend la place
   /** `prefer` : emplacement idéal si on en trouve un, sinon on se rabat sur le premier venu */
   const landmark = (kind: PropKind, zid: string, pick: (c: Cell) => boolean, r = 1, prefer?: (c: Cell) => boolean) => {
