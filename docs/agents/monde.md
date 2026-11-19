@@ -156,3 +156,19 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     interne des cadeaux.
   - Piège : l'application a maintenant un écran de connexion, et tous mes scripts de capture photographiaient
     silencieusement la page de login. Ils passent désormais par « Voir la démo sans compte ».
+- 19 nov — navigation (issue #9, priorité 3) :
+  - **Diagnostic** : PixiJS pose `touch-action: none` sur le canvas, ce qui empêchait purement et simplement
+    le pouce de faire défiler la carte. C'était la cause du point 1 d'Alexandre. Passé à `pan-y` : le
+    défilement redevient celui du navigateur, avec son inertie, sans casser le toucher des cases.
+  - **Choix d'Alexandre pour l'ordinateur** : les trois à la fois — molette, glisser à la souris, et les
+    flèches du clavier (aucun bouton à l'écran). Haut et gauche remontent dans les dates, bas et droite
+    descendent ; un appui = une date, avec défilement doux.
+  - **Le personnage rejoint la caméra en marchant** (choix d'Alexandre), sans dépasser la dernière case
+    ouverte, et sans interférer avec la marche commandée par l'interface à l'ouverture d'une case.
+  - **Mur de brouillard** (choix d'Alexandre) : le défilement s'arrête un peu après la dernière case ouverte
+    et le paysage se perd dans le brouillard juste en dessous. Deux essais avant de trouver l'équilibre : trop
+    tôt, la dernière case elle-même disparaissait ; la limite recule maintenant de 0,15 écran et le dégradé
+    s'ouvre sur 330 px.
+  - **Limite** : la hauteur de la page est calculée par l'interface au montage et au redimensionnement. Quand
+    une case s'ouvre, la carte s'allonge : faute de canal dédié, la scène émet un `resize` pour que l'interface
+    recalcule. Un `onHeight` serait plus propre — demandé au chef dans l'issue #9.
