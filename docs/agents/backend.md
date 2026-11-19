@@ -126,3 +126,14 @@ dans les deux backends (pas d'appel immédiat : seulement aux changements).
 - Incident : les remises `git stash` sont communes à toutes les `wt-*`, et un `stash pop` simultané a échangé mon travail avec celui
   de l'équipe Audio. Ma copie est réparée et les deux patchs sont dans `/home/claude/recuperation-stash/`. Signalé dans l'issue #52.
   **Ne plus utiliser `git stash`.**
+
+### 19 novembre 2026 — souvenirs en PDF (branche `backend/souvenirs-pdf`)
+- Décision d'Alexandre : pour les souvenirs, une page HTML convertie en PDF suffit (pas de génération PDF côté code).
+- La page générée par `exportSouvenirs` a un bouton « 📄 Enregistrer en PDF » (`window.print()`), avec une astuce
+  « choisis Enregistrer au format PDF comme imprimante ».
+- Feuille d'impression : A4, marges 16 × 15 mm, couleurs conservées (`print-color-adjust: exact`), fond blanc.
+  Une page de garde, puis **une lettre par page** avec son jour et ses photos (2 par ligne, 105 mm max ; une photo seule
+  en grand). Aucune photo coupée, bouton masqué.
+- Tests : 5 vérifications ajoutées à `demo_backend_test.py` (bouton, masquage, PDF A4 = garde + 1 page par lettre).
+  Captures dans `src/backend/__tests__/captures/`.
+- Prochaine étape : rien de prévu sur les souvenirs ; à revoir si Alexandre veut un autre style de page.
