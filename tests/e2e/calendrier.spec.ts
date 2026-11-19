@@ -41,7 +41,8 @@ async function diversite(page: Page, selecteur = "canvas") {
 async function ouvrirCase(page: Page, jour: number, _isMobile?: boolean) {
   await C.fermerPingou(page);
   await C.toucherCadeau(page, jour, false);
-  await expect(fenetre(page)).toBeVisible();
+  // première ouverture : le personnage marche jusqu'au cadeau, qui s'ouvre, puis la fenêtre (lent sous SwiftShader)
+  await expect(fenetre(page)).toBeVisible({ timeout: 180_000 });
   await expect(fenetre(page)).toContainText(`${jour} décembre`);
 }
 
@@ -107,14 +108,17 @@ test("case du jour : la fenêtre s'ouvre, se ferme par ✕ et par Échap", async
   expect(erreurs()).toEqual([]);
 });
 
-test("téléphone : toucher le cadeau du jour ouvre la fenêtre", async ({ page, isMobile }) => {
+// #28 : sur une case déjà ouverte, la fenêtre s'affiche tout de suite et le clic de compatibilité qui suit le
+// toucher tombait sur son fond. (Une première ouverture passe désormais par la marche, qui masque le problème.)
+test("téléphone : toucher une case déjà ouverte affiche sa fenêtre et la garde", async ({ page, isMobile }) => {
   test.skip(!isMobile, "propre au tactile");
-  test.fail(true, "#28 : clic fantôme, la fenêtre se referme aussitôt");
   await C.ouvrirDemo(page, { jour: 9 });
   await C.fermerPingou(page);
-  await C.toucherCadeau(page, 9, true);
+  expect((await C.positionCadeau(page, 5)).etat).toBe("opened");
+  await C.toucherCadeau(page, 5, true);
+  await expect(fenetre(page)).toBeVisible({ timeout: 10_000 });
   await page.waitForTimeout(1500);
-  await expect(fenetre(page)).toBeVisible({ timeout: 2000 });
+  await expect(fenetre(page)).toBeVisible();
 });
 
 test("case future verrouillée : Pingou parle, pas de fenêtre", async ({ page, isMobile }) => {
