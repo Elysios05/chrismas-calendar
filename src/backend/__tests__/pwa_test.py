@@ -114,14 +114,64 @@ def test_build_subfolder(pw):
         payload = {"title": "🐧 Psst… petit rappel de Pingou", "body": "Psst… demain c'est la case 16 !", "day": 16, "path": "./?case=16"}
         cdp.send("ServiceWorker.deliverPushMessage",
                  {"origin": f"http://localhost:{port}", "registrationId": reg_id, "data": json.dumps(payload)})
-        page.wait_for_function("navigator.serviceWorker.ready.then(r => r.getNotifications()).then(n => n.length > 0)", timeout=5000)
-        notif = page.evaluate("""navigator.serviceWorker.ready.then(r => r.getNotifications()).then(n => n.map(x => ({
-            title: x.title, body: x.body, tag: x.tag, url: x.data && x.data.url, icon: x.icon })))""")[0]
+        page.evaluate("""window.__notif = null; (async () => { const reg = await navigator.serviceWorker.ready;
+            for (let i = 0; i < 200 && !window.__notif; i++) { const n = await reg.getNotifications();
+              if (n.length) window.__notif = { title: n[0].title, body: n[0].body, tag: n[0].tag, url: n[0].data && n[0].data.url, icon: n[0].icon };
+              await new Promise(r => setTimeout(r, 25)); } })(); 0""")
+        cdp.send("ServiceWorker.deliverPushMessage",
+                 {"origin": f"http://localhost:{port}", "registrationId": reg_id, "data": json.dumps(payload)})
+        page.wait_for_function("window.__notif", timeout=5000)
+        notif = page.evaluate("window.__notif")
         check(notif["title"] == payload["title"] and "case 16" in notif["body"], "notification affichée avec le texte de Pingou")
         check(notif["url"] == base + "?case=16", f"clic → ouvre la case 16 ({notif['url']})")
         check(notif["tag"] == "rappel-case-16" and notif["icon"] == base + "icons/icon-192.png", "tag et icône corrects")
         browser.close()
         srv.shutdown()
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_offline(pw):
+    print("Hors ligne : racine et /demo/ s'ouvrent quand le serveur est coupé")
+    tmp = Path(tempfile.mkdtemp())
+    try:
+        env = dict(os.environ, VITE_SUPABASE_URL="", VITE_SUPABASE_ANON_KEY="")
+        for out in ("chrismas-calendar", "chrismas-calendar/demo"):
+            subprocess.run(["npx", "vite", "build", "--outDir", str(tmp / out), "--emptyOutDir"], cwd=ROOT, check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+
+        class Quiet(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+        browser = pw.chromium.launch(executable_path=CHROME, headless=True)
+        for path in ("chrismas-calendar/", "chrismas-calendar/demo/"):
+            port = free_port()  # nouveau serveur (et nouvelle origine) pour chaque version
+            srv = http.server.ThreadingHTTPServer(("127.0.0.1", port), functools.partial(Quiet, directory=str(tmp)))
+            threading.Thread(target=srv.serve_forever, daemon=True).start()
+            base = f"http://localhost:{port}/{path}"
+            ctx = browser.new_context()
+            page = ctx.new_page()
+            page.goto(base + "?moi=alexandre&jour=5")
+            page.wait_for_function("navigator.serviceWorker.controller !== null", timeout=15000)
+            page.wait_for_function("""caches.keys().then(async ks => {
+                const k = ks.find(n => n.startsWith('cc-fichiers-') && n.endsWith('|' + location.href.split('?')[0]));
+                if (!k) return false;
+                const c = await caches.open(k); return (await c.keys()).some(r => /assets\\/index-.*\\.js$/.test(r.url));
+            })""", timeout=15000)
+            check(True, f"{path} : application rangée dans le cache")
+            urls = page.evaluate("""(async () => { const out = []; for (const k of await caches.keys()) {
+                for (const r of await (await caches.open(k)).keys()) out.push(r.url); } return out; })()""")
+            check(not any("supabase" in u for u in urls), f"{path} : aucune donnée Supabase dans le cache ({len(urls)} fichiers)")
+            srv.shutdown()
+            srv.server_close()
+            page.reload()
+            page.wait_for_function("document.querySelector('#root') && document.querySelector('#root').children.length > 0", timeout=15000)
+            check(True, f"{path} : s'ouvre serveur coupé")
+            page.goto(base + "?jour=12")
+            page.wait_for_function("document.querySelector('#root').children.length > 0", timeout=15000)
+            check(True, f"{path} : marche aussi avec d'autres paramètres d'adresse")
+            ctx.close()
+        browser.close()
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -173,6 +223,7 @@ def test_supabase_status(pw):
 def main():
     with sync_playwright() as pw:
         test_build_subfolder(pw)
+        test_offline(pw)
         test_supabase_status(pw)
     print(f"\nTous les tests des rappels (navigateur) sont passés ({passed} vérifications).")
 
