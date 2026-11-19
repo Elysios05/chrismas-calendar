@@ -52,6 +52,7 @@ export class Scene {
   cloudLayer = new Container();
   snowLayer = new Container();
   whiteout = new Graphics();
+  endFog = new Graphics();
   pal: Palette;
   scale = 1;
   minY = 0;
@@ -69,6 +70,8 @@ export class Scene {
   flakes: { s: Sprite; vy: number; ph: number; z: number }[] = [];
   zoneNow = -1;
   light = 0;
+  retirerNavigation: (() => void) | null = null;
+  marcheScriptee = false;
   focus: { x: number; y: number; zoom: number } | null = null;
   confetti: { g: Graphics; vx: number; vy: number; rot: number; life: number }[] = [];
   confettiLayer = new Container();
@@ -97,7 +100,7 @@ export class Scene {
       this.cloudLayer.addChild(s);
       this.clouds.push({ s, v: 0.15 + Math.random() * 0.35, base: s.y });
     }
-    app.stage.addChild(this.world, this.aurora, this.tint, this.fog, this.cloudLayer, this.whiteout, this.confettiLayer, this.snowLayer);
+    app.stage.addChild(this.world, this.aurora, this.tint, this.fog, this.endFog, this.cloudLayer, this.whiteout, this.confettiLayer, this.snowLayer);
     const flakeTex = app.renderer.generateTexture(new Graphics().circle(6, 6, 6).fill(0xffffff));
     for (let i = 0; i < 260; i++) {
       const s = new Sprite(flakeTex);
@@ -112,6 +115,7 @@ export class Scene {
     const L = this.terrain.path;
     for (let i = 1; i < L.length; i++) if (L[i].zone !== L[i - 1].zone) this.boundaries.push(P(L[i].x + 0.5, L[i].y + 0.5).y);
     this.build();
+    this.installerNavigation(app.canvas as HTMLCanvasElement);
     app.ticker.add((t) => this.tick(t.deltaTime));
     // crochet de test : la Qualité interroge la scène sans dépendre de sa structure interne.
     // Seulement en développement ou quand on simule un jour (?jour=), jamais sur la vraie version.
@@ -131,12 +135,31 @@ export class Scene {
     }
   }
 
-  get worldHeight() { return (this.maxY - this.minY) * this.scale + this.padTop + innerHeight * 0.5; }
+  get worldHeight() { return Math.min(this.fullHeight, this.maxScroll + innerHeight); }
+  /** Hauteur de tout le monde, sans tenir compte de ce qui est encore verrouillé */
+  get fullHeight() { return (this.maxY - this.minY) * this.scale + this.padTop + innerHeight * 0.5; }
+  /** Le dernier jour que l'on a le droit de voir : on s'arrête un peu après, le reste est dans le brouillard */
+  get lastOpenDay() {
+    let d = 1;
+    for (const [day, st] of this.states) if (st !== "locked" && day > d) d = day;
+    return d;
+  }
+  /** Défilement maximal autorisé : un peu au-delà de la dernière case ouverte */
+  get maxScroll() {
+    const d = Math.min(24, this.lastOpenDay);
+    return Math.max(0, this.scrollForDay(d) + innerHeight * 0.15);
+  }
   setNight(night: boolean) { this.setLight(night ? 1 : 0); }
   /** Ne redessine que les cases dont l'état a changé : reconstruire toute la scène gelait l'image */
   setStates(states: Map<number, NodeState>) {
     const before = this.states;
+    const limiteAvant = this.gifts.size ? this.maxScroll : -1;
     this.states = states;
+    // une case de plus = la carte s'allonge. L'interface recalcule la hauteur de page sur `resize` ;
+    // on le lui signale ainsi, faute d'un canal dédié (proposé au chef de projet dans l'issue #9).
+    if (limiteAvant >= 0 && Math.abs(this.maxScroll - limiteAvant) > 1) {
+      setTimeout(() => dispatchEvent(new Event("resize")), 0);
+    }
     if (!this.gifts.size) { this.build(); return; }
     // le traîneau du 24 dépend de l'état de la dernière case : là, il faut tout refaire (une fois)
     if ((before.get(24) ?? "locked") !== (states.get(24) ?? "locked")) { this.build(); return; }
@@ -470,6 +493,7 @@ export class Scene {
     this.leader = who;
     const target = this.nodeIndex(day) - 0.6;
     const p = this.people[who];
+    this.marcheScriptee = true;
     return new Promise((res) => {
       p.walking = 1;
       // la vitesse est donnée par image à 60 i/s, mais mesurée au temps écoulé : sur un écran à
@@ -479,7 +503,7 @@ export class Scene {
         const dt = Math.min(3, (now - last) / 16.667);
         last = now;
         const d = target - this.pos[who];
-        if (Math.abs(d) < 0.08) { this.pos[who] = target; p.walking = 0; res(); return; }
+        if (Math.abs(d) < 0.08) { this.pos[who] = target; p.walking = 0; this.marcheScriptee = false; res(); return; }
         const pt = this.pointAt(this.pos[who], 0);
         const speed = (pt.lake ? 0.16 : pt.slope < 0 && pt.zone === "montagnes" ? 0.2 : pt.slope > 0 ? 0.06 : 0.09) * dt;
         this.pos[who] += Math.sign(d) * Math.min(Math.abs(d), speed);
@@ -489,6 +513,55 @@ export class Scene {
     });
   }
 
+  /* ---------------------------- navigation --------------------------- */
+  /** Doigt, souris et clavier. Le défilement de la page reste le maître : on ne fait que l'alimenter. */
+  private installerNavigation(canvas: HTMLCanvasElement) {
+    // PixiJS met `touch-action: none` sur le canvas, ce qui empêchait le pouce de faire défiler la carte.
+    // `pan-y` rend le glissement vertical au navigateur (avec son inertie) sans casser le toucher des cases.
+    canvas.style.touchAction = "pan-y";
+
+    // --- glisser à la souris : on attrape le paysage et on le tire ---
+    let tireur = false, departY = 0, departScroll = 0, bouge = false;
+    const bas = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse" || e.button !== 0) return;
+      tireur = true; bouge = false; departY = e.clientY; departScroll = scrollY;
+    };
+    const deplace = (e: PointerEvent) => {
+      if (!tireur) return;
+      const d = e.clientY - departY;
+      if (!bouge && Math.abs(d) < 4) return; // un simple clic doit rester un clic
+      bouge = true;
+      canvas.style.cursor = "grabbing";
+      scrollTo({ top: Math.max(0, Math.min(this.maxScroll, departScroll - d)) });
+    };
+    const haut = () => { tireur = false; canvas.style.cursor = ""; };
+    canvas.addEventListener("pointerdown", bas);
+    addEventListener("pointermove", deplace);
+    addEventListener("pointerup", haut);
+    addEventListener("pointercancel", haut);
+
+    // --- clavier : on saute de date en date ---
+    const touche = (e: KeyboardEvent) => {
+      const vers = e.key === "ArrowUp" || e.key === "ArrowLeft" ? -1 : e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : 0;
+      if (!vers) return;
+      // on laisse le clavier tranquille dès qu'on écrit ou qu'une fenêtre est ouverte
+      const actif = document.activeElement;
+      if (actif && actif !== document.body && actif.tagName !== "CANVAS") return;
+      if (document.querySelector("[role=dialog], dialog[open]")) return;
+      e.preventDefault();
+      const jour = Math.max(1, Math.min(this.lastOpenDay, Math.round(this.dayAt(this.focusWorldY())) + vers));
+      scrollTo({ top: Math.max(0, Math.min(this.maxScroll, this.scrollForDay(jour))), behavior: "smooth" });
+    };
+    addEventListener("keydown", touche);
+    this.retirerNavigation = () => {
+      canvas.removeEventListener("pointerdown", bas);
+      removeEventListener("pointermove", deplace);
+      removeEventListener("pointerup", haut);
+      removeEventListener("pointercancel", haut);
+      removeEventListener("keydown", touche);
+    };
+  }
+
   /* ------------------------------ caméra ----------------------------- */
   resize() {
     this.scale = Math.max(0.62, Math.min(1.25, innerWidth / 560));
@@ -496,7 +569,12 @@ export class Scene {
     this.padTop = Math.min(300, innerHeight * 0.36);
     this.fog.width = innerWidth; this.fog.height = innerHeight * 0.75; this.fog.y = innerHeight * 0.25;
   }
-  setScroll(y: number) { this.scrollY = y; }
+  setScroll(y: number) {
+    // on ne va pas voir les cases encore verrouillées : la suite reste une surprise
+    const max = this.maxScroll;
+    if (y > max + 2) { this.scrollY = max; scrollTo({ top: max }); return; }
+    this.scrollY = y;
+  }
   focusWorldY() { return (this.scrollY + innerHeight * 0.55 - this.padTop) / this.scale + this.minY; }
   scrollForDay(day: number) {
     const n = this.terrain.nodes[day - 1];
@@ -641,6 +719,20 @@ export class Scene {
       if (f.s.x > innerWidth + 10) f.s.x = -10;
       if (f.s.x < -10) f.s.x = innerWidth + 10;
     });
+    // mur de brouillard : au-delà de la dernière case ouverte, la suite du chemin se perd dans le blanc
+    this.endFog.clear();
+    // le brouillard se cale sur la dernière case ouverte : juste en dessous, on ne doit plus rien distinguer
+    const yCase = this.scrollForDay(Math.min(24, this.lastOpenDay)) - this.scrollY + innerHeight * 0.55;
+    const debut = yCase + 95, plein = yCase + 330;
+    if (debut < innerHeight) {
+      const n = 16;
+      for (let i = 0; i < n; i++) {
+        const y0 = debut + ((innerHeight - debut) * i) / n;
+        const y1 = debut + ((innerHeight - debut) * (i + 1)) / n + 1;
+        const t = Math.max(0, Math.min(1, (y0 - debut) / Math.max(1, plein - debut)));
+        this.endFog.rect(0, y0, innerWidth, y1 - y0).fill({ color: night ? 0x8f9ec4 : 0xf4f8ff, alpha: Math.min(1, t * 1.25) });
+      }
+    }
     this.whiteout.clear();
     const wo = Math.max(0, density - 1) * 0.16; // voile de tempête : assez pour aveugler, pas pour effacer le décor
     if (wo > 0.01) this.whiteout.rect(0, 0, innerWidth, innerHeight).fill({ color: 0xffffff, alpha: wo });
@@ -683,6 +775,20 @@ export class Scene {
       if (meta.st === "available") {
         meta.inner.y = -Math.abs(Math.sin(this.time * 0.07)) * 8;
         meta.glow.alpha = 0.55 + Math.sin(this.time * 0.07) * 0.35;
+      }
+    }
+    // le personnage rejoint en marchant l'endroit que l'on regarde, sans dépasser la dernière case ouverte
+    if (!this.marcheScriptee && !this.focus) {
+      const limite = this.nodeIndex(Math.min(24, this.lastOpenDay)) - 0.6;
+      const vise = Math.max(0, Math.min(limite, best.i - 0.6));
+      const moi = this.people[this.leader];
+      const ecart = vise - this.pos[this.leader];
+      if (Math.abs(ecart) > 0.12) {
+        moi.walking = 1;
+        this.pos[this.leader] += Math.sign(ecart) * Math.min(Math.abs(ecart), 0.11 * dt);
+      } else if (moi.walking) {
+        this.pos[this.leader] = vise;
+        moi.walking = 0;
       }
     }
     const target = this.pos[this.leader] - 1.1;
