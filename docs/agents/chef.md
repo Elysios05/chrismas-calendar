@@ -29,7 +29,9 @@ canal entre Alexandre et les équipes en arrière-plan. **Dossiers** : `src/core
 
 ## Procédures
 - **GitHub** : `gh` marche en **REST** (`gh api repos/Elysios05/chrismas-calendar/...`) ; GraphQL et `gh pr/issue` sont bloqués.
-  Clone superficiel : `git fetch --depth=80 origin <branche>:refs/remotes/origin/<branche>` avant de fusionner.
+  Clone superficiel : `git fetch --depth=80 origin +<branche>:refs/remotes/origin/<branche>` avant de fusionner
+  (le **`+` est obligatoire** : sans lui, une branche rebasée et poussée en force n'est pas mise à jour, sans erreur visible ;
+  vérifier que `git rev-parse origin/<branche>` = `head.sha` de la PR — incident du 19 nov sur #69).
 - **Fusionner une PR** : `git pull --depth=50 origin main`, `git merge --no-ff origin/<branche>`, `npx tsc -b`, `npm run build`,
   test rapide si ça touche l'assemblage, `git -c push.negotiate=true push origin main`. GitHub marque la PR fusionnée
   toute seule ; si sa base n'est pas `main` (PR empilée), commenter puis fermer.
