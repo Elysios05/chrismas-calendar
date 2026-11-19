@@ -71,7 +71,7 @@ function stats(frames) {
 
 async function mesurerChargement(opts) {
   const { ctx, page, msgs } = await nouvellePage(opts);
-  await page.goto(`${C.BASE}?jour=9&moi=alexandre&demo-reset`, { timeout: 120000 });
+  await page.goto(`${C.BASE}?jour=9`, { timeout: 120000 });
   await C.attendreScene(page, 120000);
   const r = await page.evaluate(() => {
     const nav = performance.getEntriesByType("navigation")[0];
@@ -100,7 +100,7 @@ try {
   for (const [nom, cpu] of [["cpu4", CPU], ["cpu1", 1]]) {
     console.log(`› images/s (CPU ×${cpu})…`);
     const { ctx, page } = await nouvellePage({ cpu });
-    await page.goto(`${C.BASE}?jour=9&moi=alexandre&demo-reset`);
+    await page.goto(`${C.BASE}?jour=9`);
     await C.attendreScene(page, 120000);
     await page.waitForTimeout(3000);
     await C.fermerPingou(page);
