@@ -154,11 +154,11 @@ export class Scene {
   /** Défilement maximal autorisé : un peu au-delà de la dernière case ouverte */
   get maxScroll() {
     const d = Math.min(24, this.lastOpenDay);
+    if (this.yFin === null) return Math.max(0, this.scrollForDay(d) + innerHeight * 0.15);
+    // on s'arrête juste sous la case du jour (choix d'Alexandre), et jamais au-delà du moment où
+    // la barrière de nuages touche le bas de l'écran : pas de vide derrière elle
     const parCase = this.scrollForDay(d) + innerHeight * 0.15;
-    if (this.yFin === null) return Math.max(0, parCase);
-    // on s'arrête quand le banc de nuages arrive au bas de l'écran : pas de vide derrière lui
     const parNuages = (this.yFin - this.minY) * this.scale + this.padTop - innerHeight * 0.88;
-    // ... sans jamais empêcher d'amener la dernière case au centre de l'écran
     return Math.max(0, this.scrollForDay(d), Math.min(parCase, parNuages));
   }
   setNight(night: boolean) { this.setLight(night ? 1 : 0); }
@@ -548,53 +548,58 @@ export class Scene {
     const L = this.terrain.path;
     const dernier = Math.min(24, this.lastOpenDay);
     if (dernier >= 24) { this.limiteDepth = Infinity; this.limiteCadeaux = Infinity; this.yFin = null; return; } // tout est ouvert : plus rien à cacher
-    const iDernier = this.nodeIndex(dernier);
     const nd = this.terrain.nodes[dernier - 1];
-    const colCase = nd.x - nd.y;
 
     // La lisière de nuages est une seule droite, à x constant, comme le bord du lac : elle part du
-    // bas de l'écran, au milieu, et monte vers la droite. Tout ce qui est au-delà (x plus grand)
-    // est sous les nuages ; elle est placée juste après tout ce qu'on a déjà le droit de voir.
-    const vus = L.slice(0, Math.min(L.length, iDernier + 4));
-    const xLis = Math.max(...vus.map((p) => p.x)) + 2;
+    // bas de l'écran et monte vers la droite. Elle ne sert pas à cacher le cadeau suivant, mais à
+    // empêcher de parcourir toute la carte dès le premier jour. Elle laisse donc six pas de chemin
+    // libres après la case du jour, et englobe la case de demain si elle est proche (entre deux
+    // mondes, le chemin est long : l'attendre repousserait les nuages hors de l'écran).
+    const iJour = this.nodeIndex(dernier);
+    const iSuiv = dernier < 24 ? this.nodeIndex(dernier + 1) : iJour;
+    const iDemain = Math.min(L.length - 1, iSuiv - iJour <= 10 ? iSuiv : iJour + 6);
+    const vus = L.slice(0, Math.min(L.length, Math.max(iJour + 6, iDemain + 2) + 1));
+    const xLis = Math.max(...vus.map((p) => p.x)) + 2.5;
     // jusqu'où on peut descendre : là où le chemin entre dans les nuages, ou quelques pas après
-    // la dernière case s'il file le long de la lisière ; le bas de l'écran fait le reste
-    const iCroise = L.findIndex((p, k) => k > iDernier && p.x >= xLis);
-    const iFin = Math.min(L.length - 1, iCroise >= 0 ? Math.min(iCroise, iDernier + 5) : iDernier + 5);
+    // la case de demain s'il file le long de la lisière ; le bas de l'écran fait le reste
+    const iCroise = L.findIndex((p, k) => k > iDemain && p.x >= xLis);
+    const iFin = Math.min(L.length - 1, iCroise >= 0 ? Math.min(iCroise, iDemain + 5) : iDemain + 5);
     const bout = L[iFin];
     const profondeur = bout.x + bout.y;
+    const demain = L[iDemain];
     // sol et décors un peu au-delà du bas de l'écran (le défilement s'arrête avant) ;
-    // les cadeaux encore verrouillés, eux, s'arrêtent net après la dernière case
+    // les cadeaux verrouillés s'arrêtent après celui de demain
     this.limiteDepth = profondeur + 14;
-    this.limiteCadeaux = profondeur + 1;
+    this.limiteCadeaux = demain.x + demain.y + 1;
     // les nuages passent devant tout : une ligne en diagonale ne se range pas dans une tranche de profondeur
     this.finCarte.zIndex = 1e6;
     this.yFin = P(bout.x + 0.5, bout.y + 0.5, heightAt(this.terrain, bout.x + 0.5, bout.y + 0.5)).y;
 
-    // pavage de la zone cachée : la première rangée dessine la lisière, les suivantes remplissent
-    for (let rang = 0; rang < 6; rang++) {
-      for (let t = -30; t <= 30; t += 3) {
-        const gx = xLis + 0.6 + rang * 3 + (rang === 0 ? Math.sin(t * 1.7) * 0.25 : 0);
-        const gy = nd.y + t + (rang % 2) * 1.5;
-        const n = drawProp("cloudBank", gx, gy, this.pal, Math.floor(Math.abs(t) * 7919 + rang * 101 + 7), {});
+    // pavage de la zone cachée : la première rangée dessine la lisière, les suivantes remplissent.
+    // Elle court sur toute la largeur du monde, d'un bord à l'autre.
+    for (let rang = 0; rang < 10; rang++) {
+      for (let t = -40; t <= 40; t += 2.5) {
+        const gx = xLis + 0.6 + rang * 2.6;
+        const gy = nd.y + t + (rang % 2) * 1.25;
+        const n = drawProp("cloudBank", gx, gy, this.pal, Math.floor(Math.abs(t) * 7919 + rang * 101 + 7));
         n.zIndex = gx + gy;
         this.finCarte.addChild(n);
       }
     }
-    // le panneau, juste après la dernière case ouverte et sur le bas-côté : plus loin, les nuages l'avalent
-    const pano = L[Math.min(L.length - 1, iDernier + 3)];
-    const suite = L[Math.min(L.length - 1, iDernier + 4)];
-    // Décalé perpendiculairement au chemin : planté dessus, il se cachait derrière le cadeau de la
-    // dernière case. Le côté est choisi pour le ramener vers la colonne de cette case, qui est
-    // celle que la caméra cadre : sur téléphone, l'autre côté sortait de l'écran.
-    const versX = suite.x !== pano.x;
-    const d = 1.3;
-    // en projection iso, la colonne vaut x - y : +y la diminue, +x l'augmente
-    const trop = pano.x - pano.y > colCase;
-    const ec = versX ? (trop ? d : -d) : (trop ? -d : d);
-    const sg = drawProp("signpost", pano.x + (versX ? 0 : ec), pano.y + (versX ? ec : 0), this.pal, 4242, {});
-    sg.y = -pano.z * ZH;
-    this.panneauFin.zIndex = pano.x + pano.y + ec + 0.6;
+    // le panneau « route barrée » : planté en travers du chemin, juste devant les nuages, là où la
+    // route s'y enfonce. Sur le bas-côté, il sortait de l'écran du téléphone.
+    // Sur téléphone, l'écran ne couvre qu'environ quatre colonnes de part et d'autre de la case du
+    // jour : on prend le dernier point du chemin avant les nuages qui reste dans cette bande.
+    const colJour = nd.x - nd.y;
+    const iMax = Math.min(L.length - 1, (iCroise >= 0 ? iCroise : iFin) - 2);
+    let iPano = Math.min(iMax, iJour + 2);
+    for (let i = iJour + 2; i <= iMax; i++) if (Math.abs(L[i].x - L[i].y - colJour) <= 4) iPano = i;
+    const pano = L[iPano];
+    const sx = pano.x, sy = pano.y;
+    const sg = drawProp("signpost", sx, sy, this.pal, 4242, {});
+    sg.y = -heightAt(this.terrain, sx + 0.5, sy + 0.5) * ZH;
+    // au-dessus des nuages : il est planté devant eux, et ne doit jamais s'y perdre
+    this.panneauFin.zIndex = 1e6 + 1;
     this.panneauFin.addChild(sg);
   }
 
