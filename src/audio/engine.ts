@@ -12,12 +12,14 @@ import type * as ToneNS from "tone";
 import type { SoundApi, ZoneId } from "../core/contracts";
 import { AmbienceRunner } from "./ambience";
 import { GAMES } from "./pieces/games";
+import { JINGLES } from "./pieces/jingles";
 import { WORLDS } from "./pieces/worlds";
 import { PieceRunner } from "./runner";
 import { SfxBank, type SfxName } from "./sfx";
 import type { Tone } from "./types";
 
-export type GameMood = "calm" | "action" | "victory";
+/** Musiques de jeu : calm, action, victory + duel (jeux en direct compétitifs) et cosy (créations à deux) */
+export type GameMood = "calm" | "action" | "victory" | "duel" | "cosy";
 
 /** Durée des fondus (s) */
 const FADE_ZONE = 2.5;
@@ -104,6 +106,33 @@ export class SoundEngine implements SoundApi {
   setVolume(v: number): void {
     this.volume = clamp01(v);
     this.applyVolume();
+  }
+
+  /**
+   * Jingle d'arrivée dans un monde (2 à 3 s, motif de l'air du monde).
+   * Joué sur le bus des effets ; la musique s'efface le temps du jingle.
+   */
+  playJingle(zone: ZoneId): void {
+    const T = this.T;
+    if (!this.enabled || !T || !this.sfxBus || !this.music || this.raw?.state !== "running") return;
+    try {
+      const at = T.immediate() + 0.03;
+      const def = JINGLES[zone];
+      const runner = new PieceRunner(T, def, false, this.sfxBus);
+      runner.start(at, 0);
+      const len = (def.beats * 60) / def.bpm;
+      runner.pump(at + len, at - 0.01);
+      // la musique se pousse puis revient
+      const g = this.music.gain;
+      g.cancelScheduledValues(at);
+      g.setValueAtTime(g.getValueAtTime(at), at);
+      g.linearRampToValueAtTime(this.musicVolume * 0.3, at + 0.2);
+      g.setValueAtTime(this.musicVolume * 0.3, at + len - 1.2);
+      g.linearRampToValueAtTime(this.musicVolume, at + len + 0.8);
+      window.setTimeout(() => runner.dispose(), (len + def.reverb.decay + 1) * 1000);
+    } catch {
+      // jamais d'exception vers l'appelant
+    }
   }
 
   /** Volume de la musique 0..1 (défaut 0,5) */

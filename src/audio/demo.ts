@@ -4,8 +4,8 @@
  */
 import type { ZoneId } from "../core/contracts";
 import { sound, type GameMood } from "./engine";
-import { renderAmbience, renderPiece, renderSfx, stressSfx, toWav, wavBase64 } from "./render";
-import { SFX_LIST } from "./sfx";
+import { renderAmbience, renderJingle, renderPiece, renderSfx, stressSfx, toWav, wavBase64 } from "./render";
+import { CHARACTER_SFX, SFX_LIST } from "./sfx";
 
 const ZONES: [ZoneId, string][] = [
   ["montagnes", "Montagnes"],
@@ -15,7 +15,7 @@ const ZONES: [ZoneId, string][] = [
   ["grotte", "Grotte de glace"],
   ["pole-nord", "Pôle Nord"],
 ];
-const MOODS: [GameMood, string][] = [["calm", "Jeu calme"], ["action", "Jeu d'action"], ["victory", "Victoire"]];
+const MOODS: [GameMood, string][] = [["calm", "Jeu calme"], ["action", "Jeu d'action"], ["victory", "Victoire"], ["duel", "Duel à deux"], ["cosy", "Création à deux"]];
 
 const css = `
   body { font-family: system-ui, sans-serif; background: #0f2236; color: #eef6ff; margin: 0; padding: 16px; }
@@ -41,7 +41,8 @@ root.innerHTML = `<style>${css}</style>
     <label>Vent (col) <input id="wind" type="range" min="0" max="1" step="0.01" value="0.5"></label></div>
   <h2>Ambiances des mondes</h2><div id="zones"></div>
   <h2>Musiques de jeu</h2><div id="moods"></div>
-  <h2>Effets</h2><div class="row" id="sfx"></div>`;
+  <h2>Effets</h2><div class="row" id="sfx"></div>
+  <h2>Animaux, personnages, présence</h2><div class="row" id="chars"></div>`;
 
 const status = root.querySelector<HTMLDivElement>("#status")!;
 const setStatus = (s: string) => (status.textContent = s);
@@ -83,6 +84,7 @@ for (const [id, name] of ZONES) {
       setStatus(`Ambiance : ${name} (${night ? "nuit" : "jour"}) — fondu enchaîné de 2,5 s`);
     }));
   }
+  row.append(button("Jingle", () => sound.playJingle(id)));
   row.append(button("WAV", () => void download(id, false), "dl"));
   zones.append(row);
 }
@@ -106,6 +108,8 @@ moods.append(mrow);
 
 const sfxRow = root.querySelector("#sfx")!;
 for (const s of SFX_LIST) sfxRow.append(button(s, () => sound.play(s)));
+const charRow = root.querySelector("#chars")!;
+for (const s of CHARACTER_SFX) charRow.append(button(s, () => sound.play(s)));
 
 root.querySelector<HTMLButtonElement>("#mute")!.onclick = (e) => {
   const b = e.currentTarget as HTMLButtonElement;
@@ -127,4 +131,4 @@ root.querySelector<HTMLButtonElement>("#storm")!.onclick = (e) => {
 };
 
 // Accès pour l'automatisation (rendu des extraits)
-Object.assign(window, { __audio: { renderPiece, renderSfx, renderAmbience, stressSfx, wavBase64 } });
+Object.assign(window, { __audio: { renderPiece, renderSfx, renderAmbience, renderJingle, stressSfx, wavBase64 } });
