@@ -1,6 +1,7 @@
 /**
  * Souvenirs après Noël (hors contrat) : rassemble les 12 cases préparées (6 de chacun) et leurs photos
  * dans UNE page HTML autonome (images intégrées), à télécharger et à garder. Disponible à partir du 24.
+ * La page a un bouton « Enregistrer en PDF » (window.print) et une feuille d'impression A4 : une lettre par page.
  * Fonctionne avec n'importe quel backend (démo ou Supabase) : on passe par getPrepared.
  */
 import type { BackendApi, PreparedContent, Who } from "../core/contracts";
@@ -37,10 +38,11 @@ function paragraphs(message: string): string {
   return parts.map((p) => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`).join("\n");
 }
 
-async function letterHtml(c: PreparedContent): Promise<string> {
+async function letterHtml(day: number, c: PreparedContent): Promise<string> {
   const photos = (await Promise.all(c.photos.map(toDataUrl))).filter((x): x is string => !!x);
   const missing = c.photos.length - photos.length;
   return `<article class="lettre ${c.from}">
+  <h2><span class="case">${day}</span> ${day} décembre</h2>
   <h3>De ${NAME[c.from]} pour ${NAME[c.to]}</h3>
   ${c.message.trim() ? paragraphs(c.message) : `<p class="vide">(pas de mot, seulement des photos)</p>`}
   ${photos.length ? `<div class="photos">${photos.map((src, i) => `<img src="${src}" alt="Photo ${i + 1} de ${NAME[c.from]}" loading="lazy">`).join("")}</div>` : ""}
@@ -58,16 +60,12 @@ export async function exportSouvenirs(backend: BackendApi): Promise<Blob> {
   const sections: string[] = [];
   let count = 0;
   for (const day of PREPARED_DAYS) {
-    const letters: string[] = [];
     for (const to of ["flavie", "alexandre"] as Who[]) {
       const r = await backend.getPrepared(day, to);
       if (r.status === "ready" && (r.content.message.trim() || r.content.photos.length)) {
-        letters.push(await letterHtml(r.content));
+        sections.push(await letterHtml(day, r.content));
         count++;
       }
-    }
-    if (letters.length) {
-      sections.push(`<section><h2><span class="case">${day}</span> ${day} décembre</h2>\n${letters.join("\n")}</section>`);
     }
   }
   if (!count) throw new Error("Aucune case préparée à garder pour l'instant.");
@@ -82,29 +80,54 @@ export async function exportSouvenirs(backend: BackendApi): Promise<Blob> {
 <style>
   :root { --nuit: #101a3a; --neige: #f6f8ff; --rouge: #c0392b; --or: #ffd54a; --texte: #1f2a44; }
   * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { margin: 0; background: var(--nuit); color: var(--texte); font-family: Fredoka, "Trebuchet MS", system-ui, sans-serif; }
-  header { color: var(--neige); text-align: center; padding: 48px 20px 24px; }
+  header { color: var(--neige); text-align: center; padding: 40px 20px 24px; }
   header h1 { margin: 0 0 8px; font-size: clamp(26px, 6vw, 42px); }
   header p { margin: 0; opacity: .8; }
+  .imprimer { display: inline-flex; align-items: center; gap: 10px; margin-top: 22px; padding: 14px 26px; border: 0; border-radius: 999px;
+    background: var(--rouge); color: #fff; font: inherit; font-size: 18px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 18px #0006; }
+  .imprimer:hover { filter: brightness(1.1); } .imprimer:active { transform: translateY(1px); }
+  .astuce { display: block; margin-top: 10px; font-size: 13px; opacity: .7; }
   main { max-width: 760px; margin: 0 auto; padding: 0 16px 48px; }
-  section { background: var(--neige); border-radius: 20px; padding: 20px 22px; margin: 18px 0; box-shadow: 0 6px 24px #0004; }
-  h2 { margin: 0 0 12px; color: var(--rouge); font-size: 22px; display: flex; align-items: center; gap: 12px; }
+  .lettre { background: var(--neige); border-radius: 20px; border-top: 8px solid var(--or); padding: 20px 22px; margin: 18px 0; box-shadow: 0 6px 24px #0004; }
+  .lettre.flavie { border-top-color: #e88aa8; } .lettre.alexandre { border-top-color: #6aa7e8; }
+  h2 { margin: 0 0 6px; color: var(--rouge); font-size: 22px; display: flex; align-items: center; gap: 12px; }
   .case { background: var(--rouge); color: #fff; border-radius: 12px; min-width: 40px; height: 40px; display: inline-grid; place-items: center; }
-  .lettre { border-left: 4px solid var(--or); padding: 4px 0 4px 16px; margin: 16px 0; }
-  .lettre.flavie { border-color: #e88aa8; } .lettre.alexandre { border-color: #6aa7e8; }
-  .lettre h3 { margin: 0 0 6px; font-size: 16px; opacity: .75; }
-  .lettre p { line-height: 1.55; margin: 8px 0; white-space: normal; }
+  .lettre h3 { margin: 0 0 10px; font-size: 16px; opacity: .75; }
+  .lettre p { line-height: 1.55; margin: 8px 0; }
   .vide { opacity: .6; font-style: italic; }
-  .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
+  .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; }
   .photos img { width: 100%; border-radius: 12px; display: block; }
   footer { color: var(--neige); text-align: center; opacity: .7; padding: 0 20px 40px; }
-  @media print { body { background: #fff; } header, footer { color: var(--texte); } section { box-shadow: none; break-inside: avoid; } }
+
+  /* Impression / « Enregistrer en PDF » : A4, une page de garde, puis une lettre par page avec ses photos. */
+  @page { size: A4; margin: 16mm 15mm; }
+  @media print {
+    body { background: #fff; font-size: 12pt; }
+    .imprimer, .astuce { display: none !important; }
+    header { color: var(--texte); min-height: 240mm; display: flex; flex-direction: column; justify-content: center; padding: 0; break-after: page; }
+    header h1 { font-size: 34pt; color: var(--rouge); }
+    header p { font-size: 14pt; }
+    main { max-width: none; padding: 0; }
+    .lettre { margin: 0; box-shadow: none; border: 1px solid #dde3f3; border-top-width: 8px; break-after: page; }
+    .lettre:last-child { break-after: auto; }
+    h2, h3 { break-after: avoid; }
+    .lettre p { orphans: 3; widows: 3; }
+    .photos { grid-template-columns: repeat(2, 1fr); gap: 4mm; }
+    .photos img { max-height: 105mm; object-fit: cover; break-inside: avoid; page-break-inside: avoid; }
+    .photos:has(img:only-child) { grid-template-columns: 1fr; }
+    .photos img:only-child { max-height: 150mm; object-fit: contain; }
+    footer { color: var(--texte); padding: 6mm 0 0; font-size: 10pt; break-before: avoid; }
+  }
 </style>
 </head>
 <body>
 <header>
   <h1>🎄 Nos souvenirs de l'Avent 2026</h1>
   <p>Alexandre & Flavie : les ${count} cases préparées l'un pour l'autre</p>
+  <div><button class="imprimer" type="button" onclick="window.print()">📄 Enregistrer en PDF</button>
+  <span class="astuce">Dans la fenêtre qui s'ouvre, choisis « Enregistrer au format PDF » comme imprimante.</span></div>
 </header>
 <main>
 ${sections.join("\n")}

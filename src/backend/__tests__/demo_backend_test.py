@@ -230,6 +230,16 @@ def main():
             v.set_viewport_size({"width": 390, "height": 844})
             v.goto("file:///tmp/souvenirs-demo.html")
             v.screenshot(path="/tmp/souvenirs-mobile.png", full_page=False)
+            check(v.locator("button.imprimer").is_visible(), "bouton « Enregistrer en PDF » visible")
+            check(v.evaluate("document.querySelector('button.imprimer').getAttribute('onclick')") == "window.print()",
+                  "le bouton lance window.print()")
+            v.emulate_media(media="print")
+            check(not v.locator("button.imprimer").is_visible(), "bouton masqué à l'impression")
+            v.pdf(path="/tmp/souvenirs-demo.pdf", prefer_css_page_size=True, print_background=True)
+            pdf = Path("/tmp/souvenirs-demo.pdf").read_bytes()
+            n_pages = pdf.count(b"/Type /Page") - pdf.count(b"/Type /Pages")
+            check(n_pages == n_lettres + 1, f"PDF A4 : page de garde + une page par lettre ({n_pages} pages)")
+            check(b"/MediaBox [0 0 594.9" in pdf or b"/MediaBox [0 0 595" in pdf, "format A4")
             v.close()
             s24.close()
 
