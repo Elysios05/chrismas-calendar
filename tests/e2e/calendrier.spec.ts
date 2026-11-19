@@ -231,6 +231,8 @@ test("deux onglets : Flavie écrit la case 16, Alexandre la lit le 16", async ({
   await flavie.getByRole("button", { name: "Mettre sous enveloppe" }).click();
   await expect(flavie.locator(".edit")).toContainText("Rangé dans l'enveloppe");
 
+  // on ferme l'onglet de Flavie : deux scènes WebGL logicielles en parallèle figent l'animation du second onglet
+  await flavie.close();
   const alex = await context.newPage();
   await C.ouvrirDemo(alex, { jour: 16, moi: "alexandre", reset: false });
   await expect(alex.locator(".who-badge")).toHaveText("Alexandre");

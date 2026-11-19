@@ -116,7 +116,7 @@ try {
   console.log(`Planches : ${planches.join(", ")}`);
   console.log(`Erreurs console : ${erreurs.length}`); erreurs.slice(0, 20).forEach((e) => console.log("  " + e));
   console.log(`Avertissements distincts : ${avert.size}`); [...avert].slice(0, 10).forEach((e) => console.log("  " + e));
-  const malNuit = index.filter((e) => (e.mode === "nuit") !== (e.modeAffiche === "🌙"));
+  const malNuit = index.filter((e) => e.jour && (e.mode === "nuit") !== (e.modeAffiche === "🌙"));
   if (malNuit.length) console.log(`⚠ mode jour/nuit inattendu : ${malNuit.map((e) => `${e.appareil}/${e.mode}/j${e.jour}=${e.modeAffiche}`).join(", ")}`);
 } finally {
   await navigateur.close();

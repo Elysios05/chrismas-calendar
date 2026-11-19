@@ -16,3 +16,9 @@
 - Les cadeaux du canvas sont visés via le crochet des outils de dév PixiJS (`__PIXI_APP_INIT__`). Demande faite à l'équipe Monde d'exposer une API de test stable (voir le rapport).
 - Premier rapport : `docs/qa/rapport-2026-11-18.md` (état de `origin/main` au commit 6a8adb5). 0 erreur console, e2e 14/14. Points principaux : App.tsx n'intègre pas encore les lots, état de démo codé en dur (B1), deux workflows Pages concurrents (B2), fin du monde visible (B3), reconstruction complète de la scène à chaque changement (F1).
 - À faire : e2e connexion, jeux, case préparée, direct à deux onglets dès l'intégration dans App.tsx ; relire chaque PR avec captures avant/après.
+
+### 19 novembre 2026 (branche `qualite/e2e-integre`)
+- Rebase sur `origin/main` (167f210). E2E adaptés au parcours réel : 42 réussis, 0 échec ; `test.fail` retirés. Audit axe-core (#34) : 0 violation sur 6 écrans. Captures 2026-11-19 et rapport `docs/qa/rapport-2026-11-19.md`.
+- `attendreScene` échoue explicitement si la carte n'apparaît pas après connexion.
+- Reste : exceptions Tone.js revues dans les captures (ticket Audio) ; test « jeu en direct à deux onglets » en `fixme` tant qu'aucun jeu en direct n'existe (#56) ; deux onglets : fermer le premier avant d'ouvrir le second (SwiftShader).
+- Durées : e2e ~29 min, captures ~40 min ; lancer en arrière-plan (nohup).
