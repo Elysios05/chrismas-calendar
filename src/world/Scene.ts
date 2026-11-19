@@ -6,6 +6,8 @@ import { drawProp, type AnimPart } from "./props";
 import { ZONES } from "./zones";
 import { weatherAt } from "./weather";
 import { Person, Penguin, type Who } from "./actors";
+import { makeGround, poke, spawnLife, updateCritter, type Critter, type LifeEnv } from "./life";
+import type { SoundApi } from "../core/contracts";
 
 export type NodeState = "locked" | "available" | "opened";
 export type SceneCallbacks = {
@@ -37,6 +39,9 @@ function cloudTexture() {
   }
   return Texture.from(cv);
 }
+
+/** Les grands bâtiments débordent de leur case : on les range un peu plus loin pour qu'ils passent derrière ce qui les entoure */
+const BATIMENTS_LARGES = new Set(["wheel", "workshop", "santaHouse", "postOffice", "stable"]);
 
 export class Scene {
   app: Application;
@@ -89,6 +94,18 @@ export class Scene {
   slabs: { c: Container; min: number; max: number; k: number }[] = [];
   groundBands: { c: Container; min: number; max: number; k: number }[] = [];
   weatherNow = "";
+  /** Animaux et personnages qui vivent dans le décor */
+  life: Critter[] = [];
+  lifeGround = makeGround(this.terrain);
+  sound: SoundApi | null = null;
+  lifeEnv: LifeEnv = {
+    play: (s) => this.sound?.play(s),
+    giftNear: (x, y) => {
+      for (const n of this.terrain.nodes) if (Math.hypot(n.x + 0.5 - x, n.y + 0.5 - y) < 0.9) return n.day;
+      return null;
+    },
+    tapGift: (day) => this.cb.onNodeTap(day),
+  };
 
   constructor(app: Application, cb: SceneCallbacks, night: boolean) {
     this.app = app;
@@ -138,6 +155,11 @@ export class Scene {
         giftState: (day: number) => this.states.get(day) ?? "locked",
         scrollForDay: (day: number) => this.scrollForDay(day),
         playOpen: (day: number) => this.playOpen(day),
+        /** habitants visibles à l'écran : espèce, position du milieu du corps, réaction en cours */
+        life: () => this.life.filter((cr) => cr.visible).map((cr) => {
+          const b = cr.getBounds();
+          return { species: cr.species, x: b.x + b.width / 2, y: b.y + b.height / 2, react: cr.react?.k ?? null };
+        }),
       };
     }
   }
@@ -162,6 +184,9 @@ export class Scene {
     return Math.max(0, this.scrollForDay(d), Math.min(parCase, parNuages));
   }
   setNight(night: boolean) { this.setLight(night ? 1 : 0); }
+
+  /** Les cris des animaux et les rires des lutins quand on les touche (branché par App.tsx, issue #11) */
+  setSound(sound: SoundApi) { this.sound = sound; }
   /** Ne redessine que les cases dont l'état a changé : reconstruire toute la scène gelait l'image */
   setStates(states: Map<number, NodeState>) {
     const before = this.states;
@@ -356,7 +381,7 @@ export class Scene {
       const o = drawProp(p.kind, p.x, p.y, this.pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop, alongX: p.alongX, flying });
       if (o.anim) this.anims.push(...o.anim);
       o.y = -p.z * ZH;
-      const depth = p.x + p.y + (p.kind === "mountain" ? -1.4 : p.kind === "wheel" || p.kind === "workshop" ? -0.6 : 0.5);
+      const depth = p.x + p.y + (p.kind === "mountain" ? -1.4 : BATIMENTS_LARGES.has(p.kind) ? -0.6 : 0.5);
       slabOf(depth).addChild(o);
     }
     for (const n of nodes) this.objects.addChild(this.makeGift(n));
@@ -375,6 +400,13 @@ export class Scene {
     }
     this.penguin = new Penguin(this.pal);
     this.objects.addChild(this.penguin);
+    // les habitants : recréés à chaque reconstruction (leur dessin suit la palette jour / nuit)
+    this.life = spawnLife(this.terrain, this.pal);
+    for (const cr of this.life) {
+      cr.on("pointertap", () => poke(cr, this.lifeEnv, this.lifeGround));
+      updateCritter(cr, 0, this.lifeGround, this.terrain);
+      this.objects.addChild(cr);
+    }
 
     this.nodeY = nodes.map((n) => P(n.x + 0.5, n.y + 0.5, heightAt(this.terrain, n.x + 0.5, n.y + 0.5)).y);
     const ys = path.map((p) => P(p.x, p.y).y);
@@ -730,6 +762,13 @@ export class Scene {
     // une tranche commence à `k` et court sur 10 : celle qui contient la limite reste visible,
     // juste assez pour porter le banc de nuages, et rien derrière
     for (const b of this.groundBands) b.c.visible = b.k <= this.limiteDepth && b.max > topY && b.min < botY;
+    // habitants : seuls ceux qui sont à l'écran vivent ; les autres attendent, figés
+    const leftX = (-this.world.x) / this.scale - 60, rightX = (innerWidth - this.world.x) / this.scale + 60;
+    for (const cr of this.life) {
+      const vis = cr.zIndex <= limiteDecor && cr.y > topY - 60 && cr.y < botY + 60 && cr.x > leftX && cr.x < rightX;
+      cr.visible = vis;
+      if (vis) updateCritter(cr, dt, this.lifeGround, this.terrain);
+    }
     for (const [, cont] of this.gifts) {
       const gy = cont.y;
       // un cadeau encore verrouillé au-delà des nuages flotterait au-dessus du vide
@@ -824,6 +863,18 @@ export class Scene {
       if (a.kind === "wheel") {
         a.hub.rotation += 0.0045 * dt;
         for (const car of a.cars) car.rotation = -a.hub.rotation;
+      } else if (a.kind === "belt") {
+        // les jouets défilent sur le tapis, apparaissent à une bouche et disparaissent à l'autre
+        const n = a.items.length;
+        a.items.forEach((it, i) => {
+          const u = (((this.time * 0.0035 + a.phase + i / n) % 1) + 1) % 1;
+          it.x = a.a.x + (a.b.x - a.a.x) * u;
+          it.y = a.a.y + (a.b.y - a.a.y) * u;
+          it.alpha = Math.min(1, u * 10, (1 - u) * 10);
+        });
+      } else if (a.kind === "bob") {
+        a.node.rotation = Math.sin(this.time * 0.035 + a.phase) * 0.12;
+        a.node.y = a.y0 + Math.sin(this.time * 0.05 + a.phase) * 1.5;
       } else if (a.kind === "takeoff") {
         // le traîneau s'arrache du sol une fois, puis file dans le ciel en se balançant
         a.t = Math.min(1, a.t + 0.004 * dt);

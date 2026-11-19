@@ -213,3 +213,31 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     à côté de la fabrique de jouets ; lutins qui font la navette fabrique ↔ traîneau.
   - Sons livrés par l'Audio (#11) : `fox`, `hare`, `owl`, `squirrel`, `reindeer`, `seal`, `bear`, `elf-laugh`,
     `elf-hammer`, `elf-hop`, `snowball`, `skate`, `ski`, `lift`. Le chef branchera `scene.setSound(sound)` depuis `App.tsx`.
+  - **Livré (première passe)** — nouveau module `src/world/life.ts` :
+    - habitants qui vivent dans les coordonnées de la grille, rangés à leur profondeur à chaque image, et qui ne
+      bougent que lorsqu'ils sont à l'écran (culling vertical **et horizontal**) ;
+    - déplacements : `wander` (animaux autour de chez eux, seulement sur des cases libres de tout décor et sans
+      falaise : `makeGround`), `route` (passants sur le côté de la rue, lutins fabrique ↔ traîneau),
+      `loop` (patineurs sur le lac), `slope` (skieurs qui godillent, puis repartent d'en haut), `still` ;
+    - par monde : montagnes (lièvres, renard, 2 skieurs) ; village (5 passants, 2 paires d'enfants qui se
+      lancent des boules de neige, écureuil) ; lac (3 patineurs, renards, lièvre, cerf, écureuil, 2 chouettes
+      perchées en haut des sapins) ; marché (6 badauds, 3 musiciens avec notes qui s'envolent) ; grotte
+      (2 phoques, ours blanc) ; pôle Nord (4 lutins porteurs, un lutin forgeron, rennes, ours, phoque) ;
+    - au toucher : fuite puis retour (renard, lièvre, écureuil, renne), envol en cercle (chouette), applaudit
+      (phoque), se dresse (ours), coucou de la main (passants, musiciens), saut (lutins, enfants, skieur),
+      pirouette (patineur) ; cri via `sound.play`. **Un toucher près d'un cadeau (< 0,9 case) est rendu au
+      cadeau** : un passant ne vole jamais le doigt d'une case ;
+    - les patineurs statiques ne sont plus posés par `terrain.ts` (remplacés par les vrais).
+  - **Pôle Nord** : l'atelier devient la **fabrique de jouets** (halle de briques, deux cheminées qui fument,
+    enseigne, tapis roulant où défilent ours, toupies, cubes et voitures — anim `belt`) ; ajout de la **maison du
+    Père Noël**, du **bureau du courrier** (sacs de lettres, boîte rouge) et de l'**écurie** (trois box, têtes de
+    rennes qui dodelinent — anim `bob`, bottes de foin). Les trois sont posés au plus près de la fabrique
+    (> 3,2 cases), sinon ils tombaient tout en bas de la carte. Enseignes en texte incliné comme le mur (`enseigne()`).
+  - **Contrat** : `scene.setSound(sound)` ajouté ; le chef doit l'appeler depuis `App.tsx` (demandé dans #11).
+    Sans lui, tout marche mais en silence.
+  - Crochet de test : `__calendrier.life()` donne les habitants visibles (espèce, position écran, réaction).
+  - **Piège de test** : après un saut de défilement, la caméra glisse encore latéralement plusieurs secondes ;
+    toucher tout de suite rate la cible. Attendre ~5 s. Un toucher rendu à un cadeau ouvre sa fenêtre, qui
+    bloque les touchers suivants du script.
+  - Reste à faire : remontée mécanique (son `lift`), traîneau chargé par les lutins le 24, retours d'Alexandre
+    sur captures (taille des animaux, densité).
