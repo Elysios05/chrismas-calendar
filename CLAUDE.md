@@ -53,6 +53,12 @@ recommandation. N'attends pas la réponse les bras croisés : fais tout ce qui n
 et reviens lire l'issue ensuite. Ne touche jamais au dossier d'une autre équipe avant que le chef te l'ait
 confié par écrit dans l'issue.
 
+## Économiser le contexte (et la limite d'utilisation)
+- **Tout ce qui compte vit dans le dépôt**, pas dans la conversation : ce fichier, ton brief et son **Journal**, les issues, les PR. Une session neuve doit pouvoir reprendre ton travail en lisant ces fichiers.
+- **À la fin de chaque tâche** (PR ouverte) : mets à jour ton Journal (où tu en es, décisions d'Alexandre, prochaine étape), puis dis à Alexandre : « Tâche terminée, tu peux taper `/clear` pour repartir à neuf. » Une nouvelle tâche = une conversation propre.
+- Au milieu d'une longue tâche, s'il le faut, propose `/compact` plutôt que de traîner tout l'historique.
+- **Lis le moins possible** : cherche (`grep`) avant d'ouvrir un fichier, n'ouvre que les lignes utiles, ne recopie pas de longs résultats de commandes, ne refais pas de captures inutiles.
+
 ## Lancer et tester
 ```bash
 npm install
