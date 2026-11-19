@@ -68,7 +68,7 @@ try {
       // fenêtre de la case du jour, puis éditeur de case préparée
       await C.fermerPingou(page);
       await C.toucherCadeau(page, 9, app === "mobile");
-      await page.locator(".sheet-panel").waitFor({ timeout: 15000 }).catch(() => {});
+      await page.locator(".sheet-panel").waitFor({ timeout: 180000 }).catch(() => {});
       await page.waitForTimeout(600);
       await shoot("fenetre-case");
       await page.keyboard.press("Escape");

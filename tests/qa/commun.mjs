@@ -88,16 +88,27 @@ export function collecterConsole(page) {
   return msgs;
 }
 
-/** Attend que la scène Pixi soit construite (cadeaux présents) et que la police soit prête. */
+/**
+ * Attend que la carte soit là (scène Pixi construite, 24 cadeaux) et que la police soit prête.
+ * Échoue EXPLICITEMENT si on est resté sur l'écran de connexion (ou tout autre écran sans carte) :
+ * aucune capture ni mesure ne doit se faire en silence sur le mauvais écran.
+ */
 export async function attendreScene(page, timeout = 30000) {
-  await page.waitForFunction(() => {
-    const app = globalThis.__qaApp;
-    if (!app?.stage) return false;
-    let n = 0;
-    const visit = (c) => { if (c.meta && c.eventMode === "static") n++; for (const k of c.children ?? []) visit(k); };
-    visit(app.stage);
-    return n >= 24;
-  }, null, { timeout });
+  try {
+    await page.waitForFunction(() => {
+      const app = globalThis.__qaApp;
+      if (!app?.stage || !document.querySelector(".hud")) return false;
+      let n = 0;
+      const visit = (c) => { if (c.meta && c.eventMode === "static") n++; for (const k of c.children ?? []) visit(k); };
+      visit(app.stage);
+      return n >= 24;
+    }, null, { timeout });
+  } catch (e) {
+    const login = await page.locator(".login-card").count().catch(() => 0);
+    throw new Error(login
+      ? `Carte non atteinte : la page est restée sur l'écran de connexion (${page.url()}).`
+      : `Carte non atteinte en ${timeout} ms (${page.url()}) : ${e.message.split("\n")[0]}`);
+  }
   await page.evaluate(() => document.fonts.ready);
 }
 
@@ -117,16 +128,21 @@ export async function fermerPingou(page) {
  */
 export async function positionCadeau(page, day) {
   return page.evaluate((day) => {
+    // crochet de test fourni par l'équipe Monde (Scene.ts, présent avec ?jour= ou en dev)
+    const h = globalThis.__calendrier;
     const app = globalThis.__qaApp;
     const gifts = [];
     const visit = (c) => { if (c.meta && c.eventMode === "static") gifts.push(c); for (const k of c.children ?? []) visit(k); };
     visit(app.stage);
-    // le numéro du jour est le seul Text du cadeau (pastille) ; l'ordre des enfants est trié par profondeur
     const jourDe = (c) => { let t = null; const v = (k) => { if (t === null && typeof k.text === "string") t = k.text; for (const e of k.children ?? []) v(e); }; v(c); return Number(t); };
     const g = gifts.find((c) => jourDe(c) === day);
-    if (!g) return null;
-    const b = g.meta.inner.children[0].getBounds(); // corps du paquet (hors pastille)
-    return { x: b.x + b.width / 2, y: b.y + b.height / 2, w: b.width, h: b.height, etat: g.meta.st, n: gifts.length };
+    if (!g && !h) return null;
+    // centre du paquet : on vise le corps (hors pastille) ; à défaut, le point fourni par le crochet
+    let x, y, w = 0, hh = 0;
+    if (g) { const b = g.meta.inner.children[0].getBounds(); x = b.x + b.width / 2; y = b.y + b.height / 2; w = b.width; hh = b.height; }
+    else { const p = h.giftScreenPos(day); x = p.x; y = p.y; }
+    const etat = h ? h.giftState(day) : g.meta.st;
+    return { x, y, w, h: hh, etat, n: gifts.length };
   }, day);
 }
 
