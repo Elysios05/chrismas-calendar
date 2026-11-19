@@ -72,6 +72,8 @@ export class Critter extends Container {
     drawCritter(this, pal, seed);
     this.addChild(this.inner);
     this.inner.addChild(this.body);
+    // les animaux sont un peu plus gros que nature (choix d'Alexandre) : on les remarque et on les touche mieux
+    if (ANIMAUX.has(species)) this.scale.set(1.3);
     this.eventMode = "static";
     this.cursor = "pointer";
     // une cible généreuse : un doigt est bien plus gros qu'un lièvre

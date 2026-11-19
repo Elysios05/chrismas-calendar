@@ -241,3 +241,5 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     bloque les touchers suivants du script.
   - Reste à faire : remontée mécanique (son `lift`), traîneau chargé par les lutins le 24, retours d'Alexandre
     sur captures (taille des animaux, densité).
+  - Retour d'Alexandre : **animaux grossis de 30 %** (`scale 1.3` sur les espèces de `ANIMAUX`), pour qu'on les
+    remarque et qu'on les touche facilement. Les personnages gardent leur taille.
