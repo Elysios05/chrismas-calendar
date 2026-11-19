@@ -581,24 +581,6 @@ export class Scene {
         this.finCarte.addChild(n);
       }
     }
-    // Près de la fin, on descend plus bas que d'habitude par rapport aux bords : le vide hors du
-    // monde apparaissait dans le coin. Des nuages en débordent aussi, de chaque côté.
-    const bords = new Map<number, [number, number]>();
-    for (const c of this.terrain.cells.values()) {
-      const k = c.x + c.y, col = c.x - c.y;
-      if (k < nd.x + nd.y + 3 || k > this.limiteDepth + 2) continue; // seulement après la dernière case
-      const b = bords.get(k);
-      bords.set(k, b ? [Math.min(b[0], col), Math.max(b[1], col)] : [col, col]);
-    }
-    for (const [k, [cMin, cMax]] of bords) {
-      if (k % 2 !== 0) continue;
-      for (const col of [cMin - 3, cMin - 6.5, cMax + 3, cMax + 6.5]) { // hors du monde : la forêt du bord reste visible
-        const gx = (k + col) / 2, gy = (k - col) / 2;
-        const n = drawProp("cloudBank", gx, gy, this.pal, Math.floor(k * 131 + col * 17 + 3), {});
-        n.zIndex = k;
-        this.finCarte.addChild(n);
-      }
-    }
     // le panneau, juste après la dernière case ouverte et sur le bas-côté : plus loin, les nuages l'avalent
     const pano = L[Math.min(L.length - 1, iDernier + 3)];
     const suite = L[Math.min(L.length - 1, iDernier + 4)];

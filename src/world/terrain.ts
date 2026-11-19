@@ -25,7 +25,9 @@ const SEG = 4, TRANSITION = 6, LEAD = 4;
 /** Longueur du passage d'un monde au suivant. Entre le lac et le marché il est bien plus long :
  *  la forêt doit avoir le temps de s'éteindre avant que le marché commence. */
 const transitionLen = (fromZone: number) => (ZONES[fromZone]?.id === "lac" ? 18 : TRANSITION);
-const HALF_WIDTH = 17; // demi-largeur du terrain (en tuiles, axe écran horizontal)
+// demi-largeur du terrain (en tuiles, axe écran horizontal). 17 ne suffisait pas sur ordinateur :
+// le chemin s'écarte du centre de l'écran et le bord carré des tuiles apparaissait (issue #13).
+const HALF_WIDTH = 30;
 
 function rng(seed: number) {
   return () => {
@@ -110,7 +112,8 @@ export function buildTerrain(seed = 2026): Terrain {
         h = Math.min(h, best.z + 5.5);
       } else if (zdef.id === "grotte") {
         // parois resserrées : le passage se referme sur la route, mais ses abords restent plats
-        const wall = Math.max(0, bd - 2);
+        // plafonnée : depuis que le terrain est plus large, les parois lointaines montaient sans fin
+        const wall = Math.min(7, Math.max(0, bd - 2));
         h += front ? Math.min(Math.pow(wall, 1.3) * 0.5, 2) : Math.pow(wall, 1.3) * 0.95;
       } else {
         h += bd > 3 ? (n - 0.5) * 0.35 : 0;
@@ -282,29 +285,30 @@ export function buildTerrain(seed = 2026): Terrain {
   // rangs du chemin où l'on change de monde
   const zoneEdges = path.filter((p, i) => i > 0 && p.zone !== path[i - 1].zone).map((p) => p.i);
   /* ---------- lisières : ce qui ferme la carte à gauche et à droite ---------- */
-  // Sans cela, les tuiles s'arrêtent net sur un bord carré (issue #13). Chaque monde ferme avec
-  // ce qui lui ressemble : crêtes en montagne et dans la grotte, futaie serrée en forêt et au
-  // village, bancs de nuages au marché et au pôle Nord.
-  const LISIERE: Record<string, PropKind> = {
-    montagnes: "ridge", grotte: "ridge",
-    lac: "deepWood", "saint-nicolas": "deepWood",
-    marche: "cloudBank", "pole-nord": "cloudBank",
-  };
+  // Sans cela, les tuiles s'arrêtent net sur un bord carré (issue #13). Comme le demande l'issue,
+  // chaque bord est fermé par un décor très dense : crêtes en montagne et dans la grotte, forêt
+  // serrée partout ailleurs (les nuages, essayés au marché et au pôle Nord, rendaient mal).
+  const LISIERE: Record<string, PropKind> = { montagnes: "ridge", grotte: "ridge" };
   const parRangee = new Map<number, Cell[]>();
   for (const c of cells.values()) {
     const k = c.x + c.y;
     if (!parRangee.has(k)) parRangee.set(k, []);
     parRangee.get(k)!.push(c);
   }
-  for (const [, rang] of parRangee) {
+  for (const [k, rang] of parRangee) {
     rang.sort((a, b) => (a.x - a.y) - (b.x - b.y));
-    for (const c of [rang[0], rang[rang.length - 1]]) {
+    const n = rang.length;
+    // la rangée extrême porte la lisière proprement dite, une rangée sur deux
+    if (k % 2 === 0) for (const c of [rang[0], rang[n - 1]]) {
       if (!c || c.road || c.lake) continue;
-      const kind = LISIERE[ZONES[c.zone].id];
-      if (!kind) continue;
-      // une rangée sur deux : assez pour fermer sans alourdir
-      if ((c.x + c.y) % 2 !== 0) continue;
-      place(kind, c);
+      place(LISIERE[ZONES[c.zone].id] ?? "deepWood", c);
+    }
+    // et derrière elle, une bande de forêt serrée qui remplit le bord de l'écran
+    for (let i = 1; i < Math.min(5, n / 2); i++) for (const c of [rang[i], rang[n - 1 - i]]) {
+      if (!c || c.road || c.lake || c.d < 6 || taken.has(key(c.x, c.y))) continue;
+      const zid = ZONES[c.zone].id;
+      if (zid === "montagnes" || zid === "grotte") continue; // la crête suffit, la roche n'a pas d'arbres
+      if (R() < 0.8) place(R() < 0.55 ? "tree" : "treeSmall", c);
     }
   }
 
