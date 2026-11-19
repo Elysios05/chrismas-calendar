@@ -16,6 +16,7 @@ import { Settings, chargerPreferences } from "./ui/Settings";
 import { FinalScreen } from "./ui/FinalScreen";
 import { PINGOU_ROUTE, type PingouLine } from "./ui/pingou/lines";
 import { aUnJeu, chargerJeu } from "./games/registry";
+import { downloadSouvenirs } from "./backend/souvenirs";
 
 /** Heure locale en heures décimales ; ?heure=17:30 pour simuler (captures, tests) */
 function hourNow() {
@@ -252,6 +253,9 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
           )}
           <button className="round" onClick={toggleNight} title="Jour / nuit" aria-label="Basculer jour / nuit">{night ? "🌙" : "☀️"}</button>
           <button className="round" onClick={goToday} title="Aller à aujourd'hui" aria-label="Aller à la case du jour">📍</button>
+          {today >= 24 && (
+            <button className="round" onClick={() => { sound.play("tap"); void downloadSouvenirs(backend); }} title="Garder nos souvenirs" aria-label="Télécharger nos lettres et nos photos">📜</button>
+          )}
           <button className="round" onClick={() => { sound.play("tap"); setSettings(true); }} title="Réglages" aria-label="Réglages">⚙️</button>
         </div>
       </header>
