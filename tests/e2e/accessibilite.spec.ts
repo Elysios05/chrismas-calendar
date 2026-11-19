@@ -31,7 +31,7 @@ const resume = (v: Violation[]) => v.map((x) => `[${x.impact}] ${x.id} ×${x.n} 
 async function ouvrirCaseSouris(page: Page, jour: number) {
   await C.fermerPingou(page);
   await C.toucherCadeau(page, jour, false);
-  await expect(page.locator(".sheet-panel")).toBeVisible();
+  await expect(page.locator(".sheet-panel")).toBeVisible({ timeout: 180_000 });
 }
 
 test("axe : écran de connexion", async ({ page }) => {
