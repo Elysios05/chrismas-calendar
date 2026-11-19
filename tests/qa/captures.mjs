@@ -26,6 +26,21 @@ let n = 0;
 const t0 = Date.now();
 
 try {
+  // écran de connexion (un par appareil et par mode)
+  for (const app of APP) for (const mode of MODES) {
+    const ctx = await navigateur.newContext({ ...C.APPAREILS[app], timezoneId: C.FUSEAU, locale: "fr-FR" });
+    await C.preparerContexte(ctx, { heure: C.HEURES[mode] });
+    const page = await ctx.newPage();
+    const consoleMsgs = C.collecterConsole(page);
+    await page.goto(`${C.BASE}?demo-reset`);
+    await page.locator(".login-card").waitFor();
+    await page.waitForTimeout(800);
+    const fichier = `${app}-${mode}-connexion.png`;
+    await page.screenshot({ path: path.join(sortie, fichier) });
+    index.push({ appareil: app, mode, jour: 0, captures: [{ nom: "connexion", fichier }], console: consoleMsgs });
+    n++;
+    await ctx.close();
+  }
   for (const app of APP) for (const mode of MODES) for (const jour of JOURS) {
     await srv.assurer();
     const ctx = await navigateur.newContext({ ...C.APPAREILS[app], timezoneId: C.FUSEAU, locale: "fr-FR" });
@@ -35,7 +50,7 @@ try {
     const entree = { appareil: app, mode, jour, captures: [], console: consoleMsgs };
     index.push(entree);
     const tDebut = Date.now();
-    await page.goto(`${C.BASE}?jour=${jour}`);
+    await page.goto(`${C.BASE}?jour=${jour}&moi=alexandre&demo-reset`);
     await C.attendreScene(page);
     entree.sceneMs = Date.now() - tDebut;
     await page.waitForTimeout(2500); // défilement automatique vers la case du jour (600 ms + animation)
@@ -49,6 +64,17 @@ try {
       n++;
     };
     await shoot("accueil");
+    if (jour === 9) {
+      // fenêtre de la case du jour, puis éditeur de case préparée
+      await C.fermerPingou(page);
+      await C.toucherCadeau(page, 9, app === "mobile");
+      await page.locator(".sheet-panel").waitFor({ timeout: 180000 }).catch(() => {});
+      await page.waitForTimeout(600);
+      await shoot("fenetre-case");
+      await page.keyboard.press("Escape");
+      const crayon = page.locator("button[title^='Préparer la case']");
+      if (await crayon.count()) { await crayon.click(); await page.waitForTimeout(800); await shoot("editeur"); await page.locator(".modal").click({ position: { x: 5, y: 5 } }).catch(() => {}); }
+    }
     await C.fermerPingou(page);
     for (const pos of POSITIONS) {
       if (pos.cadeau) await C.defilerVersCadeau(page, pos.cadeau);
