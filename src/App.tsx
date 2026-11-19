@@ -16,6 +16,7 @@ import { Settings, chargerPreferences } from "./ui/Settings";
 import { FinalScreen } from "./ui/FinalScreen";
 import { PINGOU_ROUTE, type PingouLine } from "./ui/pingou/lines";
 import { aUnJeu, chargerJeu } from "./games/registry";
+import { downloadSouvenirs } from "./backend/souvenirs";
 
 /** Heure locale en heures décimales ; ?heure=17:30 pour simuler (captures, tests) */
 function hourNow() {
@@ -85,6 +86,10 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
   const [editing, setEditing] = useState<number | null>(null);
   const [reminder, setReminder] = useState<number | null>(null);
   const partner = other(me);
+  const openedRef = useRef<number[]>([]);
+  openedRef.current = progress[me].opened;
+  const meRef = useRef(me);
+  meRef.current = me;
   // prochaine case préparée que je peux encore écrire (tant que l'autre ne l'a pas ouverte)
   const nextToWrite = useMemo(
     () => PREPARED_DAYS.find((d) => d >= Math.max(1, today) && !progress[partner].opened.includes(d)) ?? null,
@@ -197,8 +202,16 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
       const day = (e as CustomEvent<number>).detail;
       if (day > today) { sound.play("locked"); setLines(PINGOU_ROUTE.caseVerrouillee(day)); return; }
       sound.play("select");
-      const game = aUnJeu(day) ? (await chargerJeu(day)) ?? undefined : undefined;
       setLines([]);
+      const gameP = aUnJeu(day) ? chargerJeu(day) : Promise.resolve(null);
+      const s = sceneRef.current;
+      // première ouverture : on marche jusqu'au cadeau, il s'ouvre, puis la fenêtre
+      if (s && !openedRef.current.includes(day)) {
+        await s.walkTo(meRef.current, day);
+        await s.playOpen?.(day);
+        sound.play("open");
+      }
+      const game = (await gameP) ?? undefined;
       setOpen({ day, game });
     };
     addEventListener("node-tap", onTap);
@@ -212,9 +225,7 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
     const wasOpened = progress[me].opened.includes(day);
     const next = await loadProgress();
     if (wasOpened || !next[me].opened.includes(day)) return;
-    if (day === 24) { await sceneRef.current?.walkTo(me, day); setFinale(true); return; }
-    sound.play("open");
-    await sceneRef.current?.walkTo(me, day);
+    if (day === 24) { setFinale(true); return; }
     const diff = Math.max(0, ...next[me].opened) - Math.max(0, ...next[partner].opened);
     const name = PLAYERS[partner].name;
     setLines([...PINGOU_ROUTE.ouverture(day), ...(diff > 0 ? PINGOU_ROUTE.avance(diff, name) : diff < 0 ? PINGOU_ROUTE.retard(-diff, name) : PINGOU_ROUTE.egalite(name))]);
@@ -242,6 +253,9 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
           )}
           <button className="round" onClick={toggleNight} title="Jour / nuit" aria-label="Basculer jour / nuit">{night ? "🌙" : "☀️"}</button>
           <button className="round" onClick={goToday} title="Aller à aujourd'hui" aria-label="Aller à la case du jour">📍</button>
+          {today >= 24 && (
+            <button className="round" onClick={() => { sound.play("tap"); { const sc = sceneRef.current as (Scene & { snapshotAround?: (d: number, w: number, h: number) => Promise<string> }) | null; void downloadSouvenirs(backend, undefined, { decor: sc?.snapshotAround ? (d: number) => sc.snapshotAround!(d, 1200, 520).catch(() => null) : undefined }); } }} title="Garder nos souvenirs" aria-label="Télécharger nos lettres et nos photos">📜</button>
+          )}
           <button className="round" onClick={() => { sound.play("tap"); setSettings(true); }} title="Réglages" aria-label="Réglages">⚙️</button>
         </div>
       </header>

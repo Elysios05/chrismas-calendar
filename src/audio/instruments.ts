@@ -253,3 +253,7 @@ export const churchBell: InstrFactory = (T, out) =>
     envelope: { attack: 0.003, decay: 3.5, sustain: 0, release: 3 },
     modulationEnvelope: { attack: 0.002, decay: 1.2, sustain: 0.1, release: 1.5 },
   }, 3, [new T.Filter({ frequency: 2500, type: "lowpass" })]);
+
+/** Crépitement de feu de cheminée : petits claquements secs */
+export const crackle: InstrFactory = (T, out) =>
+  noiseHit(T, out, { type: "highpass", frequency: 2500 }, { attack: 0.001, decay: 0.012, sustain: 0, release: 0.01 });

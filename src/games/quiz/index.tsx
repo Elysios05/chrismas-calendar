@@ -5,7 +5,7 @@
  *  1. « Toi d'abord » : tu réponds pour toi (10 questions). Tes réponses deviennent la vérité.
  *  2. « À toi de deviner » : tu réponds à la place de l'autre.
  *     - si l'autre a déjà rempli ses réponses → correction immédiate ;
- *     - sinon → pas de correction, le score arrive quand il/elle aura joué ;
+ *     - sinon → pas de correction, le score arrive quand l'autre a joué ;
  *     - en mode démo → les réponses d'exemple de src/data servent de réponses de l'autre.
  *
  * Contenu : src/data/games/quiz-jour1.ts
@@ -50,7 +50,7 @@ function Quiz({ ctx }: { ctx: GameContext }) {
   const [sesReponses, setSesReponses] = useState<number[] | null>(null);
   /** vrai si `sesReponses` vient des exemples de src/data et pas de l'autre */
   const [exemples, setExemples] = useState(false);
-  /** ses paris sur moi, pour afficher « il/elle te connaît : x/10 » */
+  /** ses paris sur moi, pour afficher « Flavie te connaît : x/10 » */
   const [sesDevinettes, setSesDevinettes] = useState<number[] | null>(null);
   const [dejaRepondu, setDejaRepondu] = useState(false);
 
@@ -123,7 +123,7 @@ function Quiz({ ctx }: { ctx: GameContext }) {
     } else {
       ctx.say([
         `C'est envoyé ! ${prenomAutre} n'a pas encore répondu, donc je garde ton score au chaud.`,
-        `Dès qu'il/elle aura joué, je te dirai combien tu as eu sur ${total} 💌`,
+        `Dès que ${prenomAutre} aura joué, je te dirai combien tu as eu sur ${total} 💌`,
       ]);
     }
     ctx.backend.markCompleted(ctx.day).catch(() => { /* sans conséquence */ });
@@ -193,7 +193,7 @@ function Quiz({ ctx }: { ctx: GameContext }) {
               ? (exemples
                 ? "Mode démo : les réponses sont des exemples, c'est pour voir le jeu."
                 : `${prenomAutre} a déjà répondu : tu sauras tout de suite si tu as bon.`)
-              : `${prenomAutre} n'a pas encore répondu : ton score arrivera dès qu'il/elle aura joué.`,
+              : `${prenomAutre} n'a pas encore répondu : ton score arrivera dès que ${prenomAutre} aura joué.`,
             "Pas de chrono. On prend son temps.",
           ]}
           bouton={dejaRepondu ? `Deviner ${prenomAutre}` : "C'est parti !"}

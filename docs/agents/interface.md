@@ -4,21 +4,93 @@
 **Dossiers** : `src/ui/`, `src/index.css`.
 
 ## Existant
-HUD (titre, choix Alexandre/Flavie, jour/nuit, aller à aujourd'hui), bulle de Pingou (`Mascot.tsx`), carte provisoire d'une case.
+Tous les écrans de l'interface sont écrits, fusionnés dans `main` et branchés sur le vrai backend :
+connexion, fenêtre d'une case, lecture et éditeur d'une case préparée, rappel la veille,
+réglages (son, animations, rappels, déconnexion), indicateur de la course, écran du 24,
+et Pingou (répliques + 5 expressions).
 
-## À faire (par priorité)
-1. **Écran de connexion** (choix du profil + mot de passe), en utilisant `BackendApi.signIn`.
-2. **Fenêtre d'une case** : en-tête du jour, zone où se monte le `GameModule`, état terminé, revoir la case.
-3. **Éditeur de case préparée** (mot doux + photos, aperçu tel que l'autre le verra), et **rappel la veille**.
-4. **Lecture d'une case préparée** : lettre animée + polaroïds.
-5. **Pingou scénarisé** : textes d'accueil, d'encouragement, de rappel ; expressions (content, surpris, triste) ; fichier de répliques.
-6. Indicateur de la course (qui a combien de cases d'avance), réglages (son), écran de fin le 24.
-7. Accessibilité de base et finitions responsives.
+| Fichier (`src/ui/`) | Rôle |
+|---|---|
+| `LoginScreen.tsx` | profil + mot de passe, œil, « rester connecté·e », accès démo |
+| `DayWindow.tsx` | fenêtre d'une case : en-tête, montage du `GameModule`, état terminé |
+| `PreparedCase.tsx` | lecture d'une case préparée : enveloppe, lettre, polaroïds |
+| `PreparedEditor.tsx` | éditeur + aperçu, et `RappelVeille` (bandeau) |
+| `Settings.tsx` | réglages ; `chargerPreferences(sound)` à appeler au démarrage |
+| `Reminders.tsx` | bloc « Rappels sur cet appareil » (5 états du contrat) |
+| `RaceIndicator.tsx` | la course ; exporte aussi `avancee()` et `course()` |
+| `FinalScreen.tsx` | écran du 24 |
+| `Mascot.tsx` | portrait + bulle ; `pingou/lines.ts` = toutes les répliques |
+| `useDialog.ts` | tout ce qu'une fenêtre modale doit faire (voir Pièges) |
+| `dev/maquettes.tsx` | page de maquettes, `maquettes.html?vue=…` (outil de travail) |
 
-## Questions à poser à Alexandre
-Ton et répliques de Pingou, maquettes des écrans (montrer des captures), ce que voit Flavie au premier lancement.
+## À faire
+Voir les tickets GitHub ouverts marqués `[Interface]`. Au 19 novembre il n'en reste qu'un : **#51**.
 
 ## Journal
+
+### 📍 Où j'en suis — 19 novembre 2026
+
+**Rien en cours, rien en attente de relecture.** Les six PR de l'Interface sont fusionnées dans
+`main` (#2, #6, #26, #33, #43, #45). Aucune branche de travail ouverte.
+
+**Ce qui marche**, vérifié sur l'application réelle : les onze écrans ci-dessus, le mode démo
+(`?jour=N&moi=flavie&demo-reset&rappels=off`), 0 violation axe-core WCAG 2.1 AA sur sept écrans,
+le focus piégé dans les fenêtres, les interrupteurs au clavier.
+
+**Prochaine tâche : ticket #51 — refaire la disposition des menus du haut.**
+Alexandre trouve l'en-tête incohérent : titre, badge du joueur, 4 boutons ronds, panneau de la
+course et pastille du monde, sur trois niveaux, avec des tailles et des styles différents.
+Comment je comptais m'y prendre :
+1. **Ne pas coder d'abord.** Le ticket demande 2–3 maquettes cohérentes, captures téléphone
+   *et* ordinateur, soumises à Alexandre avant toute implémentation. Les construire dans
+   `dev/maquettes.tsx` (`?vue=hud-a`, `hud-b`, `hud-c`), qui ne touche rien de livré.
+2. Pistes données par le ticket, à affiner : une seule barre (titre à gauche, nom du monde au
+   centre, un bouton menu à droite qui regroupe ✏️ / jour-nuit / réglages) ; la course réduite à
+   une pastille « Flavie +1 » qui se déplie au toucher ; 📍 en bouton flottant en bas à droite.
+3. **`App.tsx` ne m'appartient pas.** Le chef propose que je livre un composant `<Hud />` dans
+   `src/ui/` recevant les actions en props, qu'il branchera lui-même. C'est la voie à suivre :
+   ne pas modifier `App.tsx`, livrer le composant et le dire dans la PR.
+4. Correctif à inclure : le ✕ des fenêtres affiche un gros anneau de focus **au toucher**.
+   Il ne doit apparaître qu'au clavier — vérifier que `.sheet-close` ne reçoit pas de style de
+   focus en dehors de `:focus-visible`.
+
+**Rien ne m'attend ailleurs** : #59 (questions pour Alexandre) est vide, et aucune autre issue
+ouverte n'est pour l'Interface.
+
+### 🧭 Décisions prises avec Alexandre (ne pas les rouvrir sans lui)
+- **Pingou : « copain taquin mais tendre »** — il chambre sur la course, il ne juge jamais un
+  échec, il s'efface quand le moment est à eux. Écartés : « petit frère tout doux » (mièvre à la
+  longue) et « majordome du pôle Nord » (drôle mais froid).
+- Pingou parle **aux moments clés seulement** ; il se tait pendant un jeu, sauf si le jeu l'appelle.
+- Sa bulle vit **dans la fenêtre de la case**, en bas — pas en flottant par-dessus.
+- Écran de connexion : afficher/masquer le mot de passe, « rester connecté·e », « voir la démo ».
+- Case préparée : **trois photos maximum** (au-delà, les polaroïds ne tiennent plus sur un téléphone).
+- Nom du monde : **pastille crème permanente** (en blanc sur la neige il était illisible).
+- Règles d'écriture des répliques : une phrase courte par bulle, 150 caractères au plus, tutoiement,
+  un emoji au maximum et jamais au milieu d'une phrase. Tout est dans `pingou/lines.ts`.
+
+### ⚠️ Pièges découverts (ils coûtent cher à retrouver)
+- **La bulle de Pingou ne doit jamais changer de taille.** Elle s'écrivait lettre par lettre ;
+  comme la fenêtre est centrée, toute la carte bougeait pendant qu'on visait un bouton, et
+  Playwright disait « element is not stable » sans jamais cliquer. Elle réserve maintenant la
+  hauteur de la **phrase la plus longue de la série** (`.mascot-gabarit`, invisible). Ne pas retirer.
+- **Clic fantôme au doigt** : le clic de compatibilité qui suit un toucher arrive ~25 ms après
+  l'ouverture d'une fenêtre et tombe sur son fond. `useDialog` renvoie `surFond`, qui ignore les
+  clics sur le fond pendant 400 ms. Toute nouvelle fenêtre doit passer par `useDialog`.
+- **`enableReminders()` doit être le premier `await` du clic**, sinon le navigateur considère le
+  geste perdu et refuse la demande d'autorisation. Le gestionnaire n'est donc pas `async`.
+- **Le rouge vif de la charte ne passe pas le contraste en petit texte** (4,43:1 sur le crème).
+  Utiliser `--red-texte` (#a3192f, 7,3:1) dès que le texte fait moins de 14 px.
+- **Les props qui arrivent en retard du serveur** : `DayWindow` ne lisait `dejaTerminee` qu'au
+  montage, donc une case déjà terminée s'ouvrait sur « C'est parti » puis basculait toute seule.
+- **axe-core et les animations** : mesurer pendant une animation d'entrée donne de faux positifs de
+  contraste (opacité pas encore à 1). Attendre, ou poser `data-animations="non"` avant l'audit.
+- **axe-core n'est pas une dépendance du projet** et le CDN est bloqué dans le conteneur :
+  `npm install --no-save axe-core@4.10.2`, puis l'injecter en fichier local (issue #34 pour Qualité).
+- `tests/e2e/calendrier.spec.ts` visait encore l'ancienne application (`.modal`, `localStorage`)
+  au 18 novembre : ne pas s'y fier comme juge de paix sans vérifier qu'il a été remis à jour.
+
+### 🗂️ Historique
 
 ### 17 novembre 2026 — premier lot (branche `interface/fenetre-case-et-connexion`)
 Livré, **en attente de validation d'Alexandre** :
@@ -91,10 +163,9 @@ pour les surtitres et des couleurs assombries pour les noms de la course.
 interrupteurs pilotables au clavier. Script d'audit proposé à l'équipe Qualité dans l'issue
 https://github.com/Elysios05/chrismas-calendar/issues/34.
 
-### À faire quand le socle backend arrivera
-Tous les écrans sont codés contre `BackendApi` et tournent pour l'instant sur le faux backend
-provisoire de `src/ui/dev/`. Le branchement sur `createBackend()` et la **suppression** de ce faux
-sont suivis dans l'issue https://github.com/Elysios05/chrismas-calendar/issues/37.
+### Branchement du backend — fait
+Le faux backend d'atelier a été supprimé, tout passe par `DemoBackend` / `createBackend()`.
+(L'issue #37 que j'avais ouverte a été fermée comme doublon de #17, plus complète.)
 
 ### Rappels, vrai backend et en-tête (branche `interface/rappels-et-vrai-backend`)
 Tickets #17 et #25.
@@ -110,5 +181,5 @@ Tickets #17 et #25.
 - En-tête sur téléphone : la pastille du monde devient crème et permanente, et elle flotte sous
   l'en-tête au lieu d'y ajouter une rangée ; l'indicateur de la course passe en version réduite.
   De 166 px à 135 px de haut.
-- Fond de page de nuit : écrit sous `html[data-nuit="oui"]`, en attente de la ligne correspondante
-  dans `App.tsx` (demandée au chef dans l'issue #25).
+- Fond de page de nuit : écrit sous `html[data-nuit="oui"]`. Le chef a posé la ligne qui manquait
+  dans `App.tsx` ; c'est en place.

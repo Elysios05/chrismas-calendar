@@ -95,7 +95,11 @@ export type Sfx =
   | "open" | "good" | "bad" | "pop" | "win" | "locked" | "step" | "whoosh"
   // interface : tap = bouton, select = case touchée, hover = approche d'un cadeau, talk = voix de Pingou,
   // pingou = apparition, day/night = bascule, unlock = nouvelle case, photo/send/notify = jeux à deux
-  | "tap" | "select" | "hover" | "talk" | "pingou" | "day" | "night" | "unlock" | "photo" | "send" | "notify" | "jingle" | "snow";
+  | "tap" | "select" | "hover" | "talk" | "pingou" | "day" | "night" | "unlock" | "photo" | "send" | "notify" | "jingle" | "snow"
+  // animaux, personnages, jeux à deux
+  | "fox" | "hare" | "owl" | "squirrel" | "reindeer" | "seal" | "bear"
+  | "elf-laugh" | "elf-hammer" | "elf-hop" | "snowball" | "skate" | "ski" | "lift"
+  | "partner-in" | "partner-out";
 
 export interface SoundApi {
   setEnabled(on: boolean): void;
@@ -113,7 +117,9 @@ export interface SoundApi {
   /** Change d'ambiance musicale (fondu) */
   setZone(zone: ZoneId, night: boolean): void;
   /** Musique spéciale pendant un jeu (null = retour à l'ambiance) */
-  setGameMusic(mood: "calm" | "action" | "victory" | null): void;
+  setGameMusic(mood: "calm" | "action" | "victory" | "duel" | "cosy" | null): void;
+  /** Jingle de 2–3 s à la première arrivée dans un monde */
+  playJingle(zone: ZoneId): void;
   play(sfx: Sfx): void;
 }
 
