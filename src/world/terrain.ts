@@ -243,7 +243,7 @@ export function buildTerrain(seed = 2026): Terrain {
     return true;
   };
   // demi-emprise des bâtiments : sous eux, on taille une terrasse plate dans la pente
-  const FOOTPRINT: Partial<Record<PropKind, number>> = { house: 0.8, chalet: 1, workshop: 1.2, stall: 0.75 };
+  const FOOTPRINT: Partial<Record<PropKind, number>> = { house: 0.8, chalet: 1, workshop: 1.3, stall: 0.75, santaHouse: 1.1, postOffice: 0.8, stable: 1.1 };
   const place = (kind: PropKind, c: Cell, r = 0) => {
     // les éléments naturels sont décalés au hasard : sinon la forêt se lit comme une plantation en lignes
     const wild = kind === "tree" || kind === "treeSmall" || kind === "bush" || kind === "rock";
@@ -328,7 +328,25 @@ export function buildTerrain(seed = 2026): Terrain {
   for (let i = 0; i < 2; i++) landmark("house", "lac", (c) => c.d > 1.6 && nearLake(c));
   landmark("bigTree", "marche", (c) => !c.front && c.d > 2.5 && c.d < 4);
   landmark("wheel", "marche", (c) => !c.front && c.d > 4 && c.d < 7);
-  landmark("workshop", "pole-nord", (c) => !c.front && c.d > 2.5 && c.d < 4.5);
+  landmark("workshop", "pole-nord", (c) => !c.front && c.d > 2.6 && c.d < 4.5, 2);
+  // le village du Père Noël : sa maison, le bureau du courrier et l'écurie des rennes autour de la fabrique
+  // on les veut groupés : chacun prend la place libre la plus proche de la fabrique, à distance décente
+  {
+    const ws = props.find((p) => p.kind === "workshop");
+    const z = ZONES.findIndex((zz) => zz.id === "pole-nord");
+    const near = (kind: PropKind, r: number, dMin: number, dMax: number) => {
+      if (!ws) return;
+      const cands = all
+        .filter((c) => c.zone === z && !c.road && c.d > dMin && c.d < dMax && free(c.x, c.y, r))
+        .map((c) => ({ c, k: Math.hypot(c.x - ws.x, c.y - ws.y) }))
+        .filter((o) => o.k > 3.2)
+        .sort((a, b) => a.k - b.k);
+      if (cands[0]) place(kind, cands[0].c, r);
+    };
+    near("santaHouse", 2, 2.6, 5);
+    near("stable", 2, 2.6, 5.5);
+    near("postOffice", 1, 2.2, 4.5);
+  }
   landmark("sleigh", "pole-nord", (c) => c.d > 1.5 && c.d < 2.5, 0);
 
   for (const c of all) {
@@ -342,7 +360,8 @@ export function buildTerrain(seed = 2026): Terrain {
     const d = c.d;
     // près d'une frontière de monde, les constructions se raréfient : chaque monde s'éteint avant le suivant
     const edge = Math.min(1, Math.min(...zoneEdges.map((b) => Math.abs(c.pi - b))) / 4);
-    if (c.lake) { if (z.id === "lac" && d > 1.2 && R() < 0.05) place("skater", c); continue; }
+    // les patineurs ne sont plus posés ici : ils glissent pour de bon (voir life.ts)
+    if (c.lake) continue;
     switch (z.id) {
       case "montagnes": {
         // les sapins s'arrêtent en altitude : plus haut, il n'y a que des rochers

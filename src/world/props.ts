@@ -1,5 +1,5 @@
 // Décors isométriques dessinés en vectoriel plat
-import { Container, Graphics } from "pixi.js";
+import { Container, Graphics, Text } from "pixi.js";
 import { P, box, onLeft, onRight, gableRoof, pyramid, tree, boulder, poly, shade, type Palette, type TreeKind } from "./iso";
 
 export type PropKind =
@@ -7,13 +7,18 @@ export type PropKind =
   | "stall" | "bigTree" | "wheel" | "crystal" | "presents" | "cane" | "sleigh" | "workshop" | "deer" | "skater"
   | "bush" | "visitor" | "brazier" | "garland" | "bench" | "sled"
   | "caveMouth" | "icicle" | "iceLantern" | "igloo" | "fence"
-  | "cloudBank" | "signpost" | "ridge" | "deepWood";
+  | "cloudBank" | "signpost" | "ridge" | "deepWood"
+  | "santaHouse" | "postOffice" | "stable";
 
 /** Parties animées d'un décor, que la scène fait vivre à chaque image */
 export type AnimPart =
   | { kind: "wheel"; hub: Container; cars: Container[] }
   | { kind: "smoke"; puffs: Graphics[]; phase: number }
-  | { kind: "takeoff"; node: Container; t: number };
+  | { kind: "takeoff"; node: Container; t: number }
+  /** tapis roulant : des jouets glissent de a vers b */
+  | { kind: "belt"; items: Container[]; a: { x: number; y: number }; b: { x: number; y: number }; phase: number }
+  /** tête de renne qui dodeline à la porte de son box */
+  | { kind: "bob"; node: Container; phase: number; y0: number };
 export type PropNode = Container & { anim?: AnimPart[] };
 
 const SNOW = { top: 0xf7f5f0, left: 0xe4e1dc, right: 0xcfccd0 };
@@ -213,6 +218,37 @@ function drawHouse(
 }
 
 /** Traîneau du Père Noël. En vol, on lui attelle deux rennes et une traînée d'étoiles. */
+/** Bouffées de fumée posées sur une cheminée (même mécanique que les maisons) */
+function chimneySmoke(extra: Container, anim: AnimPart[], at: { x: number; y: number }, phase: number) {
+  const stack = new Container();
+  stack.position.set(at.x, at.y);
+  const puffs: Graphics[] = [];
+  for (let i = 0; i < 3; i++) {
+    const puff = new Graphics().circle(0, 0, 11 + i * 3).fill(0xc6cfe0);
+    stack.addChild(puff);
+    puffs.push(puff);
+  }
+  extra.addChild(stack);
+  anim.push({ kind: "smoke", puffs, phase });
+}
+
+/** Enseigne peinte sur la face gauche (+y) d'un bâtiment, inclinée comme le mur */
+function enseigne(extra: Container, g: Graphics, pal: Palette, text: string, x0: number, x1: number, y: number, z: number, bg: number, fg = 0xffffff) {
+  const c = pal.c;
+  const zh = 0.26;
+  onLeft(g, y + 0.01, x0, x1, z, z + zh, c(bg));
+  onLeft(g, y + 0.012, x0 + 0.04, x1 - 0.04, z + 0.03, z + zh - 0.03, c(shade(bg, 0.12)));
+  const t = new Text({ text, style: { fontFamily: "Fredoka", fontWeight: "700", fontSize: 13, fill: c(fg) } });
+  t.anchor.set(0.5);
+  const m = P((x0 + x1) / 2, y + 0.02, z + zh / 2);
+  t.position.set(m.x, m.y);
+  // le mur gauche monte vers la droite de l'écran d'une demi-pente : le texte suit
+  t.skew.y = Math.atan2(20, 40);
+  const wpx = (x1 - x0) * 40 * 0.92;
+  if (t.width > wpx) t.scale.x = wpx / t.width;
+  extra.addChild(t);
+}
+
 function drawSleigh(g: Graphics, p: { x: number; y: number }, pal: Palette, flying: boolean) {
   const c = pal.c;
   if (flying) {
@@ -666,14 +702,151 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       break;
     }
     case "workshop": {
-      const x0 = cx - 1, y0 = cy - 0.75;
-      socle(g, x0, y0, 2, 1.5, drop, pal, rnd);
-      box(g, x0, y0, 0, 2, 1.5, 1.1, { top: c(0x9a3b3b), left: c(0xc8463b), right: c(0x9a2f2a) });
-      for (let i = 0; i < 4; i++) onLeft(g, y0 + 1.5, x0 + 0.2 + i * 0.45, x0 + 0.45 + i * 0.45, 0.5, 0.85, pal.window);
-      onRight(g, x0 + 2, y0 + 0.5, y0 + 1, 0, 0.75, c(0x2fa37a));
-      gableRoof(g, x0, y0, 1.1, 2, 1.5, 0.75, c(SNOW.left), c(SNOW.top), c(0x7a2622));
-      const s = P(x0 + 1, y0 + 0.75, 2.1);
-      g.star(s.x, s.y, 5, 12, 5).fill(0xffd46b);
+      // la fabrique de jouets : grande halle de briques, deux cheminées qui fument, enseigne,
+      // et un tapis roulant le long de la façade où défilent les jouets
+      const w = 2.5, d = 1.7, h = 1.25;
+      const x0 = cx - w / 2, y0 = cy - d / 2;
+      socle(g, x0, y0, w, d, drop, pal, rnd);
+      box(g, x0, y0, 0, w, d, h, { top: c(0x9a3b3b), left: c(0xc8463b), right: c(0x9a2f2a) });
+      // assises de briques plus sombres
+      for (let r = 1; r < 5; r++) onLeft(g, y0 + d + 0.005, x0, x0 + w, r * 0.25 - 0.012, r * 0.25, c(0xa83a31));
+      // fenêtres hautes à petits carreaux, toujours allumées : on travaille jour et nuit
+      for (let i = 0; i < 4; i++) {
+        const a = x0 + 0.22 + i * 0.58;
+        onLeft(g, y0 + d + 0.008, a, a + 0.36, 0.62, 1.02, c(0xf2e6d2));
+        onLeft(g, y0 + d + 0.01, a + 0.03, a + 0.33, 0.65, 0.99, 0xffd46b);
+        onLeft(g, y0 + d + 0.012, a + 0.165, a + 0.195, 0.65, 0.99, c(0xf2e6d2));
+      }
+      for (let i = 0; i < 2; i++) onRight(g, x0 + w + 0.008, y0 + 0.3 + i * 0.7, y0 + 0.65 + i * 0.7, 0.62, 1.0, 0xffd46b);
+      // les deux bouches du tapis : les jouets sortent d'un côté et rentrent de l'autre
+      const bz = 0.18;
+      onLeft(g, y0 + d + 0.01, x0 + 0.2, x0 + 0.5, bz, bz + 0.3, c(0x3d2a1a));
+      onLeft(g, y0 + d + 0.01, x0 + w - 0.5, x0 + w - 0.2, bz, bz + 0.3, c(0x3d2a1a));
+      box(g, x0 + 0.3, y0 + d, 0, w - 0.6, 0.22, bz, { top: c(0x4d5265), left: c(0x6b6f80), right: c(0x3d4152) });
+      for (let i = 0; i < 8; i++) { const a = x0 + 0.4 + i * ((w - 0.8) / 7); onLeft(g, y0 + d + 0.221, a, a + 0.04, 0.03, bz - 0.03, c(0x2b2f45)); }
+      gableRoof(g, x0, y0, h, w, d, 0.7, c(SNOW.left), c(SNOW.top), c(0x7a2622));
+      enseigne(extra, g, pal, "Fabrique de jouets", x0 + 0.55, x0 + w - 0.55, y0 + d, 0.28 + 0.07, 0x2fa37a);
+      // cheminées de briques sur le faîtage
+      for (const [fx, ph] of [[0.25, 0], [0.72, 2.3]] as const) {
+        const ccx = x0 + w * fx, ccy = y0 + d * 0.32;
+        box(g, ccx, ccy, h + 0.3, 0.2, 0.2, 0.62, { top: c(0x5b2a24), left: c(0xb5473b), right: c(0x8a3329) });
+        chimneySmoke(extra, anim, P(ccx + 0.1, ccy + 0.1, h + 0.98), rnd(70) * 6 + ph);
+      }
+      const st = P(x0 + w / 2, y0 + d / 2, h + 0.78);
+      g.star(st.x, st.y, 5, 12, 5).fill(0xffd46b);
+      // les jouets du tapis : ours, toupie, cube, petite voiture
+      const items: Container[] = [];
+      const toys = [
+        (t: Graphics) => t.circle(0, -7, 5).fill(c(0xa86b3d)).circle(-4, -11, 2).fill(c(0xa86b3d)).circle(4, -11, 2).fill(c(0xa86b3d)).circle(0, -2, 4.5).fill(c(0xa86b3d)),
+        (t: Graphics) => t.poly([-6, -8, 6, -8, 0, 0]).fill(c(0x3f7fb5)).rect(-1, -12, 2, 4).fill(c(0xd9354b)),
+        (t: Graphics) => t.rect(-5, -10, 10, 10).fill(c(0xffd46b)).rect(-5, -10, 10, 3).fill(c(0xe0a63a)),
+        (t: Graphics) => t.roundRect(-7, -7, 14, 5, 2).fill(c(0xd9354b)).roundRect(-4, -10, 7, 4, 1.5).fill(c(0x7fb3e0)).circle(-4, -1.5, 2).fill(c(0x2b2f45)).circle(4, -1.5, 2).fill(c(0x2b2f45)),
+      ];
+      for (let i = 0; i < 5; i++) { const t = new Graphics(); toys[i % 4](t); extra.addChild(t); items.push(t); }
+      anim.push({ kind: "belt", items, a: P(x0 + 0.35, y0 + d + 0.11, bz), b: P(x0 + w - 0.35, y0 + d + 0.11, bz), phase: rnd(71) });
+      break;
+    }
+    case "santaHouse": {
+      // la maison du Père Noël : grande maison rouge à colombages blancs, véranda, couronne, enseigne
+      const w = 2.1, d = 1.5, h = 1.35;
+      const x0 = cx - w / 2, y0 = cy - d / 2;
+      socle(g, x0, y0, w, d, drop, pal, rnd);
+      box(g, x0, y0, 0, w, d, h, { top: c(0xb02f2f), left: c(0xd9354b), right: c(0xa82a35) });
+      // poutres blanches : chaînages d'angle, lisse d'étage
+      onLeft(g, y0 + d + 0.006, x0, x0 + 0.07, 0, h, c(0xfbf3ea));
+      onLeft(g, y0 + d + 0.006, x0 + w - 0.07, x0 + w, 0, h, c(0xfbf3ea));
+      onLeft(g, y0 + d + 0.006, x0, x0 + w, 0.66, 0.72, c(0xfbf3ea));
+      onRight(g, x0 + w + 0.006, y0, y0 + 0.07, 0, h, c(0xe8ddd0));
+      onRight(g, x0 + w + 0.006, y0, y0 + d, 0.66, 0.72, c(0xe8ddd0));
+      // fenêtres chaudes, à volets verts
+      const win = (a: number, z: number) => {
+        onLeft(g, y0 + d + 0.008, a - 0.06, a, z, z + 0.3, c(0x2fa37a));
+        onLeft(g, y0 + d + 0.008, a + 0.26, a + 0.32, z, z + 0.3, c(0x2fa37a));
+        onLeft(g, y0 + d + 0.01, a, a + 0.26, z, z + 0.3, 0xffd46b);
+        onLeft(g, y0 + d + 0.012, a + 0.115, a + 0.145, z, z + 0.3, c(0xfbf3ea));
+      };
+      win(x0 + 0.25, 0.22); win(x0 + 1.55, 0.22);
+      win(x0 + 0.35, 0.86); win(x0 + 0.9, 0.86); win(x0 + 1.45, 0.86);
+      onRight(g, x0 + w + 0.008, y0 + 0.35, y0 + 0.62, 0.86, 1.14, 0xffd46b);
+      onRight(g, x0 + w + 0.008, y0 + 0.88, y0 + 1.15, 0.86, 1.14, 0xffd46b);
+      // porte verte et couronne
+      onLeft(g, y0 + d + 0.01, x0 + 0.86, x0 + 1.24, 0, 0.56, c(0x1f6b4f));
+      const wr = P(x0 + 1.05, y0 + d + 0.02, 0.42);
+      g.circle(wr.x, wr.y, 6).stroke({ width: 3.5, color: c(0x2b6f52) });
+      g.circle(wr.x, wr.y + 5, 2).fill(c(0xd9354b));
+      // véranda : auvent enneigé sur deux poteaux devant la porte
+      const vz = 0.62;
+      for (const vx of [x0 + 0.7, x0 + 1.4]) { const a = P(vx, y0 + d + 0.35, 0), b = P(vx, y0 + d + 0.35, vz); g.rect(a.x - 1.5, b.y, 3, a.y - b.y).fill(c(0xfbf3ea)); }
+      poly(g, [P(x0 + 0.62, y0 + d, vz + 0.12), P(x0 + 1.48, y0 + d, vz + 0.12), P(x0 + 1.48, y0 + d + 0.42, vz), P(x0 + 0.62, y0 + d + 0.42, vz)], c(SNOW.top));
+      gableRoof(g, x0, y0, h, w, d, 0.75, c(SNOW.left), c(SNOW.top), c(0x8a2626));
+      enseigne(extra, g, pal, "Père Noël", x0 + 0.62, x0 + 1.48, y0 + d + 0.42, vz + 0.12, 0xfbf3ea, 0xb02f2f);
+      const ccx = x0 + w * 0.7, ccy = y0 + d * 0.3;
+      box(g, ccx, ccy, h + 0.25, 0.22, 0.22, 0.55, { top: c(0x5b5f70), left: c(0x9a9286), right: c(0x7d7667) });
+      chimneySmoke(extra, anim, P(ccx + 0.11, ccy + 0.11, h + 0.86), rnd(72) * 6);
+      if (pal.night) { const p = P(cx, y0 + d, 0.4); g.ellipse(p.x, p.y + 8, 60, 18).fill({ color: 0xffd46b, alpha: 0.2 }); }
+      break;
+    }
+    case "postOffice": {
+      // le bureau du courrier : maison bleu pâle, enseigne, sacs de lettres et boîte aux lettres rouge
+      const w = 1.5, d = 1.15, h = 1.05;
+      const x0 = cx - w / 2, y0 = cy - d / 2;
+      socle(g, x0, y0, w, d, drop, pal, rnd);
+      box(g, x0, y0, 0, w, d, h, { top: c(0x7fa6c8), left: c(0xa9c7e0), right: c(0x7f9fbf) });
+      for (const a of [x0 + 0.18, x0 + 1.04]) {
+        onLeft(g, y0 + d + 0.01, a, a + 0.28, 0.4, 0.72, pal.night ? 0xffd46b : c(0xffe9a8));
+        onLeft(g, y0 + d + 0.012, a + 0.125, a + 0.155, 0.4, 0.72, c(0xfbf3ea));
+      }
+      onLeft(g, y0 + d + 0.01, x0 + 0.58, x0 + 0.92, 0, 0.6, c(0x3d5a80));
+      gableRoof(g, x0, y0, h, w, d, 0.55, c(SNOW.left), c(SNOW.top), c(0x5f7fa0));
+      enseigne(extra, g, pal, "Courrier", x0 + 0.25, x0 + w - 0.25, y0 + d, 0.76, 0xd9354b);
+      // enveloppe peinte sur le pignon
+      const e = P(x0 + w + 0.01, y0 + d / 2, h + 0.18);
+      g.rect(e.x - 8, e.y - 5, 16, 11).fill(c(0xfbf3ea)).poly([e.x - 8, e.y - 5, e.x + 8, e.y - 5, e.x, e.y + 2]).stroke({ width: 1.2, color: c(0xd9354b) });
+      // sacs de lettres devant la porte
+      for (const [sx, sy, k] of [[x0 + 0.25, y0 + d + 0.35, 0], [x0 + 0.48, y0 + d + 0.5, 1], [x0 + 1.25, y0 + d + 0.38, 2]] as const) {
+        const q = P(sx, sy);
+        g.ellipse(q.x, q.y - 8, 9, 10).fill(c(k === 1 ? 0xd8c39a : 0xc9b07f));
+        g.rect(q.x - 3, q.y - 19, 6, 3).fill(c(0x8a6a3d));
+        g.rect(q.x - 4, q.y - 10, 8, 5).fill(c(0xfbf3ea)).poly([q.x - 4, q.y - 10, q.x + 4, q.y - 10, q.x, q.y - 7]).stroke({ width: 0.8, color: c(0xd9354b) });
+      }
+      const mb = P(x0 + w + 0.3, y0 + d + 0.2);
+      g.rect(mb.x - 1.5, mb.y - 18, 3, 18).fill(c(0x3d4152));
+      g.roundRect(mb.x - 7, mb.y - 30, 14, 13, 4).fill(c(0xd9354b));
+      g.rect(mb.x - 4, mb.y - 26, 8, 1.6).fill(c(0x2b2f45));
+      break;
+    }
+    case "stable": {
+      // l'écurie des rennes : grange de bois, trois box dont les rennes sortent la tête, bottes de foin
+      const w = 2.1, d = 1.3, h = 0.95;
+      const x0 = cx - w / 2, y0 = cy - d / 2;
+      socle(g, x0, y0, w, d, drop, pal, rnd);
+      box(g, x0, y0, 0, w, d, h, { top: c(0x7d4a26), left: c(0xa86b3d), right: c(0x7d4a26) });
+      for (let i = 1; i < 9; i++) onLeft(g, y0 + d + 0.004, x0 + i * (w / 9) - 0.008, x0 + i * (w / 9) + 0.008, 0, h, c(0x8a5a2b));
+      gableRoof(g, x0, y0, h, w, d, 0.55, c(SNOW.left), c(SNOW.top), c(0x6b3a1c));
+      for (let i = 0; i < 3; i++) {
+        const a = x0 + 0.2 + i * 0.62;
+        onLeft(g, y0 + d + 0.01, a, a + 0.42, 0.5, 0.8, c(0x3d2a1a)); // ouverture du haut
+        onLeft(g, y0 + d + 0.01, a, a + 0.42, 0, 0.5, c(0xc8463b)); // demi-porte rouge
+        poly(g, [P(a, y0 + d + 0.012, 0.02), P(a + 0.42, y0 + d + 0.012, 0.48), P(a + 0.42, y0 + d + 0.012, 0.42), P(a, y0 + d + 0.012, 0.08)], c(0xfbf3ea));
+        // la tête du renne, qui dodeline
+        const head = new Container();
+        const hg = new Graphics();
+        const b = c(0xa86b3d), dk = c(0x7d4a26);
+        hg.roundRect(-4, -12, 8, 12, 3).fill(b);
+        hg.roundRect(-2, -18, 13, 8, 4).fill(b);
+        hg.circle(11, -15, 2.4).fill(c(i === 1 ? 0xd9354b : 0x3d2a1a));
+        hg.circle(3, -16, 1).fill(c(0x2b2f45));
+        hg.moveTo(0, -18).lineTo(-5, -28).lineTo(-9, -29).moveTo(-3, -23).lineTo(2, -29).stroke({ width: 2, color: dk });
+        head.addChild(hg);
+        const hp = P(a + 0.21, y0 + d + 0.05, 0.52);
+        head.position.set(hp.x, hp.y);
+        extra.addChild(head);
+        anim.push({ kind: "bob", node: head, phase: i * 2.1 + rnd(73) * 3, y0: hp.y });
+      }
+      for (const [bx, by] of [[x0 + w + 0.25, y0 + 0.3], [x0 + w + 0.25, y0 + 0.75], [x0 + w + 0.55, y0 + 0.5]] as const) {
+        box(g, bx, by, 0, 0.28, 0.4, 0.22, { top: c(0xf0d27a), left: c(0xd8b55a), right: c(0xc29d45) });
+      }
+      enseigne(extra, g, pal, "Écurie", x0 + 0.55, x0 + w - 0.55, y0 + d, h - 0.02, 0x6b3a1c, 0xffd46b);
       break;
     }
     case "deer": {
