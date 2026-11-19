@@ -6,6 +6,7 @@
  */
 import type { BackendApi, Who } from "../core/contracts";
 import { DemoBackend } from "./demo";
+import { registerOfflineShell } from "./offline";
 
 export { DemoBackend };
 export * from "./config";
@@ -37,6 +38,7 @@ export function backendConfigured(): boolean {
 /** Crée (une seule fois) le backend de l'application. */
 export function createBackend(): Promise<BackendApi> {
   if (instance) return instance;
+  registerOfflineShell(); // application disponible hors ligne (production uniquement)
   const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
   instance = url && key
