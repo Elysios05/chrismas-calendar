@@ -10,6 +10,7 @@ import { registerOfflineShell } from "./offline";
 
 export { DemoBackend };
 export * from "./config";
+export { exportSouvenirs, downloadSouvenirs, SOUVENIRS_FROM_DAY } from "./souvenirs";
 export { LiveGame, joinLive, dayRoomId, LEADER, type LiveOptions, type LivePhase } from "./realtime";
 
 /**
