@@ -6,6 +6,7 @@ import * as T from "tone";
 import type { ZoneId } from "../core/contracts";
 import { AmbienceRunner } from "./ambience";
 import { GAMES } from "./pieces/games";
+import { JINGLES } from "./pieces/jingles";
 import { WORLDS } from "./pieces/worlds";
 import { PieceRunner } from "./runner";
 import { SfxBank, SFX_LIST, type SfxName } from "./sfx";
@@ -27,6 +28,19 @@ export async function renderPiece(id: string, night: boolean, seconds: number, f
     if (fadeOut > 0) runner.fadeOut(seconds - fadeOut, fadeOut);
     runner.pump(seconds, 0);
   }, seconds, 2, 44100);
+  return buf.get() as AudioBuffer;
+}
+
+/** Rend un jingle d'arrivée (une seule fois, avec sa résonance) */
+export async function renderJingle(zone: ZoneId): Promise<AudioBuffer> {
+  const def = JINGLES[zone];
+  const len = (def.beats * 60) / def.bpm;
+  const buf = await T.Offline(() => {
+    const limiter = new T.Limiter(-1.5).toDestination();
+    const runner = new PieceRunner(T, def, false, limiter);
+    runner.start(0.05, 0);
+    runner.pump(0.05 + len, 0);
+  }, len + 0.3, 2, 44100);
   return buf.get() as AudioBuffer;
 }
 
