@@ -68,6 +68,10 @@ export class Scene {
   states = new Map<number, NodeState>();
   flakes: { s: Sprite; vy: number; ph: number; z: number }[] = [];
   zoneNow = -1;
+  light = 0;
+  focus: { x: number; y: number; zoom: number } | null = null;
+  confetti: { g: Graphics; vx: number; vy: number; rot: number; life: number }[] = [];
+  confettiLayer = new Container();
   anims: AnimPart[] = [];
   time = 0;
   boundaries: number[] = [];
@@ -93,7 +97,7 @@ export class Scene {
       this.cloudLayer.addChild(s);
       this.clouds.push({ s, v: 0.15 + Math.random() * 0.35, base: s.y });
     }
-    app.stage.addChild(this.world, this.aurora, this.tint, this.fog, this.cloudLayer, this.whiteout, this.snowLayer);
+    app.stage.addChild(this.world, this.aurora, this.tint, this.fog, this.cloudLayer, this.whiteout, this.confettiLayer, this.snowLayer);
     const flakeTex = app.renderer.generateTexture(new Graphics().circle(6, 6, 6).fill(0xffffff));
     for (let i = 0; i < 260; i++) {
       const s = new Sprite(flakeTex);
@@ -109,11 +113,49 @@ export class Scene {
     for (let i = 1; i < L.length; i++) if (L[i].zone !== L[i - 1].zone) this.boundaries.push(P(L[i].x + 0.5, L[i].y + 0.5).y);
     this.build();
     app.ticker.add((t) => this.tick(t.deltaTime));
+    // crochet de test : la Qualité interroge la scène sans dépendre de sa structure interne.
+    // Seulement en développement ou quand on simule un jour (?jour=), jamais sur la vraie version.
+    if (import.meta.env.DEV || new URLSearchParams(location.search).has("jour")) {
+      (window as unknown as { __calendrier: unknown }).__calendrier = {
+        giftScreenPos: (day: number) => {
+          const c = this.gifts.get(day);
+          if (!c) return null;
+          const m = (c as Container & { meta: { wx: number; wy: number } }).meta;
+          const sc = this.world.scale.x;
+          return { x: m.wx * sc + this.world.x, y: m.wy * sc + this.world.y, visible: c.visible };
+        },
+        giftState: (day: number) => this.states.get(day) ?? "locked",
+        scrollForDay: (day: number) => this.scrollForDay(day),
+        playOpen: (day: number) => this.playOpen(day),
+      };
+    }
   }
 
   get worldHeight() { return (this.maxY - this.minY) * this.scale + this.padTop + innerHeight * 0.5; }
-  setNight(night: boolean) { this.pal = makePalette(night); this.build(); }
-  setStates(states: Map<number, NodeState>) { this.states = states; this.build(); }
+  setNight(night: boolean) { this.setLight(night ? 1 : 0); }
+  /** Ne redessine que les cases dont l'état a changé : reconstruire toute la scène gelait l'image */
+  setStates(states: Map<number, NodeState>) {
+    const before = this.states;
+    this.states = states;
+    if (!this.gifts.size) { this.build(); return; }
+    // le traîneau du 24 dépend de l'état de la dernière case : là, il faut tout refaire (une fois)
+    if ((before.get(24) ?? "locked") !== (states.get(24) ?? "locked")) { this.build(); return; }
+    for (const n of this.terrain.nodes) {
+      if ((before.get(n.day) ?? "locked") === (states.get(n.day) ?? "locked")) continue;
+      const old = this.gifts.get(n.day);
+      if (old) { this.objects.removeChild(old); old.destroy({ children: true }); }
+      this.objects.addChild(this.makeGift(n));
+    }
+  }
+
+  /** Lumière continue : 0 = plein jour, 1 = nuit noire. Ne reconstruit qu'au passage du seuil de nuit. */
+  setLight(amount: number) {
+    const a = Math.max(0, Math.min(1, amount));
+    const wasNight = this.pal.night;
+    this.light = a;
+    const isNight = a >= 0.4;
+    if (isNight !== wasNight) { this.pal = makePalette(isNight); this.build(); }
+  }
 
   /* ------------------------------------------------------------------ */
   build() {
@@ -340,9 +382,58 @@ export class Scene {
     cont.eventMode = "static";
     cont.cursor = "pointer";
     cont.on("pointertap", () => this.cb.onNodeTap(n.day));
-    (cont as Container & { meta: object }).meta = { inner, glow, st };
+    (cont as Container & { meta: object }).meta = { inner, glow, lid, st, wx: o.x, wy: cont.y };
     this.gifts.set(n.day, cont);
     return cont;
+  }
+
+  /** Ouvre la case du jour : la caméra s'approche, le couvercle saute, des confettis partent.
+   *  La promesse se résout quand l'animation est finie, pour que l'interface ouvre ensuite sa fenêtre.
+   *  Respecte le réglage « animations » : en version courte, on se contente du couvercle. */
+  playOpen(day: number): Promise<void> {
+    const cont = this.gifts.get(day);
+    if (!cont) return Promise.resolve();
+    const meta = (cont as Container & { meta: { inner: Container; lid: Graphics; wx: number; wy: number } }).meta;
+    const court = document.documentElement.dataset.animations === "non";
+    const duree = court ? 270 : 1200; // en millisecondes, pas en images : sur un téléphone qui rame,
+    const zoomMax = court ? 1 : 1.5;  // une animation comptée en images s'éterniserait
+    return new Promise((res) => {
+      const t0 = performance.now();
+      let confettisLances = false;
+      const lid = meta.lid;
+      const step = () => {
+        const k = Math.min(1, (performance.now() - t0) / duree);
+        // zoom : on s'approche puis on repart (une cloche)
+        const cloche = Math.sin(Math.min(1, k * 1.15) * Math.PI);
+        this.focus = { x: meta.wx, y: meta.wy, zoom: 1 + (zoomMax - 1) * cloche };
+        // le couvercle saute, tourne et retombe à côté
+        const s2 = Math.min(1, k / 0.55);
+        const saut = Math.sin(s2 * Math.PI);
+        lid.y = -saut * 46 + s2 * 14;
+        lid.x = s2 * 22;
+        lid.rotation = s2 * 0.55;
+        if (!confettisLances && k > 0.25) { confettisLances = true; if (!court) this.lancerConfettis(); }
+        if (k >= 1) { this.focus = null; res(); return; }
+        requestAnimationFrame(step);
+      };
+      step();
+    });
+  }
+
+  /** Gerbe de confettis au centre de l'écran, là où la case vient de s'ouvrir */
+  private lancerConfettis() {
+    const cols = [0xd9354b, 0xffd66b, 0x2fa37a, 0x3f7fb5, 0xffffff, 0x8e4fb5];
+    const cx = innerWidth / 2, cy = innerHeight * 0.44;
+    for (let i = 0; i < 70; i++) {
+      const g = new Graphics();
+      const w = 5 + Math.random() * 6;
+      g.rect(-w / 2, -w / 3, w, w * 0.66).fill(cols[i % cols.length]);
+      g.position.set(cx + (Math.random() - 0.5) * 40, cy + (Math.random() - 0.5) * 20);
+      this.confettiLayer.addChild(g);
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
+      const v = 4 + Math.random() * 7;
+      this.confetti.push({ g, vx: Math.cos(a) * v, vy: Math.sin(a) * v, rot: (Math.random() - 0.5) * 0.4, life: 60 + Math.random() * 40 });
+    }
   }
 
   /* --------------------------- personnages --------------------------- */
@@ -381,15 +472,20 @@ export class Scene {
     const p = this.people[who];
     return new Promise((res) => {
       p.walking = 1;
-      const step = () => {
+      // la vitesse est donnée par image à 60 i/s, mais mesurée au temps écoulé : sur un écran à
+      // 120 Hz le personnage allait deux fois trop vite, et deux fois trop lentement sur un mobile qui rame
+      let last = performance.now();
+      const step = (now: number) => {
+        const dt = Math.min(3, (now - last) / 16.667);
+        last = now;
         const d = target - this.pos[who];
         if (Math.abs(d) < 0.08) { this.pos[who] = target; p.walking = 0; res(); return; }
         const pt = this.pointAt(this.pos[who], 0);
-        const speed = pt.lake ? 0.16 : pt.slope < 0 && pt.zone === "montagnes" ? 0.2 : pt.slope > 0 ? 0.06 : 0.09;
+        const speed = (pt.lake ? 0.16 : pt.slope < 0 && pt.zone === "montagnes" ? 0.2 : pt.slope > 0 ? 0.06 : 0.09) * dt;
         this.pos[who] += Math.sign(d) * Math.min(Math.abs(d), speed);
         requestAnimationFrame(step);
       };
-      step();
+      requestAnimationFrame(step);
     });
   }
 
@@ -433,7 +529,10 @@ export class Scene {
     return { a: last, b: last, t: 0 };
   }
 
-  tick(dt: number) {
+  tick(raw: number) {
+    // sur un appareil qui rame, une image peut valoir dix : sans borne, la neige et les confettis
+    // feraient un bond et traverseraient l'écran d'un coup
+    const dt = Math.min(3, raw);
     this.time += dt;
     const fy = this.focusWorldY();
     const L = this.terrain.path;
@@ -442,8 +541,17 @@ export class Scene {
     const tx = innerWidth / 2 - P(best.x + 0.5, best.y + 0.5).x * this.scale;
     if (!this.camX) this.camX = tx;
     this.camX += (tx - this.camX) * Math.min(1, 0.05 * dt);
-    this.world.x = this.camX;
-    this.world.y = -this.scrollY + this.padTop - this.minY * this.scale;
+    if (this.focus) {
+      // pendant l'ouverture d'une case : on zoome et on la cadre, sans toucher au défilement
+      const sc = this.scale * this.focus.zoom;
+      this.world.scale.set(sc);
+      this.world.x = innerWidth / 2 - this.focus.x * sc;
+      this.world.y = innerHeight * 0.44 - this.focus.y * sc;
+    } else {
+      this.world.scale.set(this.scale);
+      this.world.x = this.camX;
+      this.world.y = -this.scrollY + this.padTop - this.minY * this.scale;
+    }
 
     // on ne dessine que les tranches de décor qui touchent l'écran
     const topY = (-this.world.y) / this.scale - 80;
@@ -491,7 +599,18 @@ export class Scene {
     }
     const night = this.pal.night;
     const tintCol = mix(za.atmo.tint, zb.atmo.tint, zm.t);
-    this.tint.clear().rect(0, 0, innerWidth, innerHeight).fill({ color: night ? 0x0b1030 : tintCol, alpha: night ? 0.12 : lerp(za.atmo.tintAlpha, zb.atmo.tintAlpha) });
+    // Lumière du jour : l'ambiance du monde, puis un voile qui s'épaissit à mesure que le soir tombe.
+    // C'est ce voile qui fait le crépuscule, en continu, sans rien redessiner.
+    const l = this.light;
+    this.tint.clear();
+    this.tint.rect(0, 0, innerWidth, innerHeight)
+      .fill({ color: night ? 0x0b1030 : tintCol, alpha: (night ? 0.12 : lerp(za.atmo.tintAlpha, zb.atmo.tintAlpha)) * (1 - l * 0.4) });
+    if (l > 0.02) {
+      // d'abord doré et rose (fin d'après-midi), puis bleu profond (nuit)
+      const soir = Math.min(1, l / 0.45);
+      const col = mix(0xff9a5a, 0x101a44, Math.max(0, (l - 0.3) / 0.7));
+      this.tint.rect(0, 0, innerWidth, innerHeight).fill({ color: col, alpha: 0.3 * soir * (0.35 + l * 0.65) });
+    }
     // un jour de vraie brume tire la couleur du voile vers un gris froid : un voile beige sur un
     // village beige ne se voit pas
     const fogCol = mix(za.atmo.fogColor, zb.atmo.fogColor, zm.t);
@@ -548,6 +667,16 @@ export class Scene {
           puff.scale.set(0.55 + t * 1.1);
         });
       }
+    }
+    for (let i = this.confetti.length - 1; i >= 0; i--) {
+      const f = this.confetti[i];
+      f.life -= dt;
+      f.vy += 0.22 * dt;
+      f.g.x += f.vx * dt;
+      f.g.y += f.vy * dt;
+      f.g.rotation += f.rot * dt;
+      f.g.alpha = Math.max(0, Math.min(1, f.life / 20));
+      if (f.life <= 0) { f.g.destroy(); this.confetti.splice(i, 1); }
     }
     for (const [, cont] of this.gifts) {
       const meta = (cont as Container & { meta: { inner: Container; glow: Graphics; st: NodeState } }).meta;
