@@ -12,6 +12,37 @@ export const SOUVENIRS_FROM_DAY = 24;
 
 const NAME: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
+/** Options de l'export. */
+export interface SouvenirsOptions {
+  /**
+   * Fournit (au moment de l'export, jamais figé dans le dépôt) une image du décor autour de la case `day`,
+   * en data URL. Branchée plus tard sur `scene.snapshotAround`. Absente ou `null` : mise en page simple.
+   */
+  decor?: (day: number) => Promise<string | null>;
+}
+
+/** Appelle `decor` sans jamais casser l'export : une erreur ou un résultat vide donnent `null`. */
+async function getDecor(opts: SouvenirsOptions, day: number): Promise<string | null> {
+  if (!opts.decor) return null;
+  try {
+    const url = await opts.decor(day);
+    return url && url.startsWith("data:image/") ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Flocons en SVG (dans la page, donc imprimés). */
+const FLAKES = (() => {
+  const pts: Array<[number, number, number]> = [[8, 14, 3], [22, 62, 2], [38, 28, 2.5], [55, 80, 2], [70, 18, 3], [84, 52, 2], [93, 86, 2.5], [14, 90, 2], [62, 44, 1.6]];
+  return `<svg class="flocons" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${pts
+    .map(([x, y, r]) => `<g transform="translate(${x} ${y})" stroke="#fff" stroke-width=".5" stroke-linecap="round"><path d="M0 -${r}V${r}M-${r} 0H${r}M-${r * 0.7} -${r * 0.7}L${r * 0.7} ${r * 0.7}M-${r * 0.7} ${r * 0.7}L${r * 0.7} -${r * 0.7}"/></g>`)
+    .join("")}</svg>`;
+})();
+
+/** Bordure isométrique : liseré à losanges, en SVG. */
+const BORDER = `<svg class="bordure" viewBox="0 0 120 8" preserveAspectRatio="none" aria-hidden="true"><defs><pattern id="los" width="12" height="8" patternUnits="userSpaceOnUse"><path d="M0 4L6 0L12 4L6 8Z" fill="#c0392b"/><path d="M6 4L9 2L12 4L9 6Z" fill="#ffd54a"/></pattern></defs><rect width="120" height="8" fill="url(#los)"/></svg>`;
+
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
@@ -51,7 +82,7 @@ async function letterHtml(day: number, c: PreparedContent): Promise<string> {
 }
 
 /** Construit la page de souvenirs. Erreur avant le 24 décembre ou si personne n'est connecté. */
-export async function exportSouvenirs(backend: BackendApi): Promise<Blob> {
+export async function exportSouvenirs(backend: BackendApi, opts: SouvenirsOptions = {}): Promise<Blob> {
   const me = await backend.me();
   if (!me) throw new Error("Pas connecté.");
   const today = await backend.today();
@@ -60,16 +91,26 @@ export async function exportSouvenirs(backend: BackendApi): Promise<Blob> {
   const sections: string[] = [];
   let count = 0;
   for (const day of PREPARED_DAYS) {
+    const img = await getDecor(opts, day);
+    const bandeau = img
+      ? `<div class="bandeau"><img src="${img}" alt="Le décor autour de la case ${day}"><div class="voile"></div>${FLAKES}</div>`
+      : "";
     for (const to of ["flavie", "alexandre"] as Who[]) {
       const r = await backend.getPrepared(day, to);
       if (r.status === "ready" && (r.content.message.trim() || r.content.photos.length)) {
-        sections.push(await letterHtml(day, r.content));
+        const html = await letterHtml(day, r.content);
+        // le bandeau de décor se place juste après l'ouverture de la lettre
+        sections.push(bandeau ? html.replace(/(<article[^>]*>)/, `$1${bandeau}`).replace(/<\/article>\s*$/, `${BORDER}</article>`) : html);
         count++;
       }
     }
   }
   if (!count) throw new Error("Aucune case préparée à garder pour l'instant.");
 
+  const cover = await getDecor(opts, 24);
+  const couverture = cover
+    ? `<div class="couverture"><img src="${cover}" alt="Le pôle Nord, case 24"><div class="voile"></div>${FLAKES}</div>`
+    : "";
   const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
   const html = `<!doctype html>
 <html lang="fr">
@@ -99,6 +140,18 @@ export async function exportSouvenirs(backend: BackendApi): Promise<Blob> {
   .vide { opacity: .6; font-style: italic; }
   .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; }
   .photos img { width: 100%; border-radius: 12px; display: block; }
+  .avec-decor { position: relative; }
+  header.avec-decor { padding: 0; }
+  header.avec-decor h1 { position: relative; margin-top: -90px; }
+  header.avec-decor p { position: relative; padding-bottom: 24px; }
+  .couverture, .bandeau { position: relative; overflow: hidden; }
+  .couverture { height: 260px; }
+  .bandeau { height: 130px; margin: -20px -22px 14px; border-radius: 20px 20px 0 0; }
+  .couverture img, .bandeau img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .voile { position: absolute; inset: 0; background: linear-gradient(to bottom, #f6f8ff22, #f6f8ffee 92%); }
+  .couverture .voile { background: linear-gradient(to bottom, #101a3a00, #101a3a); }
+  .flocons { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .85; }
+  .bordure { display: block; width: 100%; height: 8px; margin-top: 14px; border-radius: 4px; }
   footer { color: var(--neige); text-align: center; opacity: .7; padding: 0 20px 40px; }
 
   /* Impression / « Enregistrer en PDF » : A4, une page de garde, puis une lettre par page avec ses photos. */
@@ -120,10 +173,12 @@ export async function exportSouvenirs(backend: BackendApi): Promise<Blob> {
     .photos img:only-child { max-height: 150mm; object-fit: contain; }
     footer { color: var(--texte); padding: 6mm 0 0; font-size: 10pt; break-before: avoid; }
   }
+  @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } body { background: #fff; } header, footer { color: var(--texte); } .couverture .voile { background: linear-gradient(to bottom, #f6f8ff00, #fff); } header.avec-decor h1, header.avec-decor p { color: var(--texte); } h2 { break-after: avoid; } section { box-shadow: none; break-inside: avoid; } }
 </style>
 </head>
 <body>
-<header>
+<header class="${cover ? 'avec-decor' : ''}">
+  ${couverture}
   <h1>🎄 Nos souvenirs de l'Avent 2026</h1>
   <p>Alexandre & Flavie : les ${count} cases préparées l'un pour l'autre</p>
   <div><button class="imprimer" type="button" onclick="window.print()">📄 Enregistrer en PDF</button>
@@ -139,8 +194,12 @@ ${sections.join("\n")}
 }
 
 /** Télécharge la page de souvenirs (à appeler dans un clic). */
-export async function downloadSouvenirs(backend: BackendApi, filename = "souvenirs-avent-2026.html"): Promise<void> {
-  const blob = await exportSouvenirs(backend);
+export async function downloadSouvenirs(
+  backend: BackendApi,
+  filename = "souvenirs-avent-2026.html",
+  opts: SouvenirsOptions = {},
+): Promise<void> {
+  const blob = await exportSouvenirs(backend, opts);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

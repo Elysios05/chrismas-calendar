@@ -127,13 +127,10 @@ dans les deux backends (pas d'appel immédiat : seulement aux changements).
   de l'équipe Audio. Ma copie est réparée et les deux patchs sont dans `/home/claude/recuperation-stash/`. Signalé dans l'issue #52.
   **Ne plus utiliser `git stash`.**
 
-### 19 novembre 2026 — souvenirs en PDF (branche `backend/souvenirs-pdf`)
-- Décision d'Alexandre : pour les souvenirs, une page HTML convertie en PDF suffit (pas de génération PDF côté code).
-- La page générée par `exportSouvenirs` a un bouton « 📄 Enregistrer en PDF » (`window.print()`), avec une astuce
-  « choisis Enregistrer au format PDF comme imprimante ».
-- Feuille d'impression : A4, marges 16 × 15 mm, couleurs conservées (`print-color-adjust: exact`), fond blanc.
-  Une page de garde, puis **une lettre par page** avec son jour et ses photos (2 par ligne, 105 mm max ; une photo seule
-  en grand). Aucune photo coupée, bouton masqué.
-- Tests : 5 vérifications ajoutées à `demo_backend_test.py` (bouton, masquage, PDF A4 = garde + 1 page par lettre).
-  Captures dans `src/backend/__tests__/captures/`.
-- Prochaine étape : rien de prévu sur les souvenirs ; à revoir si Alexandre veut un autre style de page.
+### 19 novembre 2026 — souvenirs avec décors (branche `backend/souvenirs-decors`)
+- Demande d'Alexandre : le PDF des souvenirs reprend le fond et les décors du calendrier, **générés par script à l'export**, rien de figé.
+- `exportSouvenirs(backend, { decor })` et `downloadSouvenirs(backend, filename, { decor })` : `decor(jour)` renvoie une data URL (ou `null`).
+  Sera branché par le chef sur `scene.snapshotAround` (ticket #61, équipe Monde). Absent, `null`, erreur ou URL non `data:image/` : mise en page d'avant.
+- Rendu : bandeau `<img>` (vraie balise) avec voile clair en haut de chaque case ; page de garde avec le décor du jour 24 ; flocons et liseré à losanges en SVG.
+  `print-color-adjust: exact` pour que le voile s'imprime ; `break-inside: avoid` sur les lettres.
+- Test : `__tests__/souvenirs_decor_test.py` (8 vérifications, image factice en canvas, PDF A4 par Chrome headless).
