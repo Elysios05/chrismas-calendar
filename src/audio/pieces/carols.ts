@@ -86,3 +86,11 @@ export const WE_WISH_LAST = `B4 - B4 C5 B4 A4 | G4 - E4 - D4 D4 | E4 - A4 - F#4 
 export const WE_WISH_LAST_GRID = ["Em", "C", "C~D7~D7", "G"];
 
 export const tune = (text: string, step: number, i: string, vel: number, start = 0): Ev[] => mel(text, step, i, vel, start);
+
+/**
+ * « Deck the Halls » (air gallois traditionnel, XVIIIe s.) : première phrase avec ses « fa la la ».
+ * Do majeur, 4/4, pas = croche. 4 mesures.
+ */
+export const DECK = `
+  G5 - - F5 E5 - D5 - | C5 - D5 - E5 - C5 - | D5 E5 F5 D5 E5 - - D5 | C5 - B4 - C5 - - -`;
+export const DECK_GRID = ["C", "C", "G7~C", "C~G7"];

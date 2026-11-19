@@ -4,7 +4,7 @@
  * victoire = dernière phrase de « We Wish You a Merry Christmas ».
  */
 import * as I from "../instruments";
-import { as, bars, eachChord, ladder, mel, rootOf, tr, voice, type Grid } from "../theory";
+import { as, bars, eachChord, ladder, mel, rng, rootOf, tr, voice, type Grid } from "../theory";
 import type { Ev, PieceDef } from "../types";
 import * as C from "./carols";
 
@@ -122,4 +122,81 @@ const victory: PieceDef = {
   },
 };
 
-export const GAMES = { calm, action, victory } satisfies Record<string, PieceDef>;
+/* Duel (jeux en direct à deux, compétitifs) : « Deck the Halls » énergique (do majeur, 152) */
+const duelGrid = bars([...C.DECK_GRID, ...C.DECK_GRID, ...C.DECK_GRID, ...C.DECK_GRID], 4);
+
+const duel: PieceDef = {
+  id: "duel",
+  bpm: 152,
+  nightBpm: 136,
+  beats: 64,
+  gainDb: 3.5,
+  reverb: { decay: 1.4, wet: 0.5 },
+  tone: { day: 12000, night: 4000 },
+  instruments: {
+    pluck: { make: I.musicBox, vol: 0, rev: 0.25, pan: 0.15 },
+    cuivres: { make: I.brass, vol: -14, rev: 0.3, pan: -0.15 },
+    glock: { make: I.glock, vol: -5, rev: 0.3, pan: 0.3 },
+    basse: { make: I.bass, vol: -14 },
+    grosse: { make: I.kick, vol: -10 },
+    caisse: { make: I.brush, vol: 10, rev: 0.2 },
+    grelots: { make: I.sleigh, vol: -5, pan: -0.3 },
+  },
+  events() {
+    const phrase = (start: number, i: string, v: number) => mel(C.DECK, 0.5, i, v, start);
+    const melody = [...phrase(0, "pluck", 0.62), ...phrase(16, "pluck", 0.62), ...tr(phrase(32, "pluck", 0.62), 12), ...tr(phrase(48, "pluck", 0.62), 12)];
+    const glk = tr(as([...phrase(32, "x", 0.4), ...phrase(48, "x", 0.4)], "glock"), 12);
+    const stabs: Ev[] = [];
+    const bassEv: Ev[] = [];
+    eachChord(duelGrid, (c, t0, d) => {
+      for (let k = 0; k * 0.5 < d; k++) bassEv.push({ t: t0 + k * 0.5, d: 0.35, n: [rootOf(c, 36) + (k % 2 ? 12 : 0)], v: k % 2 ? 0.5 : 0.75, i: "basse" });
+      if (t0 >= 16) for (const dt of [1, 3]) if (dt < d) stabs.push({ t: t0 + dt, d: 0.3, n: voice(c, 60), v: 0.5, i: "cuivres" });
+    });
+    const perc: Ev[] = [];
+    for (let t = 0; t < 64; t += 1) {
+      perc.push(t % 2 === 0 ? { t, d: 0.2, n: [36], v: 0.7, i: "grosse" } : { t, d: 0.1, n: [60], v: 0.6, i: "caisse" });
+      perc.push({ t, d: 0.05, n: [60], v: 0.6, i: "grelots" }, { t: t + 0.5, d: 0.05, n: [60], v: 0.35, i: "grelots" });
+    }
+    return [...melody, ...glk, ...stabs, ...bassEv, ...perc];
+  },
+};
+
+/* Cosy (créations à deux : dessin, sapin, bonhomme) : « We Wish You » en valse douce, au coin du feu (sol, 3/4, 92) */
+const cosyGrid = bars([...C.WE_WISH_GRID, ...C.WE_WISH_GRID], 3);
+
+const cosy: PieceDef = {
+  id: "cosy",
+  bpm: 92,
+  nightBpm: 80,
+  beats: 48,
+  gainDb: 7,
+  reverb: { decay: 2.6, wet: 0.7 },
+  tone: { day: 7000, night: 3000 },
+  instruments: {
+    celesta: { make: I.celesta, vol: 2, rev: 0.5, pan: 0.15 },
+    choeur: { make: I.choir, vol: -10, rev: 0.6, pan: -0.1 },
+    bois: { make: I.marimba, vol: 0, rev: 0.35, pan: -0.2 },
+    nappe: { make: I.pad, vol: -18, rev: 0.5 },
+    basse: { make: I.subPad, vol: -22 },
+    feu: { make: I.crackle, vol: -6, pan: 0.4 },
+  },
+  events() {
+    const first = tr(mel(C.WE_WISH, 0.5, "celesta", 0.5), 12);
+    const second = mel(C.WE_WISH, 0.5, "choeur", 0.4, 24);
+    const sparkle = tr(as(mel(C.WE_WISH, 0.5, "x", 0.32, 24).filter((e) => e.d >= 1), "celesta"), 24);
+    const waltz: Ev[] = [];
+    eachChord(cosyGrid, (c, t0, d) => {
+      waltz.push({ t: t0, d: 0.9, n: [rootOf(c, 43)], v: 0.5, i: "bois" });
+      for (const dt of [1, 2]) if (dt < d) waltz.push({ t: t0 + dt, d: 0.7, n: voice(c, 59), v: 0.3, i: "bois" });
+    });
+    const bassEv: Ev[] = [];
+    eachChord(cosyGrid, (c, t, d) => bassEv.push({ t, d: d - 0.1, n: [rootOf(c, 31)], v: 0.6, i: "basse" }));
+    // crépitements irréguliers, déterministes (mêmes à chaque boucle)
+    const r = rng(5);
+    const fire: Ev[] = [];
+    for (let t = 0; t < 48; t += 0.15 + r() * 0.9) fire.push({ t, d: 0.02, n: [60], v: 0.25 + r() * 0.6, i: "feu" });
+    return [...first, ...second, ...sparkle, ...waltz, ...chordsHeld(cosyGrid, "nappe", 57, 0.35), ...bassEv, ...fire];
+  },
+};
+
+export const GAMES = { calm, action, victory, duel, cosy } satisfies Record<string, PieceDef>;

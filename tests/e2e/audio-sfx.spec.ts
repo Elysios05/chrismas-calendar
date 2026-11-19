@@ -18,7 +18,11 @@ test.afterAll(async () => {
   await server?.close();
 });
 
-const EFFETS = ["open", "good", "bad", "pop", "win", "locked", "step", "whoosh", "talk", "pingou", "jingle", "snow"];
+const EFFETS = [
+  "open", "good", "bad", "pop", "win", "locked", "step", "whoosh", "talk", "pingou", "jingle", "snow",
+  "fox", "hare", "owl", "squirrel", "reindeer", "seal", "bear", "elf-laugh", "elf-hammer", "elf-hop",
+  "snowball", "skate", "ski", "lift", "partner-in", "partner-out",
+];
 
 test("audio : un effet rejoué 50 fois en 100 ms ne lève aucune exception", async ({ page }, info) => {
   test.skip(info.project.name !== "ordinateur", "test audio pur : un seul projet suffit");

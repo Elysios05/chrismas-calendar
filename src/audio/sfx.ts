@@ -24,11 +24,33 @@ import type { AudioIn, Tone } from "./types";
  * - snow    : « pouf » de neige (boule de neige, chute)
  */
 export type ExtraSfx = "tap" | "select" | "hover" | "talk" | "pingou" | "day" | "night" | "unlock" | "photo" | "send" | "notify" | "jingle" | "snow";
-export type SfxName = Sfx | ExtraSfx;
+
+/**
+ * Lot 3 : animaux, personnages, sports d'hiver, présence de l'autre (à ajouter au type `Sfx`).
+ * - fox : jappement du renard        - hare : lièvre qui tape du pied et file
+ * - owl : hou-hou de la chouette      - squirrel : écureuil qui jacasse
+ * - reindeer : renne (grognement doux + grelots)
+ * - seal : « ork ork » du phoque      - bear : petit grondement d'ours polaire, pas méchant
+ * - elf-laugh : rire de lutin « hihihi »  - elf-hammer : marteau sur l'enclume (tin-tin)
+ * - elf-hop : saut de lutin « boing »
+ * - snowball : boule de neige qui éclate  - skate : glissade de patin
+ * - ski : skieur qui passe              - lift : remontée mécanique (cla-clac et grincement)
+ * - partner-in : l'autre vient de se connecter   - partner-out : l'autre est parti
+ */
+export type CharacterSfx =
+  | "fox" | "hare" | "owl" | "squirrel" | "reindeer" | "seal" | "bear"
+  | "elf-laugh" | "elf-hammer" | "elf-hop" | "snowball" | "skate" | "ski" | "lift"
+  | "partner-in" | "partner-out";
+export type SfxName = Sfx | ExtraSfx | CharacterSfx;
 
 export const SFX_LIST: SfxName[] = [
   "open", "good", "bad", "pop", "win", "locked", "step", "whoosh",
   "tap", "select", "hover", "talk", "pingou", "day", "night", "unlock", "photo", "send", "notify", "jingle", "snow",
+];
+
+export const CHARACTER_SFX: CharacterSfx[] = [
+  "fox", "hare", "owl", "squirrel", "reindeer", "seal", "bear",
+  "elf-laugh", "elf-hammer", "elf-hop", "snowball", "skate", "ski", "lift", "partner-in", "partner-out",
 ];
 
 /**
@@ -36,7 +58,7 @@ export const SFX_LIST: SfxName[] = [
  * Sert à garantir des heures de départ strictement croissantes par synthé (sinon Tone lève
  * « Start time must be strictly greater than previous start time » quand un effet est rejoué très vite).
  */
-type Voice = "bell" | "blip" | "noise" | "knock" | "wind" | "chirp" | "jingle";
+type Voice = "bell" | "blip" | "noise" | "knock" | "wind" | "chirp" | "jingle" | "growl" | "scrape";
 const USES: Record<SfxName, [Voice, number][]> = {
   open: [["bell", 0.22]], good: [["bell", 0.09]], bad: [["blip", 0.24]], pop: [["blip", 0]],
   win: [["bell", 0.5]], locked: [["knock", 0.13]], step: [["noise", 0]], whoosh: [["wind", 0]],
@@ -44,6 +66,11 @@ const USES: Record<SfxName, [Voice, number][]> = {
   pingou: [["chirp", 0.2]], day: [["bell", 0.27]], night: [["bell", 0.36]], unlock: [["bell", 0.24], ["jingle", 0.3]],
   photo: [["noise", 0.09], ["knock", 0.01]], send: [["wind", 0], ["bell", 0.3]], notify: [["bell", 0.14]],
   jingle: [["jingle", 0.35]], snow: [["noise", 0], ["knock", 0]],
+  fox: [["chirp", 0.2]], hare: [["knock", 0.16], ["scrape", 0.25]], owl: [["blip", 0.45]], squirrel: [["chirp", 0.3]],
+  reindeer: [["growl", 0], ["jingle", 0.35]], seal: [["growl", 0.25]], bear: [["growl", 0], ["noise", 0]],
+  "elf-laugh": [["chirp", 0.3]], "elf-hammer": [["knock", 0.22], ["bell", 0.22]], "elf-hop": [["blip", 0]],
+  snowball: [["noise", 0], ["bell", 0.08]], skate: [["scrape", 0.32]], ski: [["wind", 0]], lift: [["knock", 0.14], ["chirp", 0.3]],
+  "partner-in": [["bell", 0.12], ["jingle", 0.2]], "partner-out": [["bell", 0.16]],
 };
 /** Écart minimal entre deux attaques d'un même synthé (s) */
 const GAP = 0.01;
@@ -60,6 +87,9 @@ export class SfxBank {
   private noiseFilter: ToneNS.Filter;
   private knock: ToneNS.MembraneSynth;
   private wind: ToneNS.NoiseSynth;
+  private growl!: ToneNS.Synth;
+  private scrape!: ToneNS.NoiseSynth;
+  private scrapeFilter!: ToneNS.Filter;
   private windFilter: ToneNS.Filter;
   private stepCount = 0;
   private talkCount = 0;
@@ -113,7 +143,7 @@ export class SfxBank {
     this.windFilter.connect(bus);
 
     this.chirp = new T.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.003, decay: 0.05, sustain: 0.3, release: 0.04 } });
-    this.chirp.volume.value = -6;
+    this.chirp.volume.value = 0;
     this.chirp.connect(bus);
 
     this.jingleFilter = new T.Filter({ type: "bandpass", frequency: 8500, Q: 1.4 });
@@ -124,6 +154,19 @@ export class SfxBank {
     this.jingleFilter.connect(rev);
 
     this.nodes.push(this.chirp, this.jingleNoise, this.jingleFilter);
+
+    // voix grave des animaux (phoque, ours, renne) : scie filtrée avec vibrato
+    const growlFilter = new T.Filter({ type: "lowpass", frequency: 900, Q: 2 });
+    const growlVib = new T.Vibrato({ frequency: 7, depth: 0.15 });
+    this.growl = new T.Synth({ oscillator: { type: "sawtooth" }, envelope: { attack: 0.03, decay: 0.1, sustain: 0.7, release: 0.1 } });
+    this.growl.volume.value = -2;
+    this.growl.chain(growlVib, growlFilter, bus);
+    // frottement (patins, lièvre qui file)
+    this.scrapeFilter = new T.Filter({ type: "bandpass", frequency: 4000, Q: 3 });
+    this.scrape = new T.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.3, release: 0.1 } });
+    this.scrape.volume.value = 6;
+    this.scrape.chain(this.scrapeFilter, bus);
+    this.nodes.push(growlFilter, growlVib, this.growl, this.scrapeFilter, this.scrape);
     this.nodes.push(bus, rev, revGain, this.bell, this.blip, this.noise, this.noiseFilter, this.knock, this.wind, this.windFilter);
   }
 
@@ -210,15 +253,15 @@ export class SfxBank {
       }
       case "talk": {
         const m = TALK_NOTES[(this.talkCount++ * 7 + 3) % TALK_NOTES.length];
-        this.chirp.triggerAttackRelease(hz(m), 0.035, t, 0.22);
+        this.chirp.triggerAttackRelease(hz(m), 0.035, t, 0.11);
         break;
       }
       case "pingou": {
         // « pouic ! » qui monte puis redescend un peu
-        this.chirp.triggerAttackRelease(700, 0.16, t, 0.5);
+        this.chirp.triggerAttackRelease(700, 0.16, t, 0.25);
         this.chirp.frequency.exponentialRampToValueAtTime(1500, t + 0.08);
         this.chirp.frequency.exponentialRampToValueAtTime(1200, t + 0.16);
-        this.chirp.triggerAttackRelease(1100, 0.08, t + 0.2, 0.4);
+        this.chirp.triggerAttackRelease(1100, 0.08, t + 0.2, 0.2);
         this.chirp.frequency.exponentialRampToValueAtTime(1600, t + 0.27);
         break;
       }
@@ -264,6 +307,112 @@ export class SfxBank {
         this.noiseFilter.frequency.setValueAtTime(900, t);
         this.noise.triggerAttackRelease(0.12, t, 0.8);
         this.knock.triggerAttackRelease(90, 0.1, t, 0.3);
+        break;
+      }
+      case "fox": {
+        // deux jappements aigus
+        [0, 0.17].forEach((dt) => {
+          this.chirp.triggerAttackRelease(900, 0.09, t + dt, 0.6);
+          this.chirp.frequency.exponentialRampToValueAtTime(1500, t + dt + 0.03);
+          this.chirp.frequency.exponentialRampToValueAtTime(800, t + dt + 0.09);
+        });
+        break;
+      }
+      case "hare": {
+        [0, 0.08, 0.16].forEach((dt) => this.knock.triggerAttackRelease(110, 0.05, t + dt, 0.45));
+        this.scrapeFilter.frequency.setValueAtTime(2500, t + 0.25);
+        this.scrape.triggerAttackRelease(0.12, t + 0.25, 0.35);
+        break;
+      }
+      case "owl": {
+        this.blip.oscillator.type = "sine";
+        this.blip.triggerAttackRelease(420, 0.25, t, 0.4);
+        this.blip.frequency.linearRampToValueAtTime(380, t + 0.25);
+        this.blip.triggerAttackRelease(400, 0.35, t + 0.45, 0.4);
+        this.blip.frequency.linearRampToValueAtTime(350, t + 0.8);
+        break;
+      }
+      case "squirrel": {
+        for (let k = 0; k < 7; k++) this.chirp.triggerAttackRelease(2200 + (k % 2) * 400, 0.03, t + k * 0.05, 0.35);
+        break;
+      }
+      case "reindeer": {
+        this.growl.triggerAttackRelease(150, 0.3, t, 0.3);
+        this.growl.frequency.linearRampToValueAtTime(120, t + 0.3);
+        for (let k = 0; k < 6; k++) this.jingleNoise.triggerAttackRelease(0.03, t + 0.1 + k * 0.05, 0.35 - k * 0.04);
+        break;
+      }
+      case "seal": {
+        [0, 0.25].forEach((dt) => {
+          this.growl.triggerAttackRelease(320, 0.14, t + dt, 0.5);
+          this.growl.frequency.exponentialRampToValueAtTime(240, t + dt + 0.14);
+        });
+        break;
+      }
+      case "bear": {
+        this.growl.triggerAttackRelease(95, 0.5, t, 0.5);
+        this.growl.frequency.linearRampToValueAtTime(80, t + 0.5);
+        this.noiseFilter.frequency.setValueAtTime(400, t);
+        this.noise.triggerAttackRelease(0.3, t, 0.3);
+        break;
+      }
+      case "elf-laugh": {
+        [1500, 1400, 1300, 1250, 1150].forEach((f, k) => this.chirp.triggerAttackRelease(f, 0.045, t + k * 0.075, 0.45));
+        break;
+      }
+      case "elf-hammer": {
+        [0, 0.22].forEach((dt) => {
+          this.knock.triggerAttackRelease(220, 0.03, t + dt, 0.5);
+          this.bell.triggerAttackRelease(n("A6"), 0.2, t + dt, 0.3);
+        });
+        break;
+      }
+      case "elf-hop": {
+        this.blip.oscillator.type = "sine";
+        this.blip.triggerAttackRelease(300, 0.18, t, 0.55);
+        this.blip.frequency.exponentialRampToValueAtTime(950, t + 0.12);
+        break;
+      }
+      case "snowball": {
+        this.noiseFilter.frequency.setValueAtTime(1300, t);
+        this.noise.triggerAttackRelease(0.15, t, 1);
+        ["E7", "B7"].forEach((s, k) => this.bell.triggerAttackRelease(n(s), 0.08, t + 0.04 + k * 0.04, 0.15));
+        break;
+      }
+      case "skate": {
+        const f = this.scrapeFilter.frequency;
+        f.cancelScheduledValues(t);
+        f.setValueAtTime(5000, t);
+        f.exponentialRampToValueAtTime(3000, t + 0.3);
+        this.scrape.triggerAttackRelease(0.3, t, 0.4);
+        this.scrapeFilter.frequency.setValueAtTime(5500, t + 0.32);
+        this.scrape.triggerAttackRelease(0.08, t + 0.32, 0.3);
+        break;
+      }
+      case "ski": {
+        const fq = this.windFilter.frequency;
+        fq.cancelScheduledValues(t);
+        fq.setValueAtTime(2500, t);
+        fq.exponentialRampToValueAtTime(700, t + 0.6);
+        this.wind.triggerAttackRelease(0.35, t, 0.8);
+        break;
+      }
+      case "lift": {
+        this.knock.triggerAttackRelease(85, 0.06, t, 0.6);
+        this.knock.triggerAttackRelease(120, 0.05, t + 0.14, 0.5);
+        this.chirp.triggerAttackRelease(1700, 0.15, t + 0.3, 0.06);
+        this.chirp.frequency.linearRampToValueAtTime(1550, t + 0.45);
+        break;
+      }
+      case "partner-in": {
+        this.bell.triggerAttackRelease(n("G5"), 0.2, t, 0.35);
+        this.bell.triggerAttackRelease(n("D6"), 0.4, t + 0.12, 0.38);
+        for (let k = 0; k < 4; k++) this.jingleNoise.triggerAttackRelease(0.03, t + 0.05 + k * 0.05, 0.3);
+        break;
+      }
+      case "partner-out": {
+        this.bell.triggerAttackRelease(n("D6"), 0.2, t, 0.3);
+        this.bell.triggerAttackRelease(n("G5"), 0.5, t + 0.16, 0.26);
         break;
       }
       case "whoosh": {

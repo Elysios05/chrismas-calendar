@@ -11,5 +11,6 @@ export const silentSound: SoundApi = {
   unlock: async () => {},
   setZone() {},
   setGameMusic() {},
+  playJingle() {},
   play() {},
 };

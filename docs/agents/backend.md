@@ -112,3 +112,25 @@ dans les deux backends (pas d'appel immédiat : seulement aux changements).
   cases préparées d'exemple jusqu'au jour simulé inclus ; au jour 1, tout est neuf. La progression est aussi filtrée à `≤ ?jour`
   (revenir à un jour antérieur masque les cases ouvertes plus tard).
 - Tests : 48 vérifications dans `demo_backend_test.py`.
+
+### 19 novembre 2026 — lot 3 (branche `backend/lot-3`)
+- **Jeux en direct** : `src/backend/realtime.ts` (`LiveGame` / `joinLive`).
+  - Salle `room:jour-N`, présence, « prêt ? », départ synchronisé sur l'horloge d'Alexandre (décalage estimé par ping-pong).
+  - État partagé (dernier écrit gagne) ; reprise via `getGameState(jour, "live:partie")`.
+  - Mode d'emploi : `src/backend/README.md`. Test à deux pages, horloge de Flavie décalée de 5 s : `realtime_test.py` (19 vérifications).
+- **Hors ligne** : `public/sw.js` garde la page (réseau d'abord, 3 s max), les scripts, les icônes et les polices, jamais les données Supabase.
+  - Un cache par version (racine et `/demo/`). Enregistré au démarrage par `createBackend()`, en production seulement (`offline.ts`).
+  - Testé serveur coupé dans `pwa_test.py` (22 vérifications).
+- **Souvenirs** : `exportSouvenirs(backend)` / `downloadSouvenirs(backend)` (`src/backend/souvenirs.ts`).
+  - Page HTML autonome avec les lettres des deux côtés et les photos intégrées, disponible à partir du 24.
+- Incident : les remises `git stash` sont communes à toutes les `wt-*`, et un `stash pop` simultané a échangé mon travail avec celui
+  de l'équipe Audio. Ma copie est réparée et les deux patchs sont dans `/home/claude/recuperation-stash/`. Signalé dans l'issue #52.
+  **Ne plus utiliser `git stash`.**
+
+### 19 novembre 2026 — souvenirs avec décors (branche `backend/souvenirs-decors`)
+- Demande d'Alexandre : le PDF des souvenirs reprend le fond et les décors du calendrier, **générés par script à l'export**, rien de figé.
+- `exportSouvenirs(backend, { decor })` et `downloadSouvenirs(backend, filename, { decor })` : `decor(jour)` renvoie une data URL (ou `null`).
+  Sera branché par le chef sur `scene.snapshotAround` (ticket #61, équipe Monde). Absent, `null`, erreur ou URL non `data:image/` : mise en page d'avant.
+- Rendu : bandeau `<img>` (vraie balise) avec voile clair en haut de chaque case ; page de garde avec le décor du jour 24 ; flocons et liseré à losanges en SVG.
+  `print-color-adjust: exact` pour que le voile s'imprime ; `break-inside: avoid` sur les lettres.
+- Test : `__tests__/souvenirs_decor_test.py` (8 vérifications, image factice en canvas, PDF A4 par Chrome headless).
