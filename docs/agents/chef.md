@@ -21,6 +21,12 @@ canal entre Alexandre et les équipes en arrière-plan. **Dossiers** : `src/core
 - **Limite d'utilisation de 5 h** partagée : les agents s'arrêtent avec « You've hit your 5-hour limit · resets HH:MM ».
   Leur travail est conservé ; les relancer après l'heure indiquée.
 
+## Système de travail (décidé le 19 nov)
+- Chef **léger** : fusionne, arbitre, lance les équipes en arrière-plan. Repartir d'une session chef neuve (lire ce fichier + `historique-chef-de-projet.md` dans le projet claude.ai) plutôt que de traîner un long historique.
+- Questions des équipes à Alexandre : ticket unique **#59 « Questions pour Alexandre »** ; le chef ne relaie dans sa conversation que l'important.
+- Chaque session termine chaque tâche par « ✅ Journal à jour — tu peux taper `/clear` maintenant. » (règle dans `CLAUDE.md`).
+- **Modèle par tâche** pour les équipes en arrière-plan (paramètre `model` de l'outil Agent) : `opus` pour le visuel, les jeux, l'architecture et les correctifs délicats ; `sonnet` pour les tests, la documentation, les petits correctifs bien cernés, les scripts ; `haiku` pour les vérifications triviales.
+
 ## Procédures
 - **GitHub** : `gh` marche en **REST** (`gh api repos/Elysios05/chrismas-calendar/...`) ; GraphQL et `gh pr/issue` sont bloqués.
   Clone superficiel : `git fetch --depth=80 origin <branche>:refs/remotes/origin/<branche>` avant de fusionner.

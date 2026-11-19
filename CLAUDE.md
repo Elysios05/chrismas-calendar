@@ -40,6 +40,7 @@ On code contre ces interfaces. Besoin d'un changement de contrat → le demander
 7. Tenir à jour la section « Journal » de ton brief (`docs/agents/<equipe>.md`) : décisions prises avec Alexandre, et où tu en es.
 8. **N'utilise jamais `git stash`** : la pile est partagée entre toutes les copies de travail du dépôt. Fais un commit temporaire sur ta branche à la place.
 9. **Parler au chef de projet = ouvrir une issue GitHub.** C'est le seul canal : les équipes ne se voient pas entre elles.
+10. **Questions pour Alexandre** quand il n'est pas dans ta conversation (équipes en arrière-plan) : commente le ticket **#59 « Questions pour Alexandre »**, avec 2–3 options et ta recommandation. Dans une session directe avec lui, pose-lui la question directement.
 
 ## Parler au chef de projet
 Pour tout ce qui sort de ton dossier — changement de contrat dans `src/core/contracts.ts`, besoin qu'une autre
@@ -55,7 +56,8 @@ confié par écrit dans l'issue.
 
 ## Économiser le contexte (et la limite d'utilisation)
 - **Tout ce qui compte vit dans le dépôt**, pas dans la conversation : ce fichier, ton brief et son **Journal**, les issues, les PR. Une session neuve doit pouvoir reprendre ton travail en lisant ces fichiers.
-- **À la fin de chaque tâche** (PR ouverte) : mets à jour ton Journal (où tu en es, décisions d'Alexandre, prochaine étape), puis dis à Alexandre : « Tâche terminée, tu peux taper `/clear` pour repartir à neuf. » Une nouvelle tâche = une conversation propre.
+- **À la fin de chaque tâche** (PR ouverte), **obligatoirement** : 1) mets à jour ton Journal (où tu en es, décisions d'Alexandre, prochaine étape, tout ce dont une session neuve aurait besoin) ; 2) commite-le ; 3) termine ton message par cette ligne, seule et en gras : **« ✅ Journal à jour — tu peux taper `/clear` maintenant. »** Ne la dis jamais si le journal n'est pas commité. Une nouvelle tâche = une conversation propre, qui repart de ce fichier et de ton Journal.
+- Si une tâche devient longue (beaucoup d'échanges, de captures ou de gros fichiers lus), arrête-toi à une étape propre, mets le Journal à jour, et dis : **« 📦 Point d'étape enregistré — tu peux taper `/clear`, je reprendrai depuis mon Journal. »**
 - Au milieu d'une longue tâche, s'il le faut, propose `/compact` plutôt que de traîner tout l'historique.
 - **Lis le moins possible** : cherche (`grep`) avant d'ouvrir un fichier, n'ouvre que les lignes utiles, ne recopie pas de longs résultats de commandes, ne refais pas de captures inutiles.
 
