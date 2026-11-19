@@ -101,17 +101,44 @@ Le chef a branché les jeux lui-même dans `App.tsx` : toucher une case → `cha
 Décisions techniques prises seul : accents offerts (taper E révèle É et È), clavier AZERTY à l'écran **et**
 clavier physique sur ordinateur, lettres groupées par mot pour qu'un mot ne se coupe jamais en fin de ligne.
 
-### 18 novembre 2026 — jour 17, mots croisés (branche `jeux/motscroises-jour17`)
+### 19 novembre 2026 — socle des jeux à deux + jour 11 (branche `jeux/synchro-jour11`)
 
+**Le morceau important, c'est le socle** : `src/games/shared/partie.ts`, un **journal de coups** partagé.
+`backend.joinRoom` ne garantit rien (message perdu si l'écran est éteint, rien n'est mémorisé, un
+rechargement repart de zéro). Chaque action est donc un coup identifié, diffusé en direct **et** déposé
+via `setGameState`. Qui arrive, revient ou a raté un message rejoue le journal. Conséquence : le mode
+« tour par tour » demandé au cahier des charges n'est pas un deuxième jeu à écrire, c'est le même
+journal lu plus tard. Les cinq autres jeux en direct se poseront dessus.
+
+**Décisions prises avec Alexandre (jour 11) :** 12 questions, mélange de « qu'est-ce qu'on choisirait
+à deux ? » et de « qui de nous deux ? », pas de chrono (on voit « Flavie a répondu »), et quand l'autre
+n'est pas là : Pingou fait patienter 20 secondes puis propose « Jouer quand même ».
+
+**Attention pour les questions « qui » :** les options sont les prénoms, jamais « toi » / « moi » —
+sinon les deux joueurs ne désignent pas la même personne et le score de synchro ne veut plus rien dire.
+
+**Défaut trouvé en testant à deux onglets :** les coups déjà déposés sont lus avant que le jeu n'écoute,
+donc le premier calcul des réponses restait vide — Flavie revenant dans la case repartait de la question 1
+au lieu de la 3. Corrigé.
+
+**Vérifié à deux onglets** (BroadcastChannel ne traverse pas deux navigateurs, il faut deux onglets du
+même) : présence des deux côtés, révélation simultanée, désaccord, départ d'un joueur, réponse en solo,
+retour de l'autre qui retrouve l'état. Aucune erreur console.
+
+**Reste à faire :**
+- Remplacer le faux backend d'atelier par le vrai mode démo quand `src/backend/` existe.
+- Alexandre : remplacer les 10 questions d'exemple par les vraies.
+- Suite : rébus (7), pendu (15), mots croisés (17), puis les scores à battre 10 et 22.
+
+<!-- lignes du journal reprises de main lors de la fusion -->
+### 18 novembre 2026 — jour 17, mots croisés (branche `jeux/motscroises-jour17`)
 **Décisions prises avec Alexandre :** 8 mots sur une grille d'environ 9×9, clavier AZERTY maison
 (comme le pendu), « Vérifier » gratuit et « Une lettre » payée 25 points, contenu moitié Noël
 moitié « à vous deux ».
-
 **Décision technique importante** : la grille n'est pas dessinée, elle est **construite par le code**
 (`src/games/motscroises/grille.ts`) à partir de la liste de mots, en cherchant les croisements.
 Alexandre peut donc remplacer les mots sans rien redessiner. Le générateur essaie une soixantaine
 d'agencements et garde le plus compact et le plus carré (sinon la grille partait en 13×13).
-
 **Deux défauts trouvés en regardant le résultat, puis corrigés :**
 - `TRAIN` se posait **par-dessus** `TRAINEAU` (un mot préfixe d'un autre) : deux définitions pour les
   mêmes cases. Le générateur refuse maintenant un mot entièrement recouvert, et un mot qui rallongerait
@@ -119,8 +146,3 @@ d'agencements et garde le plus compact et le plus carré (sinon la grille partai
 - Sur ordinateur, la première ligne de la grille était rognée : `.jeu-centre` centrait verticalement un
   contenu plus haut que la fenêtre. Passé en `justify-content: safe center` dans le cadre commun —
   ça profite à tous les jeux.
-
-**Reste à faire :**
-- Remplacer le faux backend d'atelier par le vrai mode démo quand `src/backend/` existe.
-- Alexandre : remplacer les 10 questions d'exemple par les vraies.
-- Suite : rébus (7), pendu (15), mots croisés (17), puis les scores à battre 10 et 22.
