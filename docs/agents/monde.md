@@ -203,3 +203,13 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - **Panneau « route barrée »** redessiné : deux poteaux, planche large avec un flocon, bandes rouges et
     blanches, lanterne toujours allumée (halo la nuit). Planté en travers du chemin, au dernier point qui reste
     dans l'écran d'un téléphone (là où la route entre dans les nuages, il sortait souvent de l'écran).
+- 19 nov — vie du monde (#11) et village du Père Noël (#42), priorité 2 de l'issue #29. Branche `monde/vie-du-monde`.
+  Choix d'Alexandre :
+  - **un peu de tout d'abord** : dans chaque monde, 2–3 choses qui bougent (animaux, villageois, patineurs, lutins…) ;
+  - **toucher un animal** : réaction propre à chaque espèce (lièvre et renard filent puis reviennent, chouette
+    s'envole, phoque frappe des nageoires, ours se dresse) avec son cri via `sound.play` ;
+  - **toucher un personnage** : il s'arrête, fait coucou, puis repart (les lutins rient : `elf-laugh`) ;
+  - **pôle Nord** : maison du Père Noël en priorité, puis si possible bureau du courrier et écurie des rennes,
+    à côté de la fabrique de jouets ; lutins qui font la navette fabrique ↔ traîneau.
+  - Sons livrés par l'Audio (#11) : `fox`, `hare`, `owl`, `squirrel`, `reindeer`, `seal`, `bear`, `elf-laugh`,
+    `elf-hammer`, `elf-hop`, `snowball`, `skate`, `ski`, `lift`. Le chef branchera `scene.setSound(sound)` depuis `App.tsx`.
