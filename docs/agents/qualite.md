@@ -22,3 +22,10 @@
 - `attendreScene` échoue explicitement si la carte n'apparaît pas après connexion.
 - Reste : exceptions Tone.js revues dans les captures (ticket Audio) ; test « jeu en direct à deux onglets » en `fixme` tant qu'aucun jeu en direct n'existe (#56) ; deux onglets : fermer le premier avant d'ouvrir le second (SwiftShader).
 - Durées : e2e ~29 min, captures ~40 min ; lancer en arrière-plan (nohup).
+
+### 19 novembre 2026 (branche `qualite/capture-commune`)
+- Décision d'Alexandre : une seule commande de capture pour toutes les équipes. Ajout de `npm run capture` (`tests/qa/capture.mjs`), doc dans `docs/qa/capture.md`.
+- Ajouts à `commun.mjs` : `buildRecent`, `avancerCamera` (ticker avancé à la main, rendu coupé), `renduActif`. `ouvrirDemo` utilise maintenant l'URL absolue `BASE`.
+- Constat : la fermeture de la bulle de Pingou ne marche pas avec le rendu coupé (elle doit se faire rendu actif, ~12 s) ; l'ouverture d'une case est en revanche bien plus rapide rendu coupé.
+- Durées : capture simple ~27 s, avec `--case` ~50 s par appareil.
+
