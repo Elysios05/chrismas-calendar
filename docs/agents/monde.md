@@ -243,3 +243,23 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     sur captures (taille des animaux, densité).
   - Retour d'Alexandre : **animaux grossis de 30 %** (`scale 1.3` sur les espèces de `ANIMAUX`), pour qu'on les
     remarque et qu'on les touche facilement. Les personnages gardent leur taille.
+  - PR #67 fusionnée par le chef, `setSound` branché dans `App.tsx`.
+- 20 nov — corrections visuelles (priorité 3 de #29), branche `monde/corrections-visuelles` :
+  - **#49 traîneau** : le cube vert (« hotte ») devient un sac de toile noué de rouge et deux paquets enrubannés.
+  - **#50 cadeau 16** : la transition marché → grotte passe de 6 à 12 cases (`transitionLen`), et **règle
+    générale** dans `terrain.ts` : devant chaque case (plus bas à l'écran), un cône (`devant`, 5 rangées,
+    s'évasant) où seuls les décors bas (`LOW` : rochers, buissons, paquets, bancs, luges, barrières, lanternes
+    de glace, badauds, bonshommes de neige, rennes, braseros) sont permis. Vaut aussi pour les repères et les
+    bâtiments du village du Père Noël. Coût mesuré au script de comptage : quelques maisons et lampadaires de
+    moins près des cases (village 12 → 10 maisons, cabanes du lac 4 → 2). Premier cône plus large (6 rangées)
+    retirait trop : ramené.
+  - Le **grand sapin de la place du 6** passe derrière la case (il était pile devant).
+  - **#48 aurores** : nouveau module `aurora.ts`. Abandon des polygones posés par-dessus tout l'écran.
+    Les aurores sont des voiles texturés (texture générée une fois sur un canevas) glissés **dans le monde entre
+    le sol et le décor** (`world` = `ground`, `aurora`, `objects`), donc maisons et sapins passent devant ; le
+    calque est recalé chaque image en coordonnées d'écran. Plus un halo doux qui teinte la neige.
+    Alexandre a choisi **B · Voiles** (trois larges bandes diffuses) plutôt que A · Rideaux (stries nettes).
+  - Piège : `MeshRope` oriente la texture selon la normale du ruban ; dès qu'il ondule, les stries se
+    déploient en éventail. Remplacé par un `MeshSimple` à deux sommets par colonne (haut/bas) : toujours vertical.
+    Autre piège : `rope.width` est l'échelle du conteneur, pas l'épaisseur du ruban.
+  - Prochaine étape (priorité 4 de #29) : #24 lisibilité des cadeaux, #18 icône Pingou, #12 présentation des mondes.
