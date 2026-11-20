@@ -247,9 +247,10 @@ export function buildTerrain(seed = 2026): Terrain {
   };
   // demi-emprise des bâtiments : sous eux, on taille une terrasse plate dans la pente
   const FOOTPRINT: Partial<Record<PropKind, number>> = { house: 0.8, chalet: 1, workshop: 1.3, stall: 0.75, santaHouse: 1.1, postOffice: 0.8, stable: 1.1 };
+  /** case et emprise de chaque décor posé, pour pouvoir le déplacer ensuite */
+  const origine = new Map<PlacedProp, { c: Cell; r: number }>();
   const place = (kind: PropKind, c: Cell, r = 0) => {
     // règle générale (issue #50) : rien de haut juste devant une case
-    if (!LOW.has(kind) && hidesGift(c.x, c.y, r)) return;
     // les éléments naturels sont décalés au hasard : sinon la forêt se lit comme une plantation en lignes
     const wild = kind === "tree" || kind === "treeSmall" || kind === "bush" || kind === "rock";
     const jx = wild ? (R() - 0.5) * 0.7 : 0, jy = wild ? (R() - 0.5) * 0.7 : 0;
@@ -281,6 +282,7 @@ export function buildTerrain(seed = 2026): Terrain {
       }
     }
     props.push({ kind, x: c.x + jx, y: c.y + jy, z, zone: c.zone, seed: Math.floor(R() * 1e6), drop });
+    origine.set(props[props.length - 1], { c, r });
     for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) taken.add(key(c.x + dx, c.y + dy));
   };
   const all = shuffled;
@@ -297,6 +299,19 @@ export function buildTerrain(seed = 2026): Terrain {
   const hidesGift = (x: number, y: number, r: number) => {
     for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) if (devant.has(key(x + dx, y + dy))) return true;
     return false;
+  };
+  /** la place libre la plus proche de `c`, dans le même monde, hors des cônes et à distance de route semblable */
+  const ailleurs = (c: Cell, r: number): Cell | undefined => {
+    const bati = r > 0;
+    let best: Cell | undefined, bs = Infinity;
+    for (let dx = -10; dx <= 10; dx++) for (let dy = -10; dy <= 10; dy++) {
+      const o = cells.get(key(c.x + dx, c.y + dy));
+      if (!o || o.zone !== c.zone || o.road || o.lake || taken.has(key(o.x, o.y))) continue;
+      if (slopeOf(o) > (bati ? 0.6 : 0.9) || !free(o.x, o.y, r) || hidesGift(o.x, o.y, r)) continue;
+      const score = Math.hypot(dx, dy) + Math.abs(o.d - c.d) * 1.5;
+      if (score < bs) { bs = score; best = o; }
+    }
+    return best;
   };
 
   // rangs du chemin où l'on change de monde
@@ -467,6 +482,24 @@ export function buildTerrain(seed = 2026): Terrain {
     for (const [dx, dy] of [[2, -2], [-2, 2], [3, 2], [2, 2]] as const) put("visitor", dx, dy);
   }
 
+  /* ---------- rien de haut devant une case (issue #50) ---------- */
+  // Alexandre ne veut perdre aucun décor : le décor est d'abord posé comme si la règle n'existait pas,
+  // puis chaque élément haut qui cacherait une case est déplacé à la place libre la plus proche.
+  let horsPlace = 0; // décors qu'on n'a pu caser nulle part : doit rester à 0 (sinon, agrandir la carte)
+  for (const p of props.slice()) {
+    const o = origine.get(p);
+    if (!o || LOW.has(p.kind) || !hidesGift(o.c.x, o.c.y, o.r)) continue;
+    for (let dx = -o.r; dx <= o.r; dx++) for (let dy = -o.r; dy <= o.r; dy++) taken.delete(key(o.c.x + dx, o.c.y + dy));
+    const alt = ailleurs(o.c, o.r);
+    if (!alt) {
+      horsPlace++;
+      for (let dx = -o.r; dx <= o.r; dx++) for (let dy = -o.r; dy <= o.r; dy++) taken.add(key(o.c.x + dx, o.c.y + dy));
+      continue;
+    }
+    props.splice(props.indexOf(p), 1);
+    place(p.kind, alt, o.r);
+  }
+
   // porche d'entrée et de sortie de la grotte, à cheval sur le chemin
   const caveZone = ZONES.findIndex((z) => z.id === "grotte");
   if (caveZone >= 0) {
@@ -479,5 +512,6 @@ export function buildTerrain(seed = 2026): Terrain {
   }
 
   T0.props = props;
+  if (horsPlace) console.warn(`[monde] ${horsPlace} décor(s) sans place hors des cônes des cases : agrandir la carte`);
   return T0;
 }
