@@ -30,6 +30,18 @@ function gradientTexture(stops: [number, string][], h = 256) {
   ctx.fillStyle = g; ctx.fillRect(0, 0, 4, h);
   return Texture.from(cv);
 }
+/** Halo rond, blanc au centre et transparent au bord : la lumière propre du cadeau du jour */
+function haloTexture() {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 128;
+  const ctx = cv.getContext("2d")!;
+  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.35, "rgba(255,255,255,0.55)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128);
+  return Texture.from(cv);
+}
 function cloudTexture() {
   const cv = document.createElement("canvas");
   cv.width = 256; cv.height = 110;
@@ -57,6 +69,11 @@ export class Scene {
   fog = new Sprite();
   clouds: { s: Sprite; v: number; base: number }[] = [];
   cloudLayer = new Container();
+  // au-dessus du voile de nuit et du brouillard (issue #24) : les numéros des cases et la lumière
+  // du cadeau du jour ne s'assombrissent jamais. Le calque suit la caméra du monde à chaque image.
+  overlay = new Container();
+  giftLight = new Sprite();
+  labels = new Container();
   snowLayer = new Container();
   whiteout = new Graphics();
   pal: Palette;
@@ -126,7 +143,13 @@ export class Scene {
       this.cloudLayer.addChild(s);
       this.clouds.push({ s, v: 0.15 + Math.random() * 0.35, base: s.y });
     }
-    app.stage.addChild(this.world, this.tint, this.fog, this.cloudLayer, this.whiteout, this.confettiLayer, this.snowLayer);
+    this.giftLight.texture = haloTexture();
+    this.giftLight.anchor.set(0.5);
+    this.giftLight.blendMode = "add";
+    this.giftLight.tint = 0xffc95e;
+    this.giftLight.visible = false;
+    this.overlay.addChild(this.giftLight, this.labels);
+    app.stage.addChild(this.world, this.tint, this.fog, this.cloudLayer, this.overlay, this.whiteout, this.confettiLayer, this.snowLayer);
     const flakeTex = app.renderer.generateTexture(new Graphics().circle(6, 6, 6).fill(0xffffff));
     for (let i = 0; i < 260; i++) {
       const s = new Sprite(flakeTex);
@@ -206,7 +229,7 @@ export class Scene {
     for (const n of this.terrain.nodes) {
       if ((before.get(n.day) ?? "locked") === (states.get(n.day) ?? "locked")) continue;
       const old = this.gifts.get(n.day);
-      if (old) { this.objects.removeChild(old); old.destroy({ children: true }); }
+      if (old) { this.objects.removeChild(old); this.dropLabel(old); old.destroy({ children: true }); }
       this.objects.addChild(this.makeGift(n));
     }
   }
@@ -224,6 +247,7 @@ export class Scene {
   build() {
     this.ground.removeChildren().forEach((c) => c.destroy());
     this.objects.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.labels.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.gifts.clear();
     const { cells, path, props, nodes } = this.terrain;
     const c = this.pal.c;
@@ -452,23 +476,42 @@ export class Scene {
     lid.circle(top.x, top.y - 3, 3).fill(rib);
     if (st === "opened") { lid.x = 16; lid.y = -18; lid.rotation = 0.35; }
     const label = new Container();
-    const txt = new Text({ text: String(n.day), style: { fontFamily: "Fredoka", fontWeight: "700", fontSize: 20, fill: st === "locked" ? 0x5b6680 : 0xffffff } });
+    // étiquette (choix d'Alexandre, issue #24) : pastille cerclée et ombre portée, pour se détacher de la neige
+    const SLATE = 0x3f4a66;
+    const txt = new Text({ text: String(n.day), style: { fontFamily: "Fredoka", fontWeight: "700", fontSize: 20, fill: st === "locked" ? SLATE : 0xffffff } });
     txt.anchor.set(0.5);
-    const pill = new Graphics().roundRect(-20, -15, 40, 30, 15).fill(st === "locked" ? 0xffffff : st === "opened" ? 0x2fa37a : 0xd9354b);
+    const pill = new Graphics().roundRect(-20, -12, 40, 30, 15).fill({ color: 0x1b2340, alpha: 0.28 });
+    pill.roundRect(-20, -15, 40, 30, 15).fill(st === "locked" ? 0xffffff : st === "opened" ? 0x2fa37a : 0xd9354b)
+      .stroke({ width: st === "locked" ? 3 : 2.5, color: st === "locked" ? SLATE : 0xffffff });
     label.addChild(pill, txt);
     if (st === "opened") label.addChild(new Graphics().star(20, -14, 5, 8, 3.5).fill(0xffd66b));
-    if (st === "locked") label.addChild(new Graphics().roundRect(10, -20, 14, 11, 3).fill(0x5b6680).circle(17, -21, 4.5).stroke({ width: 2.4, color: 0x5b6680 }));
-    label.y = top.y - 48;
-    inner.addChild(g, lid, label);
+    // cadenas blanc dans un badge rond
+    if (st === "locked") label.addChild(new Graphics().circle(17, -17, 11).fill(SLATE)
+      .roundRect(10, -20, 14, 11, 3).fill(0xffffff).circle(17, -21, 4.5).stroke({ width: 2.4, color: 0xffffff }));
+    // toucher l'étiquette ouvre la case, comme toucher le cadeau
+    label.eventMode = "static";
+    label.cursor = "pointer";
+    label.on("pointertap", () => this.cb.onNodeTap(n.day));
+    inner.addChild(g, lid);
     cont.addChild(glow, inner);
     cont.position.set(o.x, o.y - heightAt(this.terrain, n.x + 0.5, n.y + 0.5) * ZH);
+    // l'étiquette vit dans le calque du dessus ; on retient sa hauteur de repos pour la faire sauter avec le cadeau
+    const labelY = cont.y + top.y - 48;
+    label.position.set(o.x, labelY);
+    this.labels.addChild(label);
     cont.zIndex = n.x + n.y + 0.55;
     cont.eventMode = "static";
     cont.cursor = "pointer";
     cont.on("pointertap", () => this.cb.onNodeTap(n.day));
-    (cont as Container & { meta: object }).meta = { inner, glow, lid, st, wx: o.x, wy: cont.y };
+    (cont as Container & { meta: object }).meta = { inner, glow, lid, st, wx: o.x, wy: cont.y, label, labelY };
     this.gifts.set(n.day, cont);
     return cont;
+  }
+
+  /** Retire l'étiquette d'un cadeau que l'on va détruire (elle vit dans un autre calque) */
+  dropLabel(cont: Container) {
+    const lab = (cont as Container & { meta?: { label?: Container } }).meta?.label;
+    if (lab) { this.labels.removeChild(lab); lab.destroy({ children: true }); }
   }
 
   /** Ouvre la case du jour : la caméra s'approche, le couvercle saute, des confettis partent.
@@ -889,11 +932,24 @@ export class Scene {
       f.g.alpha = Math.max(0, Math.min(1, f.life / 20));
       if (f.life <= 0) { f.g.destroy(); this.confetti.splice(i, 1); }
     }
+    this.overlay.position.copyFrom(this.world.position);
+    this.overlay.scale.copyFrom(this.world.scale);
+    this.giftLight.visible = false;
     for (const [, cont] of this.gifts) {
-      const meta = (cont as Container & { meta: { inner: Container; glow: Graphics; st: NodeState } }).meta;
+      const meta = (cont as Container & { meta: { inner: Container; glow: Graphics; st: NodeState; label: Container; labelY: number; wx: number } }).meta;
+      meta.label.visible = cont.visible;
       if (meta.st === "available") {
         meta.inner.y = -Math.abs(Math.sin(this.time * 0.07)) * 8;
         meta.glow.alpha = 0.55 + Math.sin(this.time * 0.07) * 0.35;
+        meta.label.y = meta.labelY + meta.inner.y;
+        // sa propre lumière, qui monte avec le soir : le cadeau du jour reste le plus lumineux de l'écran
+        if (cont.visible && this.light > 0.05) {
+          const pulse = 0.85 + Math.sin(this.time * 0.07) * 0.15;
+          this.giftLight.visible = true;
+          this.giftLight.position.set(meta.wx, cont.y - 22);
+          this.giftLight.scale.set(1.9 * pulse, 1.5 * pulse);
+          this.giftLight.alpha = Math.min(1, this.light) * 0.55;
+        }
       }
     }
     // le personnage rejoint en marchant l'endroit que l'on regarde, sans dépasser la dernière case ouverte
