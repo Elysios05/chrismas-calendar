@@ -35,6 +35,7 @@ On code contre ces interfaces. Besoin d'un changement de contrat → le demander
 2. **Demander l'avis d'Alexandre** avant toute décision de goût ou de contenu (style, couleurs, textes, règles d'un jeu, comportement de Pingou) et dès qu'un choix est ambigu. Proposer 2–3 options concrètes avec une recommandation, plutôt qu'une question ouverte. Montrer des captures d'écran.
 3. Les décisions techniques internes à ton dossier, tu les prends seul.
 4. Avant de livrer : `npm run build` passe sans erreur, et tu as **regardé le résultat** (captures mobile 390×844 et ordinateur 1280×800).
+   **Captures : utilise `npm run capture`** (voir `docs/qa/capture.md`, ex. `npm run capture -- --jour=12 --heure=21:00 --case=12`). N'écris pas ton propre script de capture ; s'il manque une option, demande-la à la Qualité par une issue.
 5. **Pull request** vers `main` avec : ce qui change, captures, ce qui reste à faire. Le chef de projet relit et fusionne.
 6. Messages de commit en français, à l'impératif présent.
 7. Tenir à jour la section « Journal » de ton brief (`docs/agents/<equipe>.md`) : décisions prises avec Alexandre, et où tu en es.
