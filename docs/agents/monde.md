@@ -266,3 +266,15 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     déploient en éventail. Remplacé par un `MeshSimple` à deux sommets par colonne (haut/bas) : toujours vertical.
     Autre piège : `rope.width` est l'échelle du conteneur, pas l'épaisseur du ruban.
   - Prochaine étape (priorité 4 de #29) : #24 lisibilité des cadeaux, #18 icône Pingou, #12 présentation des mondes.
+- 20 nov — icône de l'application (#18, priorité 4 de #29), branche `monde/icone-pingou` (partie de `main`) :
+  - Deux variantes montrées à Alexandre (A · tête en grand plan avec clin d'œil, B · Pingou entier avec un cadeau) ;
+    **il a choisi B**. Pingou repris de `PenguinPortrait` (`src/ui/Mascot.tsx`) : bonnet, écharpe, paquet doré
+    à ruban rouge sous l'aile droite, sur un monticule de neige. Fond bleu nuit en dégradé radial (bord `#101a3a`),
+    flocons, halo doré doux derrière lui pour le détacher du fond (le corps `#2b3c6c` est éclairci par rapport au
+    portrait, sinon il se perd dans le bleu nuit).
+  - Fichiers remplacés dans `public/icons/` aux mêmes noms : `icon-192`, `icon-512`, `apple-touch-icon` (180),
+    `icon-maskable-512` (dessin réduit à 80 % pour la zone sûre d'Android). Source `public/icons/pingou.svg`.
+    `badge-96.png` (badge monochrome des notifications) inchangé. Manifeste non touché (Backend).
+  - Générateur : `node src/world/icone/genere-icone.mjs B public/icons` depuis la racine (Chromium de
+    `/opt/pw-browsers`) ; sans argument, il produit les aperçus A et B dans le dossier courant.
+  - Prochaine étape : #12 présentation des mondes.
