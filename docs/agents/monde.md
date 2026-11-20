@@ -281,4 +281,4 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     Après la case 24 : la place du pôle Nord remplit l'écran et le traîneau décolle (fait plus tôt).
   - Piège de capture : sur ordinateur, la caméra glisse encore latéralement après un saut ; attendre ~14 s avant
     de photographier, sinon le cadeau est hors champ.
-  - Prochaine étape : #18 icône Pingou, puis #12 présentation des mondes.
+  - PR #72 ouverte (à fusionner après #71). Prochaine étape : #18 icône Pingou, puis #12 présentation des mondes.
