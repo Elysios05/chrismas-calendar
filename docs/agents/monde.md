@@ -277,4 +277,4 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     `badge-96.png` (badge monochrome des notifications) inchangé. Manifeste non touché (Backend).
   - Générateur : `node src/world/icone/genere-icone.mjs B public/icons` depuis la racine (Chromium de
     `/opt/pw-browsers`) ; sans argument, il produit les aperçus A et B dans le dossier courant.
-  - Prochaine étape : #12 présentation des mondes.
+  - PR #73 ouverte. Prochaine étape : #12 présentation des mondes.
