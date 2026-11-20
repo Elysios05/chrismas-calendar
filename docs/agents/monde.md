@@ -266,3 +266,19 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     déploient en éventail. Remplacé par un `MeshSimple` à deux sommets par colonne (haut/bas) : toujours vertical.
     Autre piège : `rope.width` est l'échelle du conteneur, pas l'épaisseur du ruban.
   - Prochaine étape (priorité 4 de #29) : #24 lisibilité des cadeaux, #18 icône Pingou, #12 présentation des mondes.
+- 20 nov — lisibilité des cadeaux (#24, priorité 4 de #29), branche `monde/lisibilite-cadeaux` (partie de
+  `monde/corrections-visuelles`, PR #71 pas encore fusionnée) :
+  - **Étiquettes dans un calque du dessus** (`overlay` dans `Scene.ts`, posé après le voile, le brouillard et les
+    nuages, recalé sur la caméra du monde à chaque image) : les numéros ne s'assombrissent plus la nuit et ne sont
+    plus masqués par un décor. L'étiquette garde sa hauteur de repos (`labelY`) et saute avec le cadeau du jour ;
+    elle est touchable et ouvre la case. Quand un cadeau est détruit, `dropLabel` retire aussi son étiquette.
+  - **Style choisi par Alexandre : B · blanche cerclée** (contre A · pastille foncée et l'actuel) : pastille
+    blanche bordée d'ardoise `0x3f4a66`, ombre portée, cadenas blanc dans un badge rond ardoise. Les pastilles
+    rouges et vertes gagnent un liseré blanc et la même ombre.
+  - **Lumière propre du cadeau du jour** : halo radial additif doré (`giftLight`, texture générée une fois) dans le
+    calque du dessus, qui monte avec le soir (`light`) et pulse avec le cadeau. Rien de jour.
+  - Bord du monde sur ordinateur : déjà réglé par les 30 tuiles de #13 (vérifié jour 1 en 1280×800).
+    Après la case 24 : la place du pôle Nord remplit l'écran et le traîneau décolle (fait plus tôt).
+  - Piège de capture : sur ordinateur, la caméra glisse encore latéralement après un saut ; attendre ~14 s avant
+    de photographier, sinon le cadeau est hors champ.
+  - PR #72 ouverte (à fusionner après #71). Prochaine étape : #18 icône Pingou, puis #12 présentation des mondes.
