@@ -249,10 +249,13 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - **#50 cadeau 16** : la transition marché → grotte passe de 6 à 12 cases (`transitionLen`), et **règle
     générale** dans `terrain.ts` : devant chaque case (plus bas à l'écran), un cône (`devant`, 5 rangées,
     s'évasant) où seuls les décors bas (`LOW` : rochers, buissons, paquets, bancs, luges, barrières, lanternes
-    de glace, badauds, bonshommes de neige, rennes, braseros) sont permis. Vaut aussi pour les repères et les
-    bâtiments du village du Père Noël. Coût mesuré au script de comptage : quelques maisons et lampadaires de
-    moins près des cases (village 12 → 10 maisons, cabanes du lac 4 → 2). Premier cône plus large (6 rangées)
-    retirait trop : ramené.
+    de glace, badauds, bonshommes de neige, rennes, braseros) sont permis.
+  - **Règle d'Alexandre : ne jamais supprimer de décor ; si ça ne passe pas, agrandir la carte.** Le décor est
+    donc d'abord posé comme si la règle n'existait pas, puis chaque élément haut d'un cône est **déplacé** vers
+    la place libre la plus proche (même monde, même distance à la route, hors cône). Vérifié au script de comptage :
+    même code avec et sans cône (filtre des repères retiré) → 1673 décors des deux côtés, identiques type par type.
+    Les repères (fabrique, chalet…) choisissent directement une place hors cône. Si un décor ne trouve aucune
+    place, la console affiche « [monde] … agrandir la carte » : actuellement 0.
   - Le **grand sapin de la place du 6** passe derrière la case (il était pile devant).
   - **#48 aurores** : nouveau module `aurora.ts`. Abandon des polygones posés par-dessus tout l'écran.
     Les aurores sont des voiles texturés (texture générée une fois sur un canevas) glissés **dans le monde entre
