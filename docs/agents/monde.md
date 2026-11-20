@@ -244,7 +244,7 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - Retour d'Alexandre : **animaux grossis de 30 %** (`scale 1.3` sur les espèces de `ANIMAUX`), pour qu'on les
     remarque et qu'on les touche facilement. Les personnages gardent leur taille.
   - PR #67 fusionnée par le chef, `setSound` branché dans `App.tsx`.
-- 20 nov — corrections visuelles (priorité 3 de #29), branche `monde/corrections-visuelles` :
+- 20 nov — corrections visuelles (priorité 3 de #29), branche `monde/corrections-visuelles`, PR #71 :
   - **#49 traîneau** : le cube vert (« hotte ») devient un sac de toile noué de rouge et deux paquets enrubannés.
   - **#50 cadeau 16** : la transition marché → grotte passe de 6 à 12 cases (`transitionLen`), et **règle
     générale** dans `terrain.ts` : devant chaque case (plus bas à l'écran), un cône (`devant`, 5 rangées,
