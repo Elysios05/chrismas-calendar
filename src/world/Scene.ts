@@ -52,8 +52,8 @@ export class Scene {
   ground = new Container();
   objects = new Container();
   tint = new Graphics();
-  // variante d'aurores, en attendant le choix d'Alexandre (issue #48) : ?aurores=voiles pour comparer
-  aurora = new Aurora(new URLSearchParams(location.search).get("aurores") === "voiles" ? "voiles" : "rideaux");
+  // aurores en voiles (choix d'Alexandre, issue #48)
+  aurora = new Aurora();
   fog = new Sprite();
   clouds: { s: Sprite; v: number; base: number }[] = [];
   cloudLayer = new Container();
