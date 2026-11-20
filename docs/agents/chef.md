@@ -114,5 +114,6 @@ l'environnement cloud de l'ancien chef ; si le nouveau chef tourne ailleurs, rec
 ## Journal
 - 17 nov : terrain continu retenu ; organisation en 6 équipes ; backend démo + Supabase ; audio ; assemblage d'`App.tsx`.
 - 18 nov : rappels push, relance, éditeur, réglages, course, souvenirs, hors ligne, temps réel ; incident `git stash` (règle ajoutée).
+- 20 nov (nuit) : PR #69 (e2e), #70 (`npm run capture`, règle ajoutée dans `CLAUDE.md`), #71 (aurores, traîneau, cadeaux) fusionnées ; Audio lancé sur #68 (`audio/tone-exceptions`).
 - 19 nov (soir) : Qualité relancée (`qualite/e2e-integre`) ; PR #63, #64, #65 fusionnées ; hauteur de page : on garde le `resize` (#9) ; outil de capture commun décidé.
 - 19 nov : ouverture animée + crépuscule branchés, navigation au doigt fusionnée, passage de relais écrit.
