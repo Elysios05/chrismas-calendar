@@ -5,6 +5,7 @@ import { buildTerrain, heightAt, key, type Terrain, type DayNode } from "./terra
 import { drawProp, type AnimPart } from "./props";
 import { ZONES } from "./zones";
 import { weatherAt } from "./weather";
+import { Aurora } from "./aurora";
 import { Person, Penguin, type Who } from "./actors";
 import { makeGround, poke, spawnLife, updateCritter, type Critter, type LifeEnv } from "./life";
 import type { SoundApi } from "../core/contracts";
@@ -51,7 +52,8 @@ export class Scene {
   ground = new Container();
   objects = new Container();
   tint = new Graphics();
-  aurora = new Graphics();
+  // aurores en voiles (choix d'Alexandre, issue #48)
+  aurora = new Aurora();
   fog = new Sprite();
   clouds: { s: Sprite; v: number; base: number }[] = [];
   cloudLayer = new Container();
@@ -112,7 +114,7 @@ export class Scene {
     this.cb = cb;
     this.pal = makePalette(night);
     this.objects.sortableChildren = true;
-    this.world.addChild(this.ground, this.objects);
+    this.world.addChild(this.ground, this.aurora, this.objects);
     this.fog.texture = gradientTexture([[0, "rgba(255,255,255,0)"], [0.55, "rgba(255,255,255,0.35)"], [1, "rgba(255,255,255,1)"]]);
     const ct = cloudTexture();
     for (let i = 0; i < 7; i++) {
@@ -124,7 +126,7 @@ export class Scene {
       this.cloudLayer.addChild(s);
       this.clouds.push({ s, v: 0.15 + Math.random() * 0.35, base: s.y });
     }
-    app.stage.addChild(this.world, this.aurora, this.tint, this.fog, this.cloudLayer, this.whiteout, this.confettiLayer, this.snowLayer);
+    app.stage.addChild(this.world, this.tint, this.fog, this.cloudLayer, this.whiteout, this.confettiLayer, this.snowLayer);
     const flakeTex = app.renderer.generateTexture(new Graphics().circle(6, 6, 6).fill(0xffffff));
     for (let i = 0; i < 260; i++) {
       const s = new Sprite(flakeTex);
@@ -784,30 +786,14 @@ export class Scene {
     const lerp = (a: number, b: number) => a + (b - a) * zm.t;
     const zi = zm.t < 0.5 ? zm.a : zm.b;
     if (zi !== this.zoneNow) { this.zoneNow = zi; this.cb.onZone(zi); }
-    // aurores boréales : des voiles qui ondulent et teintent la neige, seulement au pôle Nord
+    // aurores boréales, seulement au pôle Nord : rubans glissés entre le sol et le décor (aurora.ts)
     const polarForce = (ZONES[zm.a].id === "pole-nord" ? 1 - zm.t : 0) + (ZONES[zm.b].id === "pole-nord" ? zm.t : 0);
-    this.aurora.clear();
-    if (polarForce > 0.01) {
-      // en plein jour un voile additif se perdrait dans la neige : on teinte, et on n'ajoute que la nuit
-      this.aurora.blendMode = this.pal.night ? "add" : "normal";
-      const boost = this.pal.night ? 1.6 : 1;
-      const H = innerHeight * 0.62, N = 10;
-      const cols = [0x4ef0a8, 0x8f7cf0, 0xf06fb0];
-      for (let b = 0; b < 3; b++) {
-        const base = ((b + 0.5) / 3) * innerWidth;
-        for (let layer = 0; layer < 2; layer++) {
-          const halfW = (90 - layer * 42) * (0.8 + 0.3 * Math.sin(this.time * 0.004 + b));
-          const left: Pt[] = [], right: Pt[] = [];
-          for (let i = 0; i <= N; i++) {
-            const y = (i / N) * H;
-            const dx = Math.sin(y * 0.012 + this.time * 0.008 + b * 2.1) * 70 + Math.sin(y * 0.03 - this.time * 0.004) * 22;
-            const taper = 1 - (i / N) * 0.75; // le voile s'efface en descendant vers le sol
-            left.push({ x: base + dx - halfW * taper, y });
-            right.push({ x: base + dx + halfW * taper, y });
-          }
-          poly(this.aurora, [...left, ...right.reverse()], cols[b], (0.17 - layer * 0.06) * polarForce * boost);
-        }
-      }
+    {
+      // le calque vit dans le monde (pour passer sous le décor) mais se dessine en coordonnées d'écran
+      const sc = this.world.scale.x;
+      this.aurora.position.set(-this.world.x / sc, -this.world.y / sc);
+      this.aurora.scale.set(1 / sc);
+      this.aurora.update(this.time * 16.67, polarForce, this.pal.night, innerWidth, innerHeight);
     }
     const night = this.pal.night;
     const tintCol = mix(za.atmo.tint, zb.atmo.tint, zm.t);
