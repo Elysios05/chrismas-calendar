@@ -23,8 +23,11 @@ export function heightAt(t: Terrain, x: number, y: number) {
 export const key = (x: number, y: number) => `${x},${y}`;
 const SEG = 4, TRANSITION = 6, LEAD = 4;
 /** Longueur du passage d'un monde au suivant. Entre le lac et le marché il est bien plus long :
- *  la forêt doit avoir le temps de s'éteindre avant que le marché commence. */
-const transitionLen = (fromZone: number) => (ZONES[fromZone]?.id === "lac" ? 18 : TRANSITION);
+ *  la forêt doit avoir le temps de s'éteindre avant que le marché commence. Entre le marché et la
+ *  grotte aussi : la voûte d'entrée tombait juste à côté du cadeau 16 (issue #50). */
+const transitionLen = (fromZone: number) => ({ lac: 18, marche: 12 } as Record<string, number>)[ZONES[fromZone]?.id] ?? TRANSITION;
+/** Décors assez bas pour être posés devant une case sans la cacher. */
+const LOW = new Set<PropKind>(["rock", "bush", "presents", "bench", "sled", "fence", "iceLantern", "visitor", "snowman", "deer", "brazier"]);
 // demi-largeur du terrain (en tuiles, axe écran horizontal). 17 ne suffisait pas sur ordinateur :
 // le chemin s'écarte du centre de l'écran et le bord carré des tuiles apparaissait (issue #13).
 const HALF_WIDTH = 30;
@@ -245,6 +248,8 @@ export function buildTerrain(seed = 2026): Terrain {
   // demi-emprise des bâtiments : sous eux, on taille une terrasse plate dans la pente
   const FOOTPRINT: Partial<Record<PropKind, number>> = { house: 0.8, chalet: 1, workshop: 1.3, stall: 0.75, santaHouse: 1.1, postOffice: 0.8, stable: 1.1 };
   const place = (kind: PropKind, c: Cell, r = 0) => {
+    // règle générale (issue #50) : rien de haut juste devant une case
+    if (!LOW.has(kind) && hidesGift(c.x, c.y, r)) return;
     // les éléments naturels sont décalés au hasard : sinon la forêt se lit comme une plantation en lignes
     const wild = kind === "tree" || kind === "treeSmall" || kind === "bush" || kind === "rock";
     const jx = wild ? (R() - 0.5) * 0.7 : 0, jy = wild ? (R() - 0.5) * 0.7 : 0;
@@ -281,6 +286,18 @@ export function buildTerrain(seed = 2026): Terrain {
   const all = shuffled;
   // une case de chaque nœud reste dégagée
   for (const n of nodes) for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) taken.add(key(n.x + dx, n.y + dy));
+  // et devant chaque case (plus bas à l'écran, donc dessiné par-dessus), un cône où seuls les décors bas
+  // ont droit de cité : un sapin, une échoppe ou une voûte y cacheraient le cadeau (issue #50)
+  const devant = new Set<string>();
+  for (const n of nodes) for (let dx = -5; dx <= 5; dx++) for (let dy = -5; dy <= 5; dy++) {
+    const dk = dx + dy, du = dx - dy;
+    if ((dk >= 1 && dk <= 5 && Math.abs(du) <= 1.5 + dk * 0.4) || Math.hypot(dx, dy) < 1.8) devant.add(key(n.x + dx, n.y + dy));
+  }
+  /** un bâtiment de rayon `r` posé en (x, y) déborderait-il dans le cône d'une case ? */
+  const hidesGift = (x: number, y: number, r: number) => {
+    for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) if (devant.has(key(x + dx, y + dy))) return true;
+    return false;
+  };
 
   // rangs du chemin où l'on change de monde
   const zoneEdges = path.filter((p, i) => i > 0 && p.zone !== path[i - 1].zone).map((p) => p.i);
@@ -316,7 +333,7 @@ export function buildTerrain(seed = 2026): Terrain {
   /** `prefer` : emplacement idéal si on en trouve un, sinon on se rabat sur le premier venu */
   const landmark = (kind: PropKind, zid: string, pick: (c: Cell) => boolean, r = 1, prefer?: (c: Cell) => boolean) => {
     const z = ZONES.findIndex((zz) => zz.id === zid);
-    const cands = all.filter((c) => c.zone === z && !c.road && pick(c) && free(c.x, c.y, r));
+    const cands = all.filter((c) => c.zone === z && !c.road && pick(c) && free(c.x, c.y, r) && (LOW.has(kind) || !hidesGift(c.x, c.y, r)));
     const c = (prefer && cands.find(prefer)) ?? cands[0];
     if (c) place(kind, c, r);
   };
@@ -337,7 +354,7 @@ export function buildTerrain(seed = 2026): Terrain {
     const near = (kind: PropKind, r: number, dMin: number, dMax: number) => {
       if (!ws) return;
       const cands = all
-        .filter((c) => c.zone === z && !c.road && c.d > dMin && c.d < dMax && free(c.x, c.y, r))
+        .filter((c) => c.zone === z && !c.road && c.d > dMin && c.d < dMax && free(c.x, c.y, r) && !hidesGift(c.x, c.y, r))
         .map((c) => ({ c, k: Math.hypot(c.x - ws.x, c.y - ws.y) }))
         .filter((o) => o.k > 3.2)
         .sort((a, b) => a.k - b.k);
@@ -443,10 +460,11 @@ export function buildTerrain(seed = 2026): Terrain {
       const c = at(dx, dy);
       if (c && !c.road) { taken.delete(key(c.x, c.y)); place(kind, c); }
     };
-    put("bigTree", 2, 2);
+    // le grand sapin derrière la case, jamais devant : il la cacherait (issue #50)
+    put("bigTree", -2, -2);
     put("snowman", -2, 1);
     for (const [dx, dy] of [[3, -1], [-1, 3], [-3, -1], [1, -3]] as const) put("lamp", dx, dy);
-    for (const [dx, dy] of [[2, -2], [-2, 2], [3, 2], [-2, -2]] as const) put("visitor", dx, dy);
+    for (const [dx, dy] of [[2, -2], [-2, 2], [3, 2], [2, 2]] as const) put("visitor", dx, dy);
   }
 
   // porche d'entrée et de sortie de la grotte, à cheval sur le chemin

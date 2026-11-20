@@ -273,11 +273,28 @@ function drawSleigh(g: Graphics, p: { x: number; y: number }, pal: Palette, flyi
   g.roundRect(p.x - 40, p.y - 34, 70, 26, 10).fill(c(0xd9354b));
   g.roundRect(p.x - 40, p.y - 34, 70, 8, 4).fill(c(0xf0b23a));
   g.moveTo(p.x - 46, p.y - 2).lineTo(p.x + 36, p.y - 2).arc(p.x + 36, p.y - 10, 8, Math.PI / 2, -Math.PI / 2, true).stroke({ width: 4, color: c(0xf0b23a) });
-  // la hotte, dessinée en relatif pour que le traîneau puisse pivoter sur lui-même
-  const sx = p.x - 18, sy = p.y - 44;
-  poly(g, [{ x: sx, y: sy }, { x: sx + 14, y: sy - 8 }, { x: sx + 28, y: sy }, { x: sx + 14, y: sy + 8 }], c(0x3f9e6e));
-  poly(g, [{ x: sx, y: sy }, { x: sx + 14, y: sy + 8 }, { x: sx + 14, y: sy + 22 }, { x: sx, y: sy + 14 }], c(0x2fa37a));
-  poly(g, [{ x: sx + 14, y: sy + 8 }, { x: sx + 28, y: sy }, { x: sx + 28, y: sy + 14 }, { x: sx + 14, y: sy + 22 }], c(0x1f7a52));
+  // la cargaison, dessinée en relatif pour que le traîneau puisse pivoter sur lui-même :
+  // un gros sac de toile noué, et deux paquets enrubannés posés devant (issue #49)
+  const sx = p.x - 14, sb = p.y - 32;
+  // sac : panse arrondie, ombre à droite, col froncé et lien rouge
+  g.moveTo(sx - 15, sb).bezierCurveTo(sx - 21, sb - 20, sx - 12, sb - 34, sx - 4, sb - 37)
+    .lineTo(sx + 4, sb - 37).bezierCurveTo(sx + 12, sb - 34, sx + 21, sb - 20, sx + 15, sb).closePath().fill(c(0xb08a5a));
+  g.moveTo(sx + 4, sb - 36).bezierCurveTo(sx + 12, sb - 32, sx + 20, sb - 18, sx + 15, sb)
+    .lineTo(sx + 6, sb).bezierCurveTo(sx + 11, sb - 16, sx + 8, sb - 30, sx + 4, sb - 36).closePath().fill(c(0x8a6a42));
+  g.moveTo(sx - 9, sb - 26).quadraticCurveTo(sx - 12, sb - 14, sx - 8, sb - 5).stroke({ width: 1.5, color: c(0xcfae7c), alpha: 0.8 });
+  g.moveTo(sx - 4, sb - 37).lineTo(sx - 7, sb - 45).lineTo(sx, sb - 41).lineTo(sx + 7, sb - 45).lineTo(sx + 4, sb - 37).closePath().fill(c(0x9c784c));
+  g.roundRect(sx - 6, sb - 39, 12, 4, 2).fill(c(0xd9354b));
+  // deux paquets devant le sac, chacun avec son ruban en croix et un nœud
+  const paquet = (x: number, y: number, w: number, h: number, fond: number, ruban: number) => {
+    g.roundRect(x, y - h, w, h, 1.5).fill(c(fond));
+    g.rect(x + w * 0.62, y - h, w * 0.38, h).fill({ color: 0x000000, alpha: 0.16 });
+    g.rect(x + w / 2 - 1.5, y - h, 3, h).fill(c(ruban));
+    g.rect(x, y - h * 0.55 - 1.5, w, 3).fill(c(ruban));
+    g.ellipse(x + w / 2 - 3, y - h - 2, 3.2, 2.2).fill(c(ruban));
+    g.ellipse(x + w / 2 + 3, y - h - 2, 3.2, 2.2).fill(c(ruban));
+  };
+  paquet(sx + 6, sb + 2, 16, 13, 0x3a7bd5, 0xf0d54a);
+  paquet(sx - 24, sb + 2, 13, 11, 0xffffff, 0xd9354b);
 }
 
 export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, seed: number, opts: { zone?: string; drop?: number; alongX?: boolean; flying?: boolean } = {}): PropNode {
