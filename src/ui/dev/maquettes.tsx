@@ -1,7 +1,7 @@
 /**
  * Page de maquettes de l'équipe Interface (outil de travail, pas livrée au public).
  * `npm run dev` puis http://localhost:5173/maquettes.html?vue=connexion
- * Vues : connexion · connexion-erreur · case-intro · case-jeu · case-fini · lettre
+ * Vues : connexion (+ &erreur=mdp|reseau|compte pour simuler un échec) · connexion-erreur · case-intro · case-jeu · case-fini · lettre
  *         editeur · editeur-vide · rappel · course · reglages · final · pingou
  */
 import { StrictMode, useState } from "react";
@@ -50,6 +50,13 @@ const EXPRESSIONS: { face: Expression; nom: string }[] = [
   { face: "clin", nom: "clin d'œil" },
 ];
 
+/** Erreurs telles que `SupabaseBackend.signIn` les renvoie (ticket #75). */
+const ECHECS: Record<string, string> = {
+  mdp: "Mot de passe incorrect.",
+  reseau: "Failed to fetch",
+  compte: "Ce compte n'est pas relié à alexandre (table profiles).",
+};
+
 function Maquettes() {
   const vue = new URLSearchParams(location.search).get("vue") ?? "connexion";
   const [ouverte, setOuverte] = useState(true);
@@ -58,7 +65,11 @@ function Maquettes() {
   ]);
 
   if (vue === "connexion" || vue === "connexion-erreur") {
-    return <LoginScreen backend={backend} />;
+    const echec = ECHECS[new URLSearchParams(location.search).get("erreur") ?? ""];
+    if (!echec) return <LoginScreen backend={backend} />;
+    // même backend démo, mais signIn échoue comme le ferait Supabase
+    const enPanne = Object.assign(Object.create(backend), { signIn: async () => { throw new Error(echec); } });
+    return <LoginScreen backend={enPanne} />;
   }
 
   if (vue === "editeur" || vue === "editeur-vide") {
