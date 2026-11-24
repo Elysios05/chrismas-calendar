@@ -13,7 +13,7 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 `npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
 **avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
 
-1. **#11** et **#42** (presque faits) : vérifier sur captures ce qui manque, finir, commenter les issues pour que le chef ferme.
+1. ~~**#11** et **#42**~~ : faits le 24 nov (télésiège, lutin au chariot, emballeurs) — PR ouverte, issues commentées.
 2. **#23** : ne plus tout reconstruire à chaque changement d'état (mesure avant/après avec `tests/qa/perf.mjs`).
 3. **#14** : ne charger que le monde où l'on se trouve.
 4. **#12** : courte présentation à l'arrivée dans un nouveau monde.
@@ -298,3 +298,29 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - Générateur : `node src/world/icone/genere-icone.mjs B public/icons` depuis la racine (Chromium de
     `/opt/pw-browsers`) ; sans argument, il produit les aperçus A et B dans le dossier courant.
   - PR #73 ouverte. Prochaine étape : #12 présentation des mondes.
+
+- 24 nov — fin de #11 et #42 (priorité 1 du chef), branche `claude/intelligent-ride-qdbkzh` :
+  - **Ce qui manquait** (relu dans les issues) : la remontée mécanique des skieurs (#11), et des lutins qui
+    poussent un chariot et emballent (#42). Tout le reste était livré par la PR #67.
+  - **Choix d'Alexandre** : **télésiège** (contre téléski à perches et télécabine) ; **chariot + emballage**
+    (sans le chargement du traîneau le 24).
+  - **Télésiège** (`chooseLift`, `drawLiftPart`, mouvement `lift` dans `life.ts`) : la ligne est choisie
+    automatiquement dans les montagnes — part à 1,6–3,4 cases de la route, monte d'au moins 1,4, n'enjambe ni
+    route ni bâtiment, reste à plus de 3,4 cases de toute case (sinon la gare du bas cachait la case 3).
+    Le câble est droit d'une gare à l'autre, assez haut pour passer **au-dessus des sapins** (règle « ne jamais
+    supprimer de décor ») : 2,4 au-dessus du sol au minimum. Pylônes tous les ~2,2 cases, gares en bois avec
+    grande roue rouge. Sièges biplaces (parfois un seul skieur) qui montent chargés et redescendent vides ;
+    au toucher le siège se balance autour de sa pince et le skieur fait coucou, son `lift`.
+    Deux skieurs redescendent le long de la ligne (piste parallèle ; les deux skieurs au hasard sont gardés).
+    Résultat : sur l'écran du jour 1, le télésiège est la pièce maîtresse du paysage.
+  - **Lutin au chariot** (`elfCart`) : navette fabrique ↔ traîneau par un autre chemin que les porteurs,
+    chariot chargé à l'aller, vide au retour, pause plus longue aux bouts. Son `elf-hop`.
+  - **Emballeurs** (`elfWrap`, `addWrapBench`, `wrapStep`) : deux lutins face à face devant un établi près de la
+    fabrique ; cycle d'environ 4 s : paquet brut, papier de couleur, ruban et nœud, il le pose sur la pile dans
+    son dos ; pile pleine (4) → vidée. Place cherchée en cercles autour de la porte, à plus de 2,6 cases d'une case.
+  - **Culling** : les pylônes ont une marge de 240 px (leur câble monte loin au-dessus de leur pied).
+  - **Outil** : le comptage en Node marche **avec** PixiJS (bundle esbuild de `terrain.ts` + `life.ts`,
+    `spawnLife(buildTerrain(), makePalette(false))`) — c'est lui qui a montré que l'établi et la piste
+    ne trouvaient pas de place.
+  - Reste possible (non demandé) : le chargement du traîneau par les lutins le 24.
+  - Prochaine étape : **#23** (mesure avant/après avec `tests/qa/perf.mjs`).
