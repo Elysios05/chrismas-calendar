@@ -9,6 +9,9 @@ import { fileURLToPath } from "node:url";
 const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../dist");
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/json", ".woff2": "font/woff2", ".webmanifest": "application/manifest+json", ".ico": "image/x-icon", ".mp3": "audio/mpeg" };
 
+export const DIST = RACINE;
+
+/** port = 0 : le système choisit un port libre (lire `srv.address().port`). */
 export function demarrerServeur(port = Number(process.env.QA_PORT ?? 4180)) {
   const srv = createServer(async (req, res) => {
     try {
@@ -18,7 +21,7 @@ export function demarrerServeur(port = Number(process.env.QA_PORT ?? 4180)) {
       const s = await stat(f).catch(() => null);
       if (!s) f = path.join(RACINE, "index.html"); else if (s.isDirectory()) f = path.join(f, "index.html");
       const buf = await readFile(f);
-      res.writeHead(200, { "content-type": TYPES[path.extname(f)] ?? "application/octet-stream", "cache-control": "no-store" }).end(buf);
+      res.writeHead(200, { "content-type": TYPES[path.extname(f)] ?? "application/octet-stream", "cache-control": "no-store", "x-cc-dist": RACINE }).end(buf);
     } catch { res.writeHead(404).end(); }
   });
   return new Promise((ok) => srv.listen(port, "127.0.0.1", () => ok(srv)));

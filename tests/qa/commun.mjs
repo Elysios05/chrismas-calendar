@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 
 export const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-export const PORT = Number(process.env.QA_PORT ?? 4180);
-export const BASE = `http://localhost:${PORT}/`;
+export let PORT = Number(process.env.QA_PORT ?? 4180);
+export let BASE = `http://localhost:${PORT}/`; // liaisons vivantes : servir() peut les changer (port libre)
 export const CHROME = process.env.QA_CHROME ?? "/usr/bin/google-chrome";
 export const ARGS_CHROME = ["--use-gl=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"];
 
@@ -42,14 +42,26 @@ export function buildRecent() {
   return t >= plusRecent;
 }
 
-async function repond() {
-  try { const r = await fetch(`http://127.0.0.1:${PORT}/`); return r.ok; } catch { return false; }
+/** Renvoie le dossier dist/ servi sur le port (en-tête x-cc-dist), "?" si un autre serveur répond, null si rien. */
+async function distServi(port) {
+  try { const r = await fetch(`http://127.0.0.1:${port}/`); return r.headers.get("x-cc-dist") ?? "?"; } catch { return null; }
 }
-/** Sert dist/ sur le port Qualité dans ce processus Node (voir serveur.mjs). */
+const repond = async () => (await distServi(PORT)) !== null;
+/**
+ * Sert dist/ de CETTE copie de travail. Si le port est déjà pris par le serveur d'une autre copie
+ * (ou par autre chose), on ne le réutilise pas : on prend un port libre et on met PORT/BASE à jour.
+ */
 export async function servir() {
-  if (await repond()) { console.log(`› serveur déjà présent sur ${BASE}`); return { stop() {}, assurer: async () => {} }; }
-  const { demarrerServeur } = await import("./serveur.mjs");
-  let srv = await demarrerServeur(PORT);
+  const { demarrerServeur, DIST } = await import("./serveur.mjs");
+  const deja = await distServi(PORT);
+  if (deja === DIST) { console.log(`› serveur déjà présent sur ${BASE} (même dist/)`); return { stop() {}, assurer: async () => {} }; }
+  let port = PORT;
+  if (deja !== null) {
+    console.log(`› le port ${PORT} sert un autre dossier (${deja}) : port libre à la place`);
+    port = 0;
+  }
+  let srv = await demarrerServeur(port);
+  PORT = srv.address().port; BASE = `http://localhost:${PORT}/`;
   console.log(`› dist/ servi sur ${BASE}`);
   return {
     async assurer() { if (!(await repond())) { console.log("› serveur tombé : relance"); srv.close(); srv = await demarrerServeur(PORT); } },
