@@ -33,6 +33,8 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 3. ~~Relire les issues `[Interface]`~~ — fait le 24 nov : aucune ouverte. Suite demandée au chef dans **#81**
    (avec le signalement de `npm run capture` cassé). PR `interface/nettoyage-entete` en attente de fusion.
 4. ~~Réponse du chef dans #81~~ : reçue (25 nov), PR #82 fusionnée.
+**🆕 Salons (décision d'Alexandre du 25 nov, avant le 30)** — lire `docs/salons.md`. Dès que le chef annonce dans **#84** la fusion du contrat `SalonApi`, ce point passe **avant tous les autres** : accueil « Créer notre calendrier », assistant de création, page du lien à envoyer, première connexion par lien, connexion par salon, éditeur de contenu générique. Avant cela, tu peux déjà proposer à Alexandre 2–3 maquettes de ces écrans.
+
 5. **Nom du monde tronqué sur téléphone** (« La Forêt et le Lac … ») : proposer 2–3 options à Alexandre avec captures
    (ligne plus petite, nom court par monde, défilement), puis faire celle qu'il choisit.
 6. **À partir du 27 nov** (Supabase branché) : vérification complète de l'interface en vrai — messages d'erreur de #75
