@@ -10,7 +10,8 @@ import { PREPARED_DAYS } from "./config";
 /** Jour à partir duquel l'export est possible. */
 export const SOUVENIRS_FROM_DAY = 24;
 
-const NAME: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
+/** Prénoms par défaut (si le backend ne fournit pas de salon) ; sinon ceux de la config du salon. */
+const DEFAULT_NAMES: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
 /** Options de l'export. */
 export interface SouvenirsOptions {
@@ -69,14 +70,14 @@ function paragraphs(message: string): string {
   return parts.map((p) => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`).join("\n");
 }
 
-async function letterHtml(day: number, c: PreparedContent): Promise<string> {
+async function letterHtml(day: number, c: PreparedContent, NAME: Record<Who, string>): Promise<string> {
   const photos = (await Promise.all(c.photos.map(toDataUrl))).filter((x): x is string => !!x);
   const missing = c.photos.length - photos.length;
   return `<article class="lettre ${c.from}">
   <h2><span class="case">${day}</span> ${day} décembre</h2>
-  <h3>De ${NAME[c.from]} pour ${NAME[c.to]}</h3>
+  <h3>De ${esc(NAME[c.from])} pour ${esc(NAME[c.to])}</h3>
   ${c.message.trim() ? paragraphs(c.message) : `<p class="vide">(pas de mot, seulement des photos)</p>`}
-  ${photos.length ? `<div class="photos">${photos.map((src, i) => `<img src="${src}" alt="Photo ${i + 1} de ${NAME[c.from]}" loading="lazy">`).join("")}</div>` : ""}
+  ${photos.length ? `<div class="photos">${photos.map((src, i) => `<img src="${src}" alt="Photo ${i + 1} de ${esc(NAME[c.from])}" loading="lazy">`).join("")}</div>` : ""}
   ${missing ? `<p class="vide">${missing} photo(s) n'ont pas pu être récupérées.</p>` : ""}
 </article>`;
 }
@@ -87,6 +88,11 @@ export async function exportSouvenirs(backend: BackendApi, opts: SouvenirsOption
   if (!me) throw new Error("Pas connecté.");
   const today = await backend.today();
   if (today < SOUVENIRS_FROM_DAY) throw new Error(`Les souvenirs seront disponibles le ${SOUVENIRS_FROM_DAY} décembre.`);
+  const salon = await backend.salons?.getSalon().catch(() => null);
+  const NAME: Record<Who, string> = salon
+    ? { alexandre: salon.config.joueurs.alexandre.prenom, flavie: salon.config.joueurs.flavie.prenom }
+    : DEFAULT_NAMES;
+  const couple = `${esc(NAME.alexandre)} & ${esc(NAME.flavie)}`;
 
   const sections: string[] = [];
   let count = 0;
@@ -98,7 +104,7 @@ export async function exportSouvenirs(backend: BackendApi, opts: SouvenirsOption
     for (const to of ["flavie", "alexandre"] as Who[]) {
       const r = await backend.getPrepared(day, to);
       if (r.status === "ready" && (r.content.message.trim() || r.content.photos.length)) {
-        const html = await letterHtml(day, r.content);
+        const html = await letterHtml(day, r.content, NAME);
         // le bandeau de décor se place juste après l'ouverture de la lettre
         sections.push(bandeau ? html.replace(/(<article[^>]*>)/, `$1${bandeau}`).replace(/<\/article>\s*$/, `${BORDER}</article>`) : html);
         count++;
@@ -117,7 +123,7 @@ export async function exportSouvenirs(backend: BackendApi, opts: SouvenirsOption
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nos souvenirs de l'Avent 2026 — Alexandre & Flavie</title>
+<title>Nos souvenirs de l'Avent 2026 — ${couple}</title>
 <style>
   :root { --nuit: #101a3a; --neige: #f6f8ff; --rouge: #c0392b; --or: #ffd54a; --texte: #1f2a44; }
   * { box-sizing: border-box; }
@@ -180,7 +186,7 @@ export async function exportSouvenirs(backend: BackendApi, opts: SouvenirsOption
 <header class="${cover ? 'avec-decor' : ''}">
   ${couverture}
   <h1>🎄 Nos souvenirs de l'Avent 2026</h1>
-  <p>Alexandre & Flavie : les ${count} cases préparées l'un pour l'autre</p>
+  <p>${couple} : les ${count} cases préparées l'un pour l'autre</p>
   <div><button class="imprimer" type="button" onclick="window.print()">📄 Enregistrer en PDF</button>
   <span class="astuce">Dans la fenêtre qui s'ouvre, choisis « Enregistrer au format PDF » comme imprimante.</span></div>
 </header>
