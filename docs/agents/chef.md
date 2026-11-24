@@ -101,9 +101,11 @@ Ce qui ne suit pas d'un compte à l'autre : les conversations, les agents en cou
 - **Jamais testé en vrai** : Supabase (Alexandre doit créer le projet en suivant `docs/supabase.md`), notifications,
   vrais téléphones.
 - **Modèles : on garde le fonctionnement actuel** (choix par tâche, voir « Système de travail ») — décision d'Alexandre le 24 nov.
-- **Proposé à Alexandre le 24 nov, pas encore décidé** pour tenir le 30 : jeux en direct en **tour par tour seulement**
-  pour 2–3 d'entre eux ; abandonner #61, #12, #10 ; surveillance à la demande.
-  Estimation : ~40 tâches, ~50–100 $ au tarif API, environ une limite hebdomadaire.
+- **Coupes refusées par Alexandre le 24 nov : on ne coupe rien.** Les 12 jeux restants gardent leur forme prévue
+  (pas de tour par tour à la place du direct) ; #61, #12, #10 restent à faire. Surveillance des tickets : seulement
+  à sa demande. Estimation : ~40 tâches, ~50–100 $ au tarif API, environ une limite hebdomadaire.
+- Session chef du 24 nov (soir) : le registre npm était injoignable depuis la session (réseau des paquets coupé) →
+  `npm install` impossible, Audio pas relancé. Il faut une session dont les réglages réseau autorisent les paquets.
 
 ## Échéancier
 | Date | Jalon |
@@ -115,6 +117,7 @@ Ce qui ne suit pas d'un compte à l'autre : les conversations, les agents en cou
 | 30 nov | Mise en ligne finale |
 
 ## Journal
+- 24 nov (soir) : Alexandre refuse toutes les coupes ; relance de l'Audio bloquée (npm injoignable).
 - 17 nov : terrain continu retenu ; organisation en 6 équipes ; backend démo + Supabase ; audio ; assemblage d'`App.tsx`.
 - 18 nov : rappels push, relance, éditeur, réglages, course, souvenirs, hors ligne, temps réel ; incident `git stash` (règle ajoutée).
 - 24 nov : point de reprise écrit (section « Reprendre le projet ») ; travail Audio #68 sauvegardé sur sa branche ; estimation du reste.
