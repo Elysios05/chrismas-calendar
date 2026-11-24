@@ -14,12 +14,14 @@ import { REBUS_JOUR7 } from "../data/games/rebus-jour7";
 import { PENDU_JOUR15 } from "../data/games/pendu-jour15";
 import { MOTSCROISES_JOUR17 } from "../data/games/motscroises-jour17";
 import { SYNCHRO_JOUR11 } from "../data/games/synchro-jour11";
+import { PHOTO_JOUR3 } from "../data/games/photo-jour3";
 
 type Chargeur = () => Promise<GameModule>;
 
 const JEUX: Partial<Record<DayNumber, Chargeur>> = {
   1: () => import("./quiz/index").then((m) => m.quizJour1),
   2: () => import("./luge/index").then((m) => m.lugeJour2),
+  3: () => import("./photo/index").then((m) => m.defiPhotoJour3),
   7: () => import("./rebus/index").then((m) => m.rebusJour7),
   11: () => import("./synchro/index").then((m) => m.synchroJour11),
   15: () => import("./pendu/index").then((m) => m.penduJour15),
@@ -31,6 +33,7 @@ const JEUX: Partial<Record<DayNumber, Chargeur>> = {
 const CONTENU: Partial<Record<DayNumber, unknown>> = {
   1: QUIZ_JOUR1,
   2: LUGE_JOUR2,
+  3: PHOTO_JOUR3,
   7: REBUS_JOUR7,
   11: SYNCHRO_JOUR11,
   15: PENDU_JOUR15,
