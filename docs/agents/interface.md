@@ -46,7 +46,7 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 - tout le reste → « Connexion impossible : » + message du backend (option 1 recommandée par le chef),
   avec traduction des deux messages Supabase anglais prévisibles (e-mail non confirmé, trop d'essais).
 Dans ces deux derniers cas le mot de passe est **gardé** dans le champ. Deux répliques ajoutées
-(`reseauCoupe`, `connexionImpossible`) : **à faire valider par Alexandre**.
+(`reseauCoupe`, `connexionImpossible`) : **validées par Alexandre le 24 nov**.
 Au passage : `.login-erreur` passe en `--red-texte` (13 px, le rouge vif ne passait pas le contraste).
 Maquettes : `maquettes.html?vue=connexion&erreur=mdp|reseau|compte` simule chaque échec.
 `npm run capture` ne sait pas montrer l'écran de connexion (il passe la connexion d'office) :
@@ -92,6 +92,7 @@ ouverte n'est pour l'Interface.
 - Écran de connexion : afficher/masquer le mot de passe, « rester connecté·e », « voir la démo ».
 - Case préparée : **trois photos maximum** (au-delà, les polaroïds ne tiennent plus sur un téléphone).
 - Nom du monde : **pastille crème permanente** (en blanc sur la neige il était illisible).
+- Connexion (#75) : répliques « réseau gelé » et « la porte coince de notre côté » validées (24 nov).
 - Règles d'écriture des répliques : une phrase courte par bulle, 150 caractères au plus, tutoiement,
   un emoji au maximum et jamais au milieu d'une phrase. Tout est dans `pingou/lines.ts`.
 
