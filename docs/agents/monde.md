@@ -8,14 +8,17 @@
   `props.ts` décors vectoriels ; `zones.ts` les 6 mondes (couleurs, météo, ambiance) ; `actors.ts` personnages + Pingou ;
   `Scene.ts` rendu, caméra liée au défilement, brouillard, nuages, neige, mode nuit.
 
-## À faire (par priorité)
-1. **Direction artistique des montagnes** : crêtes nettes, limite neige/roche propre, rochers, sapins plus variés. Valider avec Alexandre sur captures.
-2. **Transitions entre mondes** fondues dans le paysage (neige → pavés, forêt qui s'éclaircit vers le lac…).
-3. Finir chaque monde : village (place centrale pour le 6), lac (patineurs, bord gelé), marché (allées, grand sapin, grande roue),
-   grotte (entrée, parois de glace, lumière bleue), pôle Nord (aurores, atelier, traîneau qui décolle le 24).
-4. **Ouverture d'une case** : animation (zoom caméra, couvercle qui saute, confettis) exposée par une méthode de `Scene`.
-5. Météo par jour (tempête le 10), jour/nuit doux (crépuscule), fenêtres et lampadaires allumés la nuit.
-6. Performances mobile : regrouper la géométrie, ne dessiner que ce qui est visible, 60 i/s sur un téléphone moyen.
+## À faire (par priorité) — mis à jour par le chef le 24 nov
+Méthode : prends le **premier point non fait** de cette liste, une branche et une PR par point, `npm run build`,
+`npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
+**avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
+
+1. **#11** et **#42** (presque faits) : vérifier sur captures ce qui manque, finir, commenter les issues pour que le chef ferme.
+2. **#23** : ne plus tout reconstruire à chaque changement d'état (mesure avant/après avec `tests/qa/perf.mjs`).
+3. **#14** : ne charger que le monde où l'on se trouve.
+4. **#12** : courte présentation à l'arrivée dans un nouveau monde.
+5. **#10** : neige au gyroscope, lumière des maisons, halo sur le joueur.
+6. **#61** : instantané du décor autour d'une case (pour le PDF des souvenirs).
 
 ## Questions à poser à Alexandre
 Style des montagnes, palette de chaque monde, densité du décor, look de Pingou et des personnages, animation d'ouverture.

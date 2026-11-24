@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push:*)",
+      "Bash(git -c push.negotiate=true push:*)",
+      "Bash(git merge:*)",
+      "Bash(git commit:*)",
+      "Bash(git pull:*)"
+    ]
+  }
+}

@@ -11,7 +11,7 @@ import { MascotDialog } from "./ui/Mascot";
 import { LoginScreen } from "./ui/LoginScreen";
 import { DayWindow } from "./ui/DayWindow";
 import { PreparedEditor, RappelVeille } from "./ui/PreparedEditor";
-import { RaceIndicator } from "./ui/RaceIndicator";
+import { Hud } from "./ui/Hud";
 import { Settings, chargerPreferences } from "./ui/Settings";
 import { FinalScreen } from "./ui/FinalScreen";
 import { PINGOU_ROUTE, type PingouLine } from "./ui/pingou/lines";
@@ -241,26 +241,17 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
       <div ref={host} className="stage-host" />
       <div style={{ height }} aria-hidden="true" />
 
-      <header className="hud">
-        <div className="brand">
-          <span className="brand-kicker">Calendrier de l'Avent{backend.mode === "demo" ? " · démo" : ""}</span>
-          <span className="brand-title">Alexandre & Flavie</span>
-        </div>
-        <div className="zone-pill" key={zone}>{ZONES[zone]?.name}</div>
-        <RaceIndicator me={me} progress={progress} compact />
-        <div className="hud-actions">
-          <span className="who-badge" style={{ ["--c" as string]: "#" + PLAYERS[me].coat.toString(16).padStart(6, "0") }}>{PLAYERS[me].name}</span>
-          {nextToWrite && (
-            <button className="round" onClick={() => { sound.play("tap"); setEditing(nextToWrite); }} title={`Préparer la case ${nextToWrite}`} aria-label={`Préparer la case ${nextToWrite} pour ${PLAYERS[partner].name}`}>✏️</button>
-          )}
-          <button className="round" onClick={toggleNight} title="Jour / nuit" aria-label="Basculer jour / nuit">{night ? "🌙" : "☀️"}</button>
-          <button className="round" onClick={goToday} title="Aller à aujourd'hui" aria-label="Aller à la case du jour">📍</button>
-          {today >= 24 && (
-            <button className="round" onClick={() => { sound.play("tap"); { const sc = sceneRef.current as (Scene & { snapshotAround?: (d: number, w: number, h: number) => Promise<string> }) | null; void downloadSouvenirs(backend, undefined, { decor: sc?.snapshotAround ? (d: number) => sc.snapshotAround!(d, 1200, 520).catch(() => null) : undefined }); } }} title="Garder nos souvenirs" aria-label="Télécharger nos lettres et nos photos">📜</button>
-          )}
-          <button className="round" onClick={() => { sound.play("tap"); setSettings(true); }} title="Réglages" aria-label="Réglages">⚙️</button>
-        </div>
-      </header>
+      <Hud
+        me={me} progress={progress}
+        zoneName={ZONES[zone]?.name ?? ""} zoneKey={zone}
+        couleur={"#" + PLAYERS[me].coat.toString(16).padStart(6, "0")}
+        demo={backend.mode === "demo"} night={night}
+        nextToWrite={nextToWrite} souvenirs={today >= 24}
+        onEdit={(d) => { sound.play("tap"); setEditing(d); }}
+        onToggleNight={toggleNight} onGoToday={goToday}
+        onSouvenirs={() => { sound.play("tap"); const sc = sceneRef.current as (Scene & { snapshotAround?: (d: number, w: number, h: number) => Promise<string> }) | null; void downloadSouvenirs(backend, undefined, { decor: sc?.snapshotAround ? (d: number) => sc.snapshotAround!(d, 1200, 520).catch(() => null) : undefined }); }}
+        onSettings={() => { sound.play("tap"); setSettings(true); }}
+      />
 
       {reminder && !open && !editing && (
         <div className="rappel-host"><RappelVeille jour={reminder} partenaire={partner} onOuvrir={() => setEditing(reminder)} /></div>

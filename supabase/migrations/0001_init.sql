@@ -234,6 +234,16 @@ language sql stable security definer set search_path = public as $$
   )
 $$;
 
+-- Une photo d'une case DÉJÀ OUVERTE par son destinataire ne peut plus être remplacée ni supprimée
+-- (sinon l'auteur pourrait vider une case figée en effaçant les fichiers).
+create or replace function public.photo_frozen(object_name text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.prepared_content p
+    where object_name = any (p.photos) and public.prepared_frozen(p.day, p.to_who)
+  )
+$$;
+
 drop policy if exists photos_read on storage.objects;
 create policy photos_read on storage.objects for select to authenticated
   using (bucket_id = 'photos' and public.photo_readable(name));
@@ -242,11 +252,11 @@ create policy photos_insert on storage.objects for insert to authenticated
   with check (bucket_id = 'photos' and split_part(name, '/', 1) = public.my_who());
 drop policy if exists photos_update on storage.objects;
 create policy photos_update on storage.objects for update to authenticated
-  using (bucket_id = 'photos' and split_part(name, '/', 1) = public.my_who())
+  using (bucket_id = 'photos' and split_part(name, '/', 1) = public.my_who() and not public.photo_frozen(name))
   with check (bucket_id = 'photos' and split_part(name, '/', 1) = public.my_who());
 drop policy if exists photos_delete on storage.objects;
 create policy photos_delete on storage.objects for delete to authenticated
-  using (bucket_id = 'photos' and split_part(name, '/', 1) = public.my_who());
+  using (bucket_id = 'photos' and split_part(name, '/', 1) = public.my_who() and not public.photo_frozen(name));
 
 -- =====================================================================
 -- TEMPS RÉEL — canaux privés « room:… » réservés aux deux comptes

@@ -9,7 +9,7 @@
 // SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont fournis automatiquement par Supabase.
 //
 // Corps JSON facultatif (tests) : { "day": 16, "kind": "relance", "force": true, "dry": true }
-//   day   : jour à traiter (sinon « demain », et seulement à l'heure du rappel)
+//   day   : jour à traiter (sinon « demain », et seulement à l'heure du rappel) ; un test n'écrit pas dans le journal
 //   kind  : "rappel" ou "relance" (sinon déduit de l'heure de Paris)
 //   force : ignore l'heure et le journal des rappels déjà envoyés
 //   dry   : n'envoie rien, renvoie seulement qui serait prévenu
@@ -62,9 +62,13 @@ Deno.serve(async (req) => {
       report.push({ who: t.who, kind: t.kind, ok: false, code, error: String((e as Error).message ?? e) });
     }
   }
-  for (const [k, devices] of perWho) {
-    const [day, who, kind] = k.split(":");
-    await db.from("reminder_log").upsert({ day: Number(day), who, kind, devices, sent_at: new Date().toISOString() });
+  // Un envoi de TEST (day ou force) ne s'inscrit pas au journal : sinon il bloquerait le vrai rappel du soir
+  const isTest = opts.force === true || opts.day != null;
+  if (!isTest) {
+    for (const [k, devices] of perWho) {
+      const [day, who, kind] = k.split(":");
+      await db.from("reminder_log").upsert({ day: Number(day), who, kind, devices, sent_at: new Date().toISOString() });
+    }
   }
   return json(200, { sent: [...perWho.values()].reduce((a, b) => a + b, 0), report });
 });

@@ -102,6 +102,11 @@ VITE_VAPID_PUBLIC_KEY=
 Puis `npm run dev` : le site passe automatiquement en mode Supabase (il demande le mot de passe).
 Supprime ou renomme `.env.local` pour revenir au mode démo.
 
+> Si le site répond « Mot de passe incorrect » alors que le mot de passe est bon : (1) l'adresse de
+> `.env.local` ne correspond pas à celle du compte créé à l'étape 4 ; (2) l'étape « relier chaque compte à son
+> personnage » (requête SQL de l'étape 4) n'a pas été faite ; (3) la `Project URL` ou la clé est fausse.
+> (Le site affiche ce même message pour toute erreur de connexion, en attendant de le préciser.)
+
 ## 7. Brancher le site en ligne (GitHub Pages)
 
 Sur GitHub, dépôt `chrismas-calendar` → **Settings** → **Secrets and variables** → **Actions** →
@@ -114,6 +119,9 @@ Sur GitHub, dépôt `chrismas-calendar` → **Settings** → **Secrets and varia
 | `VITE_EMAIL_ALEXANDRE` | ton adresse (celle du compte) |
 | `VITE_EMAIL_FLAVIE` | celle de Flavie |
 | `VITE_VAPID_PUBLIC_KEY` | clé publique des rappels (étape 10) |
+
+Vérifie aussi, **une seule fois** : **Settings** → **Pages** → *Build and deployment* → **Source** : **GitHub Actions**
+(sinon le déploiement se termine sans rien publier).
 
 Puis **Actions** → **Déploiement GitHub Pages** → **Run workflow** (ou pousse sur `main`).
 Résultat :
@@ -129,11 +137,17 @@ Les cases s'ouvrent selon la date **du serveur** : **à 7 h du matin, heure de P
 **Table Editor** → `app_settings` → colonne `day_override` → mets par ex. `12` → **Save**.
 **Remets-la à `NULL` avant le 1er décembre !**
 
-Pour repartir de zéro après tes tests (SQL Editor) :
+**Avant la mise en ligne, repars de zéro** (SQL Editor). C'est important : une case que l'autre a « ouverte »
+pendant tes tests est **figée** (plus modifiable), et un rappel déjà noté au journal ne repartirait pas.
 ```sql
-delete from public.progress; delete from public.game_state; delete from public.prepared_content;
+update public.app_settings set day_override = null;
+delete from public.progress;            -- d'abord : sinon les cases préparées ouvertes sont figées
+delete from public.prepared_content;
+delete from public.game_state;
+delete from public.reminder_log;
 ```
-Les photos de test se suppriment dans **Storage** → `photos`.
+Les photos de test se suppriment dans **Storage** → `photos` (ouvre le seau, sélectionne les dossiers, **Delete**).
+Garde tes abonnements aux rappels (`push_subscriptions`) : ils servent le 3 décembre.
 
 ## Réglages modifiables (table `app_settings`)
 
@@ -153,7 +167,8 @@ Si tu changes `open_hour`, change aussi `OPEN_HOUR` dans `src/backend/config.ts`
   ouvre le tableau de bord Supabase et clique **Restore project**. Pendant décembre, vos visites
   quotidiennes le gardent éveillé.
 - **Case préparée figée** : tu peux modifier la case que tu prépares pour l'autre jusqu'au moment où
-  il ou elle l'ouvre ; ensuite le serveur refuse toute modification.
+  il ou elle l'ouvre ; ensuite le serveur refuse toute modification (texte, et aussi remplacement ou
+  suppression des photos de cette case).
 - Photos : le site les réduit (2000 px max, JPEG) avant l'envoi ; le serveur refuse au-delà de 10 Mo.
 - Vérifier les règles de sécurité sans Supabase (développeurs) : `bash supabase/tests/run_sql_tests.sh`.
 
@@ -328,6 +343,7 @@ Tu avais déjà lancé ce script avant la relance ? Relance-le simplement : il e
    ```
 4. Même requête **sans** `"dry": true` → la notification arrive sur ton téléphone (si ta case 16 est vide).
    Pour voir la relance : `'{"day": 16, "kind": "relance", "force": true}'`.
+   Un envoi de test (avec `day` ou `force`) **n'est pas inscrit au journal** : il n'empêche pas le vrai rappel.
 5. Le 3 décembre à 20 h, ça partira tout seul. Historique : `select * from public.reminder_log;` et
    `select * from cron.job_run_details order by start_time desc limit 5;`
 
@@ -351,3 +367,43 @@ Tu avais déjà lancé ce script avant la relance ? Relance-le simplement : il e
 - Mode « Ne pas déranger » / Concentration actif à 20 h : la notification arrive en silence.
 - Changement de téléphone ou réinstallation : réactive simplement les rappels.
 - Se déconnecter du site désactive les rappels sur cet appareil.
+
+---
+
+## 11. Checklist de test à deux, sur de vrais téléphones (avant le 30 novembre)
+
+À faire dans l'ordre. Coche au fur et à mesure ; au premier ✗, note ce que tu vois (message exact, capture)
+et dis-le à Claude.
+
+**A. Connexion**
+- [ ] Sur ton téléphone : le site en ligne affiche « Qui es-tu ? » avec un mot de passe (si la carte s'ouvre sans rien demander, c'est le mode démo : les secrets GitHub de l'étape 7 manquent).
+- [ ] Tu entres comme **Alexandre** → la carte s'affiche. Flavie fait de même sur le sien.
+- [ ] Tu ne peux pas te connecter en tant que Flavie avec ton mot de passe (et inversement).
+- [ ] Ferme et rouvre le site : tu es toujours connecté·e (case « Rester connecté·e » cochée).
+
+**B. Case préparée (le cœur du secret)** — avec `day_override` à `12` (étape 8)
+- [ ] Alexandre prépare la case 12 pour Flavie : un texte et une photo, puis enregistre.
+- [ ] Alexandre la relit : texte et photo sont là.
+- [ ] Flavie ouvre la case 12 : elle voit le texte **et** la photo.
+- [ ] Alexandre essaie de modifier la case 12 → refus (« Cette case a déjà été ouverte… »).
+- [ ] Remets `day_override` à `4` : Alexandre prépare la case 20 pour Flavie ; Flavie ne peut pas l'ouvrir (cadenas, jour pas arrivé).
+- [ ] Dans **Storage** → `photos` : le seau est marqué **Private** et les photos y sont rangées par dossier `alexandre/` et `flavie/`.
+
+**C. Jeux et progression**
+- [ ] Quand Alexandre ouvre une case, Flavie voit sa progression avancer (barre « À égalité avec… »).
+- [ ] Un jeu en direct : vous êtes tous les deux dans la même salle (présence), le départ est synchronisé.
+
+**D. Rappels (notification de 20 h)**
+- [ ] Chacun active les rappels sur son téléphone (voir « Pour Alexandre et Flavie » à l'étape 10) : **Table Editor** → `push_subscriptions` montre **une ligne par téléphone**, avec le bon `who`.
+- [ ] Simulation à blanc (10.7, point 3) : la réponse liste `alexandre` et/ou `flavie` pour la case 16.
+- [ ] Envoi réel (10.7, point 4) : la notification arrive en quelques secondes ; un toucher ouvre le site **sur la case 16**.
+- [ ] Même chose avec `"kind": "relance"` : le texte « Toc toc… » arrive.
+- [ ] Remplis la case 16 de ce côté, relance la simulation à blanc : cette personne n'est **plus** dans la liste.
+- [ ] Planification : `select * from cron.job;` montre 2 lignes (`rappel-veille`, `relance-veille`) actives.
+- [ ] iPhone : le test est fait **depuis l'icône** sur l'écran d'accueil (pas depuis Safari).
+
+**E. Remise à zéro (obligatoire)**
+- [ ] Exécute la remise à zéro de l'étape 8 (y compris `day_override = null`).
+- [ ] `select day_override from public.app_settings;` renvoie `NULL`.
+- [ ] `select count(*) from public.progress;` renvoie `0`.
+- [ ] Photos de test supprimées dans **Storage**.

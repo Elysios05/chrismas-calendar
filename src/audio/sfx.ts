@@ -7,6 +7,7 @@ import type { Sfx } from "../core/contracts";
 import { makeImpulse } from "./runner";
 import { hz, midi } from "./theory";
 import type { AudioIn, Tone } from "./types";
+import { VoicePool } from "./voices";
 
 /**
  * Effets en plus du contrat (à ajouter au type `Sfx`) :
@@ -80,8 +81,8 @@ const MAX_DELAY = 0.12;
 const TALK_NOTES = [76, 79, 81, 84, 86, 88]; // pentatonique : la voix de Pingou reste toujours jolie
 
 export class SfxBank {
-  private nodes: ToneNS.ToneAudioNode[] = [];
-  private bell: ToneNS.PolySynth<ToneNS.FMSynth>;
+  private nodes: { dispose(): unknown }[] = [];
+  private bell: VoicePool;
   private blip: ToneNS.Synth;
   private noise: ToneNS.NoiseSynth;
   private noiseFilter: ToneNS.Filter;
@@ -108,7 +109,7 @@ export class SfxBank {
     const revGain = new T.Gain(0.35).connect(bus);
     rev.connect(revGain);
 
-    this.bell = new T.PolySynth(T.FMSynth, {
+    this.bell = new VoicePool(T, T.FMSynth, {
       harmonicity: 3,
       modulationIndex: 4,
       oscillator: { type: "sine" },

@@ -23,10 +23,58 @@ et Pingou (répliques + 5 expressions).
 | `useDialog.ts` | tout ce qu'une fenêtre modale doit faire (voir Pièges) |
 | `dev/maquettes.tsx` | page de maquettes, `maquettes.html?vue=…` (outil de travail) |
 
-## À faire
-Voir les tickets GitHub ouverts marqués `[Interface]`. Au 19 novembre il n'en reste qu'un : **#51**.
+## À faire (par priorité) — mis à jour par le chef le 24 nov
+Méthode : prends le **premier point non fait** de cette liste, une branche et une PR par point, `npm run build`,
+`npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
+**avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
+
+1. ~~**#75**~~ — **fait le 24 nov**, PR `interface/erreurs-connexion` en attente de fusion. La connexion affiche « Mot de passe incorrect » pour toute erreur. Distinguer au moins mauvais mot de
+   passe / problème réseau / compte non relié. **À finir avant le 27 nov** (branchement de Supabase).
+2. ~~**#51**~~ — **fait le 24 nov**, PR `interface/menus-haut` : composant `<Hud />` livré, **à brancher par le chef dans `App.tsx`**.
+3. Ensuite : relire les issues `[Interface]` ouvertes ; s'il n'y en a plus, ouvrir une issue pour demander la suite au chef.
 
 ## Journal
+
+### 📍 Où j'en suis — 24 novembre 2026 (soir)
+
+**#51 livré** (branche `interface/menus-haut`, PR vers `main`). Alexandre a vu trois maquettes
+(`maquettes.html?vue=hud-a|hud-b|hud-c`) et a **choisi B, « deux îlots »** :
+- à gauche un îlot crème : « Alexandre & Flavie » + nom du monde dessous (badge « démo » en mode démo) ;
+- à droite une capsule ✏️ ☀️/🌙 (📜 le 24) ⚙️ + pastille ronde du joueur (initiale, couleur du manteau) ;
+- dessous, la course réduite à une pastille « 🏁 Flavie +1 » qui déplie le `RaceIndicator` au toucher
+  (se replie au toucher ailleurs ou sur Échap) ;
+- 📍 en bouton rond flottant en bas à droite (Pingou, z-index 20, passe par-dessus quand il parle).
+Écartées : A (une barre + menu ☰ : ✏️ caché derrière deux touchers) et C (barre d'actions en bas).
+
+`src/ui/Hud.tsx` reçoit tout en props (`HudProps`), **App.tsx n'est pas touché** : le chef doit remplacer
+le `<header className="hud">` par `<Hud …/>`, puis on pourra supprimer `.hud`, `.brand`, `.zone-pill`,
+`.who-badge`, `.round` (et la règle `.zone-pill` de nuit et du media 560 px) de `index.css`.
+Le jour où ✏️ et 📜 sont là ensemble (le 24), la pastille du joueur s'efface sur téléphone (`.entete--pleine`),
+sinon le titre ne tient plus. Aperçu du vrai composant : `maquettes.html?vue=entete` (`&nuit=1&j24=1&plein=1&egalite=1`).
+
+**Anneau du ✕ au toucher** : venait de `useDialog`, qui donnait le focus au ✕ à l'ouverture. Il retient
+maintenant la dernière façon d'interagir (clavier / pointeur) : au doigt, le focus va sur le panneau
+(`tabIndex=-1`, sans contour) ; au clavier, sur le premier bouton comme avant. Maj+Tab depuis le panneau
+renvoie au dernier élément.
+
+**Prochaine tâche** : relire les issues `[Interface]` ouvertes ; sinon, demander la suite au chef par une issue.
+
+### 24 novembre 2026 — #75 (erreurs de connexion)
+
+**#75 livré** (branche `interface/erreurs-connexion`, PR vers `main`, en attente du chef).
+`LoginScreen` classe l'échec de `signIn` avec `classerEchec()` (exportée) :
+- « Mot de passe incorrect. » (seul message que le backend renvoie pour un mauvais mot de passe)
+  → comme avant : réplique taquine de Pingou, champ vidé ;
+- réseau (`Failed to fetch` / `NetworkError` / `Load failed`, ou `navigator.onLine` faux)
+  → « Pas de réseau : vérifie ta connexion internet, puis réessaie. » ;
+- tout le reste → « Connexion impossible : » + message du backend (option 1 recommandée par le chef),
+  avec traduction des deux messages Supabase anglais prévisibles (e-mail non confirmé, trop d'essais).
+Dans ces deux derniers cas le mot de passe est **gardé** dans le champ. Deux répliques ajoutées
+(`reseauCoupe`, `connexionImpossible`) : **validées par Alexandre le 24 nov**.
+Au passage : `.login-erreur` passe en `--red-texte` (13 px, le rouge vif ne passait pas le contraste).
+Maquettes : `maquettes.html?vue=connexion&erreur=mdp|reseau|compte` simule chaque échec.
+`npm run capture` ne sait pas montrer l'écran de connexion (il passe la connexion d'office) :
+captures faites à la main sur la page de maquettes en dev.
 
 ### 📍 Où j'en suis — 19 novembre 2026
 
@@ -66,6 +114,7 @@ ouverte n'est pour l'Interface.
 - Écran de connexion : afficher/masquer le mot de passe, « rester connecté·e », « voir la démo ».
 - Case préparée : **trois photos maximum** (au-delà, les polaroïds ne tiennent plus sur un téléphone).
 - Nom du monde : **pastille crème permanente** (en blanc sur la neige il était illisible).
+- Connexion (#75) : répliques « réseau gelé » et « la porte coince de notre côté » validées (24 nov).
 - Règles d'écriture des répliques : une phrase courte par bulle, 150 caractères au plus, tutoiement,
   un emoji au maximum et jamais au milieu d'une phrase. Tout est dans `pingou/lines.ts`.
 
