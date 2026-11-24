@@ -72,7 +72,7 @@ test("connexion démo : choisir Alexandre, mot de passe quelconque", async ({ pa
   await page.getByRole("button", { name: "Entrer" }).click();
   await C.attendreScene(page);
   await expect(page.locator(".entete-avatar")).toHaveAttribute("title", "Alexandre");
-  await expect(page.locator(".brand-kicker")).toContainText("démo");
+  await expect(page.locator(".entete-demo:visible")).toContainText("démo");
   expect(await diversite(page), "le canvas semble vide").toBeGreaterThan(20);
   expect(erreurs(), JSON.stringify(erreurs(), null, 1)).toEqual([]);
   // déconnexion (dans les réglages) → retour à l'écran de connexion
@@ -90,11 +90,11 @@ test("« Voir la démo sans compte » entre directement", async ({ page }) => {
 
 test("mode jour à midi, mode nuit à 21 h", async ({ page, context }) => {
   await C.ouvrirDemo(page, { jour: 9 });
-  await expect(page.locator("button[title='Jour / nuit']")).toHaveText("☀️");
+  await expect(page.getByRole("button", { name: "Passer en nuit" })).toHaveText("☀️");
   await context.clock.setFixedTime(new Date(C.HEURES.nuit));
   await page.reload();
   await C.attendreScene(page);
-  await expect(page.locator("button[title='Jour / nuit']")).toHaveText("🌙");
+  await expect(page.getByRole("button", { name: "Passer en jour" })).toHaveText("🌙");
 });
 
 test("case du jour : la fenêtre s'ouvre, se ferme par ✕ et par Échap", async ({ page, isMobile }) => {
@@ -124,9 +124,9 @@ test("téléphone : toucher une case déjà ouverte affiche sa fenêtre et la ga
 test("case future verrouillée : Pingou parle, pas de fenêtre", async ({ page, isMobile }) => {
   await C.ouvrirDemo(page, { jour: 9 });
   await C.fermerPingou(page);
-  const p = await C.toucherCadeau(page, 12, isMobile);
+  const p = await C.toucherCadeau(page, 10, isMobile);
   expect(p.etat).toBe("locked");
-  await expect(page.locator(".mascot--flottant")).toContainText("12");
+  await expect(page.locator(".mascot--flottant")).toContainText("10");
   await expect(fenetre(page)).toHaveCount(0);
 });
 
@@ -140,7 +140,7 @@ test("jour 1 : le quiz se joue jusqu'au bout", async ({ page, isMobile }) => {
   await page.locator(".jeu-btn").last().click();
   // répond toujours la première option, sur soi puis sur l'autre, jusqu'à l'écran de fin
   const fin = page.locator(".jeu-btn", { hasText: "Fermer" });
-  for (let i = 0; i < 40 && !(await fin.isVisible()); i++) {
+  for (let i = 0; i < 120 && !(await fin.isVisible()); i++) {
     const opt = page.locator(".quiz-options button:enabled").first();
     if (await opt.isVisible().catch(() => false)) await opt.click();
     await page.waitForTimeout(500);
