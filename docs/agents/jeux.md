@@ -18,9 +18,9 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 
 **🆕 Salons (décision d'Alexandre du 25 nov, avant le 30)** — lire `docs/salons.md`. Dès que le chef annonce dans **#84** la fusion du contrat `SalonApi`, ce point passe **avant les nouveaux jeux** : chaque jeu (déjà livré, puis chaque nouveau) lit son contenu depuis le salon (sinon le défaut de `src/data/games/`) et exporte un schéma de contenu pour l'éditeur ; plus aucun prénom en dur. En attendant, continue la liste ci-dessous en écrivant déjà le contenu de chaque nouveau jeu comme un objet séparé et remplaçable.
 
-Faits : 1, 2, **3** (PR en attente de fusion), 7, 11, 15, 17. Restent 11, **dans l'ordre d'ouverture des cases** :
-1. ~~Jour **3** (défi photo croisé)~~ — fait le 24 nov, branche `jeux/defi-photo-jour3`
-2. Jours **5** et **6** (en direct : `joinLive`, voir #56, avec version tour par tour si l'autre est absent)
+Faits : 1, 2, 3, **5, 6** (PR #83 en attente de fusion), 7, 11, 15, 17. Restent 10, **dans l'ordre d'ouverture des cases** :
+1. ~~Jour **3** (défi photo croisé)~~ — fait le 24 nov (PR #77, fusionnée)
+2. ~~Jours **5** et **6** (en direct)~~ — faits le 24 nov, branche `jeux/direct-jours-5-6` (PR #83)
 3. Jour **9** (dessin à deviner)
 4. Jour **10** (score à battre)
 5. Jour **13** (en direct)
@@ -44,6 +44,43 @@ du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
 
+### 24 novembre 2026 — jours 5 et 6, jeux en direct (branche `jeux/direct-jours-5-6`)
+
+**Socle (#56) :** `shared/partie.ts` passe maintenant par `joinLive` (présence par « hello », prêt,
+départ synchronisé, horloge commune) au lieu de `joinRoom`. Le journal de coups reste par-dessus,
+et la salle est exposée en `partie.live` (`setReady`, `onReady`, `onStart`, `now`/`toLocal`,
+`emit`/`on`, `setState`). `ouvrirPartie(ctx, { cle, compteARebours })` (une chaîne seule = la clé,
+comme avant). Le jour 11 n'a pas changé d'une ligne.
+⚠️ `LiveGame` garde `startAt` en mémoire : un départ « repris » (`resumed: true`) vient d'une
+ancienne séance et bloque tout nouveau départ → le jour 6 appelle `live.reset()` en arrivant au salon.
+
+**Jour 5 — Pictionary (décidé avec Alexandre) :** 6 manches de 60 s (3 dessins chacun, Flavie
+commence) ; celui qui dessine choisit entre un mot de Noël et un mot « à vous deux » (15 s, sinon
+le mot de Noël) ; l'autre tape (correction tolérante du rébus) ; trouvé en t s → devineur
+100 + 2×(60−t), dessinateur 50 + (60−t). 8 couleurs, 3 épaisseurs, gomme, « Tout effacer ».
+Absent : 20 s d'attente puis différé — le dessin est enregistré **horodaté** (`dessin.ts`) et
+rejoué au même rythme chez l'autre, qui devine plus tard puis dessine à son tour. Fin : galerie
+des 6 dessins (un vrai souvenir). Contenu : `src/data/games/pictionary-jour5.ts`.
+Technique : coups `dessin:<qui>:<k>` et `devine:<qui>:<k>` ; en direct, le dessinateur fixe la
+manche dans l'état `live` (`{r, debut, mot, rejeu}`), les traits passent par `emit("trait")`
+toutes les 80 ms et le dessin complet est déposé à la fin. Si l'autre part, mon dessin ou un rejeu
+continuent seuls ; un dessin en direct de l'autre s'arrête (il sera rejoué plus tard).
+
+**Jour 6 — duel des friandises (décidé avec Alexandre) :** même écran, même pluie (graine),
+on se dispute les friandises ; charbon −1 et hotte ralentie 1,5 s ; **étoile dorée +5 chacun
+seulement si les deux hottes la touchent** ; 3 manches de 45 s. Absent : 20 s puis on joue contre
+le **fantôme** de l'autre (sa hotte rejouée) s'il a joué la manche, sinon on pose un score.
+Décompte unique (`pluie.ts`) : la première hotte qui touche garde la friandise ; l'instant de
+prise est l'heure exacte du passage de la ligne + écart au centre (départage équitable).
+Coups `manche:<qui>:<m>` (prises + trace de la hotte à 10 Hz). En direct, les manches que
+personne n'a jouées s'enchaînent sur l'horloge commune (45 s + 6 s de pause).
+Contenu : `src/data/games/friandises-jour6.ts`.
+
+**Vérifié :** à deux onglets (direct, 3 manches du duel avec le même score des deux côtés) et en différé (rejeu, fantôme), jour 11 non cassé, aucune erreur console. PR #83 (brouillon).
+Défaut trouvé puis corrigé : en fin de direct, Pingou annonçait « score posé » avant que la dernière manche de l'autre arrive → on l'attend 4 s.
+
+**Prochaine étape :** jour 9 (dessin à deviner, différé) — il pourra reprendre `pictionary/dessin.ts`
+et `Tableau.tsx` tels quels. Demander d'abord ses règles à Alexandre.
 ### 24 novembre 2026 — jour 3, défi photo croisé (branche `jeux/defi-photo-jour3`)
 
 **Décisions prises avec Alexandre :**
