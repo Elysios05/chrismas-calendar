@@ -12,8 +12,9 @@ import { churchBell } from "./instruments";
 import { makeImpulse } from "./runner";
 import { rng } from "./theory";
 import type { AudioIn, Instr, Tone } from "./types";
+import { audioErrors, safeTime, VoicePool } from "./voices";
 
-type Node = ToneNS.ToneAudioNode;
+type Node = { dispose(): unknown };
 
 /** Réglage par monde (dB) : chaque ambiance ≈ -24 LUFS à plein volume, sous la musique (-16) */
 const AMB_TRIM: Record<ZoneId, number> = {
@@ -202,7 +203,7 @@ export class AmbienceRunner {
 
   /** Tintement de verres (vin chaud) */
   private clink(out: AudioIn) {
-    const s = this.add(new this.T.PolySynth(this.T.FMSynth, {
+    const s = this.add(new VoicePool(this.T, this.T.FMSynth, {
       harmonicity: 5.5, modulationIndex: 6,
       envelope: { attack: 0.001, decay: 0.4, sustain: 0, release: 0.3 },
       modulationEnvelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 },
@@ -321,7 +322,14 @@ export class AmbienceRunner {
   pump(horizon: number, now: number) {
     for (const g of this.gens) {
       while (g.next < horizon) {
-        if (g.next >= now) g.fire(g.next);
+        // jamais dans le passé (fil principal en retard) ; un bruitage ne doit jamais lever d'exception
+        if (g.next >= now && safeTime(this.T.getContext().currentTime, -Infinity, g.next) === g.next) {
+          try {
+            g.fire(g.next);
+          } catch {
+            audioErrors.count++;
+          }
+        }
         g.next += g.min + (g.max - g.min) * this.rand();
       }
     }
