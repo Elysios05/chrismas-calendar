@@ -100,8 +100,9 @@ Ce qui ne suit pas d'un compte à l'autre : les conversations, les agents en cou
 - Monde : #10, #12, #14, #23, #61 (+ #11/#42 en grande partie faits, à vérifier puis fermer). Interface : #51 (en-tête).
 - **Jamais testé en vrai** : Supabase (Alexandre doit créer le projet en suivant `docs/supabase.md`), notifications,
   vrais téléphones.
-- **Proposé à Alexandre le 24 nov, pas encore décidé** pour tenir le 30 : Sonnet pour tout sauf le Monde ; jeux en
-  direct en **tour par tour seulement** pour 2–3 d'entre eux ; abandonner #61, #12, #10 ; surveillance à la demande.
+- **Modèles : on garde le fonctionnement actuel** (choix par tâche, voir « Système de travail ») — décision d'Alexandre le 24 nov.
+- **Proposé à Alexandre le 24 nov, pas encore décidé** pour tenir le 30 : jeux en direct en **tour par tour seulement**
+  pour 2–3 d'entre eux ; abandonner #61, #12, #10 ; surveillance à la demande.
   Estimation : ~40 tâches, ~50–100 $ au tarif API, environ une limite hebdomadaire.
 
 ## Échéancier
