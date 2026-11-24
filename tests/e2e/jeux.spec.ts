@@ -100,8 +100,8 @@ test("jour 7 : le rébus se joue jusqu'au bout (on passe les 8 énigmes)", async
   await expect(page.locator(".rebus-retour")).toContainText("Pas tout à fait");
   await page.getByRole("button", { name: /Une lettre/ }).click();
   const fin = page.locator(".jeu-btn", { hasText: "Fermer" });
-  for (let i = 0; i < 12 && !(await fin.isVisible()); i++) {
-    const passer = page.getByRole("button", { name: "Passer" });
+  for (let i = 0; i < 60 && !(await fin.isVisible()); i++) {
+    const passer = page.locator(".jeu-actions .jeu-btn", { hasText: "Passer" });
     if (await passer.isEnabled().catch(() => false)) await passer.click().catch(() => {});
     await page.waitForTimeout(700);
   }
