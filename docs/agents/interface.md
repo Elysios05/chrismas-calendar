@@ -32,7 +32,12 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 2. ~~**#51**~~ — fait et fusionné (PR #79), branché par le chef dans `App.tsx`.
 3. ~~Relire les issues `[Interface]`~~ — fait le 24 nov : aucune ouverte. Suite demandée au chef dans **#81**
    (avec le signalement de `npm run capture` cassé). PR `interface/nettoyage-entete` en attente de fusion.
-4. **Attendre la réponse du chef dans #81** avant d'ouvrir un nouveau chantier.
+4. ~~Réponse du chef dans #81~~ : reçue (25 nov), PR #82 fusionnée.
+5. **Nom du monde tronqué sur téléphone** (« La Forêt et le Lac … ») : proposer 2–3 options à Alexandre avec captures
+   (ligne plus petite, nom court par monde, défilement), puis faire celle qu'il choisit.
+6. **À partir du 27 nov** (Supabase branché) : vérification complète de l'interface en vrai — messages d'erreur de #75
+   avec de vraies erreurs, audit axe-core, revue des 24 jours (`--jour=1..24`, jour et nuit).
+7. Ensuite : issue au chef pour la suite (aide aux Jeux côté interface si besoin).
 
 ## Journal
 
