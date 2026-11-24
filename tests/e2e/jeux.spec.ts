@@ -1,4 +1,4 @@
-// Un parcours complet par jeu fini (jours 2, 7, 11, 15, 17 ; le quiz du jour 1 est dans calendrier.spec.ts) :
+// Un parcours complet par jeu fini (jours 2, 3, 7, 11, 15, 17 ; le quiz du jour 1 est dans calendrier.spec.ts) :
 // ouvrir la case, jouer jusqu'à l'écran de fin, « Fermer », puis vérifier ce qui est enregistré dans la démo.
 // Le jeu en direct à deux onglets reste en fixme tant que #56 (joinLive) n'est pas livré.
 import { test, expect, type Page } from "@playwright/test";
@@ -64,6 +64,29 @@ test("jour 2 : la luge se joue jusqu'à la fin (arrivée ou dernier choc)", asyn
   await expect(page.locator(".jeu-canvas canvas")).toBeVisible();
   // pas de pilotage : la luge file droit et finit par un choc ou l'arrivée
   await terminerEtVerifier(page, 2);
+});
+
+// PNG 8×8 rouge, pour « prendre » la photo du défi du jour 3 sans caméra
+const PNG_ROUGE = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEklEQVR4nGP4z8CAFTEMLQkAjVr/ARnBGkoAAAAASUVORK5CYII=", "base64");
+
+test("jour 3 : le défi photo se joue jusqu'au bout (photo, légende, devinette)", async ({ page }) => {
+  test.setTimeout(300_000);
+  await C.ouvrirDemo(page, { jour: 3 });
+  await ouvrirCase(page, 3);
+  await fermerBulle(page);
+  await page.getByRole("button", { name: /Prendre ma photo/ }).click();
+  await page.locator("input[type=file]:not([capture])").setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: PNG_ROUGE });
+  await page.locator(".photo-champ input[type=text]").fill("Notre test");
+  await page.locator(".photo-question").first().click();
+  await page.locator(".photo-champ .quiz-option").first().click();
+  await fermerBulle(page);
+  await page.getByRole("button", { name: /^Envoyer à/ }).click();
+  // démo : une photo d'exemple tient lieu de celle de Flavie
+  await fermerBulle(page);
+  await page.locator(".photo-dos").click();
+  await page.locator(".quiz-options .quiz-option:enabled").first().click();
+  await expect(page.locator(".photo-bilan")).toBeVisible({ timeout: 30_000 });
+  await terminerEtVerifier(page, 3, { score: false });
 });
 
 test("jour 7 : le rébus se joue jusqu'au bout (on passe les 8 énigmes)", async ({ page }) => {
