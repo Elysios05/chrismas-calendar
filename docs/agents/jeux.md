@@ -11,10 +11,24 @@
   boules de neige (18), sapin à deux (21) — chacun avec **une version tour par tour** si l'autre n'est pas là.
 - **Synchronisé** : biscuits + minuteur partagé (14), film lancé ensemble (23).
 
-## À faire (par priorité)
-1. **Cadre commun** : registre des jeux, chargement par jour, composants partagés (compte à rebours, score, écran de victoire).
-2. Jeux solo → score à battre → différés → en direct (tester à deux onglets avec le mode démo).
-3. Contenu d'exemple dans `src/data/` (facile à remplacer par Alexandre).
+## À faire (par priorité) — mis à jour par le chef le 24 nov
+Méthode : prends le **premier point non fait** de cette liste, une branche et une PR par point, `npm run build`,
+`npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
+**avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
+
+Faits : 1, 2, 7, 11, 15, 17. Restent 12, **dans l'ordre d'ouverture des cases** :
+1. Jour **3** (défi photo croisé)
+2. Jours **5** et **6** (en direct : `joinLive`, voir #56, avec version tour par tour si l'autre est absent)
+3. Jour **9** (dessin à deviner)
+4. Jour **10** (score à battre)
+5. Jour **13** (en direct)
+6. Jour **14** (activité synchronisée)
+7. Jour **18** (en direct)
+8. Jour **19** (défi photo)
+9. Jour **21** (en direct)
+10. Jour **22** (score à battre)
+11. Jour **23** (activité synchronisée)
+Les règles de chaque jeu sont dans `src/data/planning.ts` et `docs/cahier-des-charges.md`.
 
 ## Questions à poser à Alexandre
 Règles et difficulté de chaque jeu, contenu à mettre (souvenirs, private jokes), durée des parties.
