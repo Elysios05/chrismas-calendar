@@ -28,12 +28,31 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 `npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
 **avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
 
-1. **#75** : la connexion affiche « Mot de passe incorrect » pour toute erreur. Distinguer au moins mauvais mot de
+1. ~~**#75**~~ — **fait le 24 nov**, PR `interface/erreurs-connexion` en attente de fusion. La connexion affiche « Mot de passe incorrect » pour toute erreur. Distinguer au moins mauvais mot de
    passe / problème réseau / compte non relié. **À finir avant le 27 nov** (branchement de Supabase).
 2. **#51** : refaire la disposition des menus du haut (2–3 options avec captures d'abord).
 3. Ensuite : relire les issues `[Interface]` ouvertes ; s'il n'y en a plus, ouvrir une issue pour demander la suite au chef.
 
 ## Journal
+
+### 📍 Où j'en suis — 24 novembre 2026
+
+**#75 livré** (branche `interface/erreurs-connexion`, PR vers `main`, en attente du chef).
+`LoginScreen` classe l'échec de `signIn` avec `classerEchec()` (exportée) :
+- « Mot de passe incorrect. » (seul message que le backend renvoie pour un mauvais mot de passe)
+  → comme avant : réplique taquine de Pingou, champ vidé ;
+- réseau (`Failed to fetch` / `NetworkError` / `Load failed`, ou `navigator.onLine` faux)
+  → « Pas de réseau : vérifie ta connexion internet, puis réessaie. » ;
+- tout le reste → « Connexion impossible : » + message du backend (option 1 recommandée par le chef),
+  avec traduction des deux messages Supabase anglais prévisibles (e-mail non confirmé, trop d'essais).
+Dans ces deux derniers cas le mot de passe est **gardé** dans le champ. Deux répliques ajoutées
+(`reseauCoupe`, `connexionImpossible`) : **validées par Alexandre le 24 nov**.
+Au passage : `.login-erreur` passe en `--red-texte` (13 px, le rouge vif ne passait pas le contraste).
+Maquettes : `maquettes.html?vue=connexion&erreur=mdp|reseau|compte` simule chaque échec.
+`npm run capture` ne sait pas montrer l'écran de connexion (il passe la connexion d'office) :
+captures faites à la main sur la page de maquettes en dev.
+
+**Prochaine tâche : #51** (menus du haut) — voir le plan détaillé au 19 novembre ci-dessous.
 
 ### 📍 Où j'en suis — 19 novembre 2026
 
@@ -73,6 +92,7 @@ ouverte n'est pour l'Interface.
 - Écran de connexion : afficher/masquer le mot de passe, « rester connecté·e », « voir la démo ».
 - Case préparée : **trois photos maximum** (au-delà, les polaroïds ne tiennent plus sur un téléphone).
 - Nom du monde : **pastille crème permanente** (en blanc sur la neige il était illisible).
+- Connexion (#75) : répliques « réseau gelé » et « la porte coince de notre côté » validées (24 nov).
 - Règles d'écriture des répliques : une phrase courte par bulle, 150 caractères au plus, tutoiement,
   un emoji au maximum et jamais au milieu d'une phrase. Tout est dans `pingou/lines.ts`.
 

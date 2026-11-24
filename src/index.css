@@ -181,7 +181,8 @@ button { font-family: inherit; cursor: pointer; }
   width: 40px; height: 40px; border: 0; border-radius: 12px; background: transparent; color: var(--ink-soft);
 }
 .login-oeil:hover { background: #f1ece2; }
-.login-erreur { min-height: 20px; margin: 6px 0 4px; font-size: 13px; font-weight: 600; color: var(--red); }
+/* --red-texte : le rouge vif ne passe pas le contraste en 13 px */
+.login-erreur { min-height: 20px; margin: 6px 0 4px; font-size: 13px; font-weight: 600; line-height: 1.35; color: var(--red-texte); }
 .login-rester {
   display: flex; align-items: center; gap: 9px; margin: 0 0 14px;
   font-size: 14px; color: var(--ink-soft); cursor: pointer;
