@@ -13,7 +13,7 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 `npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
 **avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
 
-1. ~~**#11** et **#42**~~ : faits le 24 nov (télésiège, lutin au chariot, emballeurs) — PR ouverte, issues commentées.
+1. ~~**#11** et **#42**~~ : faits le 24 nov (télésiège, lutin au chariot, emballeurs) — PR #80, issues commentées.
 2. **#23** : ne plus tout reconstruire à chaque changement d'état (mesure avant/après avec `tests/qa/perf.mjs`).
 3. **#14** : ne charger que le monde où l'on se trouve.
 4. **#12** : courte présentation à l'arrivée dans un nouveau monde.
