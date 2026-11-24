@@ -100,3 +100,21 @@ Extraits renouvelés dans `/home/claude/previews-audio/` (+ `ambiance-<monde>.mp
 - « Saint Nicolas, patron des écoliers » : l'air vient du « Galop des tambours » de J.-B.-J. Tolbecque (1839, domaine public,
   source RTBF), mais aucune partition lisible trouvée : le village reste sur « Il est né ».
 - Extraits : `/home/claude/previews-audio/lot3/`.
+
+### 2026-11-24 — Exceptions Tone.js (branche `audio/tone-exceptions`, ticket #68)
+**Cause** : `Tone.PolySynth` ne programme pas ses notes tout de suite ; il les confie à une minuterie (`context.setTimeout`)
+qui les rejoue plus tard, hors de nos `try/catch`. Fil principal en retard → heure passée ramenée à « maintenant » →
+deux attaques au même instant sur la même voix → « Start time must be strictly greater… » / « time must be >= last scheduled time ».
+**Fait**
+- `src/audio/voices.ts` : `VoicePool` remplace tous les `PolySynth` (instruments, tintement de verres, cloches des effets) :
+  notes programmées immédiatement, heure toujours ≥ maintenant + 4 ms et strictement croissante par voix (2 ms d'écart),
+  note sautée si elle a plus de 100 ms de retard ou s'il n'y a plus de voix libre (comme PolySynth). `guard()` fait de même
+  pour les synthés monophoniques (basse, flûte, bruits, membranes, gouttes). `audioErrors.count` compte les exceptions rattrapées.
+- Ambiances : un bruitage n'est plus déclenché dans le passé et ne peut plus lever d'exception.
+**Vérifié** : `tsc -b` et build OK ; `npm run capture` jour 9 mobile, jour 21 nuit (mobile + ordinateur), case 2 : 0 erreur.
+Test de charge maison (fil principal bloqué 0,3 à 1,5 s par à-coups, changements de monde, 40 cycles) : 0 exception, son bien
+présent en sortie. Note : le problème ne se reproduisait plus non plus sur `main` dans ce bac à sable (dépend de la machine) ;
+le correctif supprime le mécanisme en cause plutôt que le symptôme.
+**Attention captures** : un serveur Qualité tourne souvent déjà sur le port 4180 (copie `wt-qualite`) ; `npm run capture` le
+réutilise alors et photographie SA version. Lancer avec `QA_PORT=4191 npm run capture …` pour tester sa propre branche.
+**Reste** : que la Qualité confirme sur sa campagne complète (`qa:captures`).
