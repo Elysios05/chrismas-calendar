@@ -3,6 +3,7 @@
  * `npm run dev` puis http://localhost:5173/maquettes.html?vue=connexion
  * Vues : connexion · connexion-erreur · case-intro · case-jeu · case-fini · lettre
  *         editeur · editeur-vide · rappel · course · reglages · final · pingou
+ *         hud-a · hud-b · hud-c (en-tête, ticket #51 ; &ouvert=1, &nuit=1)
  */
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -16,6 +17,7 @@ import { FinalScreen } from "../FinalScreen";
 import { MascotDialog, PenguinPortrait } from "../Mascot";
 import type { Expression } from "../pingou/lines";
 import { DemoBackend } from "../../backend";
+import { HudMaquette } from "./hudMaquettes";
 import "../../index.css";
 
 // le vrai mode démo, celui qu'utilise l'application publique : plus de faux backend d'atelier.
@@ -56,6 +58,10 @@ function Maquettes() {
   const [lines, setLines] = useState([
     { text: "Case 12 ouverte. Flavie a déjà fait 1 400 points, au cas où.", face: "clin" as Expression },
   ]);
+
+  if (vue === "hud-a" || vue === "hud-b" || vue === "hud-c") {
+    return <HudMaquette piste={vue.slice(4) as "a" | "b" | "c"} />;
+  }
 
   if (vue === "connexion" || vue === "connexion-erreur") {
     return <LoginScreen backend={backend} />;
