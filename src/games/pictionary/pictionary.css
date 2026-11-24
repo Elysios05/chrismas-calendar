@@ -1,0 +1,68 @@
+/* Jour 5 — Pictionary */
+
+.pic-choix { display: flex; gap: 10px; margin: 6px 0 4px; }
+.pic-mot {
+  flex: 1; border: 0; border-radius: 18px; padding: 14px 10px; cursor: pointer; font: inherit;
+  background: #fff; color: var(--ink, #1b2747); box-shadow: 0 5px 0 rgba(27, 39, 71, .15);
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+.pic-mot span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--red, #d9354b); }
+.pic-mot b { font-size: 18px; line-height: 1.15; }
+.pic-mot:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(27, 39, 71, .15); }
+
+.pic-pret { display: flex; gap: 10px; justify-content: center; margin: 0 0 16px; }
+.pic-pret span { background: #fff; border-radius: 14px; padding: 8px 12px; font-weight: 700; color: var(--ink-soft, #5b6680); box-shadow: 0 3px 0 rgba(27, 39, 71, .1); }
+.pic-pret span.ok { color: var(--green, #2fa37a); }
+
+.pic-manche { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 8px 12px 12px; }
+.pic-entete { flex: none; display: flex; align-items: center; gap: 10px; }
+.pic-chrono {
+  flex: none; min-width: 58px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums;
+  background: #fff; border-radius: 12px; padding: 6px 8px; box-shadow: 0 3px 0 rgba(27, 39, 71, .1);
+}
+.pic-chrono.vite { color: var(--red, #d9354b); animation: picBat 1s infinite; }
+@keyframes picBat { 50% { transform: scale(1.08); } }
+.pic-indice { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 20px; font-weight: 700; letter-spacing: 2px; line-height: 1.1; overflow-wrap: anywhere; }
+.pic-indice small { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--red, #d9354b); }
+
+.pic-tableau { flex: 1; min-height: 120px; display: flex; align-items: center; justify-content: center; }
+.pic-toile { border-radius: 14px; background: #fff; box-shadow: 0 4px 0 rgba(27, 39, 71, .12), inset 0 0 0 2px rgba(27, 39, 71, .08); touch-action: none; }
+.pic-toile.actif { cursor: crosshair; }
+
+.pic-essais { flex: none; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; min-height: 28px; font-size: 14px; }
+.pic-essais span { background: #fff; border-radius: 12px; padding: 4px 10px; box-shadow: 0 2px 0 rgba(27, 39, 71, .1); animation: jeuPop .25s ease-out; }
+.pic-essais em { color: var(--ink-soft, #5b6680); }
+
+.pic-outils { flex: none; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.pic-couleurs, .pic-traits { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.pic-couleurs button {
+  width: 32px; height: 32px; border-radius: 50%; border: 3px solid #fff; cursor: pointer;
+  box-shadow: 0 2px 0 rgba(27, 39, 71, .2);
+}
+.pic-couleurs button.on { transform: scale(1.18); box-shadow: 0 0 0 3px var(--ink, #1b2747); }
+.pic-traits button {
+  min-width: 40px; height: 38px; border-radius: 12px; border: 0; background: #fff; cursor: pointer; font-size: 18px;
+  display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(27, 39, 71, .12);
+}
+.pic-traits button i { display: block; border-radius: 50%; background: var(--ink, #1b2747); }
+.pic-traits button.on { background: var(--ink, #1b2747); color: #fff; }
+.pic-traits button.on i { background: #fff; }
+.pic-traits .pic-fini { padding: 0 12px; font: inherit; font-weight: 700; font-size: 14px; background: var(--green, #2fa37a); color: #fff; }
+
+.pic-devine { flex: none; display: flex; gap: 8px; }
+.pic-devine input {
+  flex: 1; min-width: 0; font: inherit; font-size: 17px; padding: 10px 14px; border-radius: 14px;
+  border: 2px solid rgba(27, 39, 71, .15); background: #fff;
+}
+.pic-devine input.secoue { animation: rebusSecoue .3s; border-color: var(--red, #d9354b); }
+.pic-devine .jeu-btn { padding-left: 16px; padding-right: 16px; }
+
+.pic-fin { max-width: 520px; }
+.pic-galerie { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 16px; }
+.pic-galerie figure { margin: 0; background: #fff; border-radius: 12px; padding: 6px; box-shadow: 0 3px 0 rgba(27, 39, 71, .1); }
+.pic-galerie img, .pic-galerie .vide { display: block; width: 100%; aspect-ratio: 1; border-radius: 8px; background: #f3f5f9; }
+.pic-galerie .vide { display: flex; align-items: center; justify-content: center; font-size: 26px; color: #c9ccd6; }
+.pic-galerie figcaption { display: flex; flex-direction: column; font-size: 11px; line-height: 1.25; margin-top: 4px; }
+.pic-galerie figcaption b { font-size: 12px; }
+.pic-galerie figcaption span { color: var(--ink-soft, #5b6680); }
+.pic-scores .jeu-chip { white-space: nowrap; }
