@@ -22,7 +22,7 @@ canal entre Alexandre et les équipes en arrière-plan. **Dossiers** : `src/core
   Leur travail est conservé ; les relancer après l'heure indiquée.
 
 ## Système de travail (décidé le 19 nov)
-- Chef **léger** : fusionne, arbitre, lance les équipes en arrière-plan. Repartir d'une session chef neuve (lire ce fichier + `historique-chef-de-projet.md` dans le projet claude.ai) plutôt que de traîner un long historique.
+- Chef **léger** : fusionne, arbitre, lance les équipes en arrière-plan. Repartir d'une session chef neuve (lire ce fichier + `docs/agents/historique-chef.md`) plutôt que de traîner un long historique.
 - Questions des équipes à Alexandre : ticket unique **#59 « Questions pour Alexandre »** ; le chef ne relaie dans sa conversation que l'important.
 - Chaque session termine chaque tâche par « ✅ Journal à jour — tu peux taper `/clear` maintenant. » (règle dans `CLAUDE.md`).
 - **Modèle par tâche** pour les équipes en arrière-plan (paramètre `model` de l'outil Agent) : `opus` pour le visuel, les jeux, l'architecture et les correctifs délicats ; `sonnet` pour les tests, la documentation, les petits correctifs bien cernés, les scripts ; `haiku` pour les vérifications triviales.
@@ -40,7 +40,7 @@ canal entre Alexandre et les équipes en arrière-plan. **Dossiers** : `src/core
   `/home/claude/.last-gh-check` ; lister `issues?state=all&since=…` et `issues/comments?since=…` en ignorant les
   commentaires qui commencent par `**Chef de projet**`. Rien de nouveau → ne rien dire à Alexandre.
 - **Commits** : signés `Claude <noreply@anthropic.com>`, message en français, deux lignes de fin
-  `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` et `Claude-Session: https://claude.ai/code/session_015RYyqMthd65N9EWeRX49J2`.
+  `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` et `Claude-Session: <lien de ta session>`.
 - **Test d'assemblage** : `npx vite preview --port 4173` puis Playwright Python avec `/usr/bin/google-chrome`
   (`--use-gl=swiftshader --enable-unsafe-swiftshader`) : `?jour=N&demo-reset&heure=HH:MM`, bouton « Alexandre »,
   mot de passe quelconque, Entrée, puis `dispatchEvent(new CustomEvent('node-tap', {detail: N}))`.
@@ -71,42 +71,44 @@ vent. HUD : badge joueur, ✏️ prochaine case préparée (`PreparedEditor`), �
 - **Outil de capture commun** (19 nov, 20 h 53) : la Qualité ajoute `npm run capture` (sur `tests/qa/commun.mjs`, connexion démo, mobile + ordinateur) ; ensuite règle dans `CLAUDE.md` « n'écris pas ton propre script de capture ». Pas de mise en commun du reste du code (doublons négligeables). Scripts Python du Backend laissés tels quels.
 - Économie : sessions qui se vident (`/clear` après chaque tâche, voir `CLAUDE.md`), surveillance toutes les 15 min.
 
-## Où on en est (19 nov, 14 h)
-- Fait et fusionné : monde complet (6 mondes, météo par jour, crépuscule, ouverture animée, navigation, perfs),
-  connexion, fenêtres des cases, éditeur de case préparée, rappels (côté serveur, non testés en vrai), réglages, course,
-  écran du 24, souvenirs, hors ligne, outillage temps réel (`joinLive`), audio complet (ambiances, jingles, 30+ effets),
-  jeux **1 quiz, 2 luge, 7 rébus, 15 pendu, 17 mots croisés**, outils Qualité (captures, e2e, perf).
-- **Reste le plus risqué** : 13 jeux (10, 22 à score ; 5, 6, 11, 13, 18, 21 en direct ; 3, 19 photo ; 9 dessin ; 14, 23 synchro).
-  Si retard le 24–25 nov, proposer à Alexandre de simplifier certains jeux.
-- **Jamais testé en vrai** : Supabase (Alexandre doit créer le projet en suivant `docs/supabase.md`), notifications, sur vrai téléphone.
-- Priorités Monde : voir #29 (dernier commentaire). Interface : #51 (en-tête). Qualité : #34 + lot `qualite/e2e-integre` en cours.
-- Lot en cours : Backend `backend/souvenirs-pdf` (bouton « Enregistrer en PDF »).
+## Reprendre le projet depuis une session neuve (n'importe quel compte Claude)
+Tout ce qu'il faut est dans le dépôt : rien n'est à aller chercher dans une conversation ou un projet claude.ai.
+1. Cloner `Elysios05/chrismas-calendar` (accès en **écriture** nécessaire : le compte Claude doit avoir l'app GitHub
+   autorisée sur ce dépôt privé). `npm install`.
+2. Lire, dans l'ordre : ce fichier, `CLAUDE.md`, `docs/cahier-des-charges.md`, `docs/agents/historique-chef.md`
+   (résumé des échanges avec Alexandre du 17 au 19 nov), puis les issues ouvertes (REST).
+3. Les 6 équipes sont définies dans `.claude/agents/*.md` (types d'agents `monde`, `interface`, `jeux`, `backend`,
+   `audio`, `qualite`). Le chef lance celles en arrière-plan avec l'outil Agent ; Alexandre peut aussi ouvrir une
+   session directe par équipe (« Tu es l'équipe X, lis `docs/agents/x.md` »).
+4. Recréer les worktrees au besoin : `git worktree add ../wt-<équipe> -b <équipe>/<tâche> origin/main` puis `npm install`.
+5. Ligne `Claude-Session:` des commits : mettre celle de **ta** session.
+6. Surveillance des tickets : seulement si Alexandre la demande (rythme à lui demander, 15 min par défaut).
+Ce qui ne suit pas d'un compte à l'autre : les conversations, les agents en cours, les rappels programmés, la mémoire.
 
-## Équipes en arrière-plan : état au passage de relais (19 nov, 14 h 30)
-L'ancien chef ne peut pas transmettre ses agents (ils sont rattachés à sa conversation). **Le nouveau chef relance
-une instance neuve** par lot (outil Agent, `subagent_type` = `backend` / `audio` / `qualite`, `model` adapté), en
-lui donnant le worktree, la branche et la consigne ci-dessous. Les worktrees `/home/claude/wt-*` existent dans
-l'environnement cloud de l'ancien chef ; si le nouveau chef tourne ailleurs, recréer les worktrees
-(`git worktree add ../wt-<équipe> <branche>` puis `npm install`).
-- **Backend** — rien en cours. Tout est fusionné (dernier : PR #62, décors dans les souvenirs). Prochaines tâches
-  possibles : rien d'urgent ; aider à brancher Supabase quand Alexandre créera le projet (`docs/supabase.md`).
-- **Audio** — rien en cours. Tout est fusionné (PR #53 : jingles, musiques `duel`/`cosy`, 16 effets d'animaux et de
-  personnages). « Saint Nicolas, patron des écoliers » non ajouté faute de partition fiable. Prochaine tâche possible :
-  retours d'Alexandre à l'écoute des extraits du lot 3 (pas encore donnés).
-- **Qualité** — **en cours, non terminé** : branche `qualite/e2e-integre` (poussée, commit e02b132 « travail en
-  cours »), **pas encore de PR**. Contenu : tests adaptés au parcours réel (connexion → carte, quiz, luge, cases
-  préparées, rappel, deux onglets), audit axe-core (#34), captures. À relancer avec cette consigne : rebase sur
-  `origin/main`, finir les tests (faire échouer tout script qui ne voit pas la carte après connexion ; retirer les
-  `test.fail` de la luge et du « 1er décembre » qui doivent passer), relancer captures et rapport, ouvrir la PR,
-  un ticket par bug trouvé. Modèle conseillé : `sonnet`.
-- **PR ouverte au moment du relais** : #63 (`interface/journal`) à relire et fusionner.
-- La surveillance des tickets de l'ancien chef est **arrêtée** (« arrête » d'Alexandre, 19 nov 14 h 19).
+## Où on en est (24 nov)
+- `main` à jour au 20 nov (dernier : PR #73). **Aucune PR ouverte.** Rien n'a avancé du 20 au 24 : limite
+  d'utilisation hebdomadaire atteinte le 20.
+- Fait : monde complet et vivant (6 mondes, animaux et personnages animés avec sons, aurores, fin de carte, cadeaux
+  lisibles, icône Pingou), connexion, fenêtres des cases, éditeur de case préparée, rappels (non testés en vrai),
+  réglages, course, écran du 24, souvenirs PDF, hors ligne, outillage temps réel (`joinLive`), audio complet,
+  tests e2e (42 OK) + accessibilité, commande commune `npm run capture`.
+- **Jeux faits : 1, 2, 7, 11, 15, 17.** **Restent 12** : 10, 22 (score) ; 5, 6, 13, 18, 21 (en direct) ; 3, 19
+  (photo) ; 9 (dessin) ; 14, 23 (synchro). C'est le gros du travail restant.
+- **En cours, non terminé** : Audio sur #68 (exceptions Tone.js), branche `audio/tone-exceptions`, dernier commit
+  « travail en cours » **non vérifié** (build et captures à refaire) → relancer l'Audio (`opus`) avec : reprendre
+  la branche, vérifier, finir, `npm run capture -- --jour=9 --appareils=mobile` sans erreur Tone, PR.
+- Monde : #10, #12, #14, #23, #61 (+ #11/#42 en grande partie faits, à vérifier puis fermer). Interface : #51 (en-tête).
+- **Jamais testé en vrai** : Supabase (Alexandre doit créer le projet en suivant `docs/supabase.md`), notifications,
+  vrais téléphones.
+- **Proposé à Alexandre le 24 nov, pas encore décidé** pour tenir le 30 : Sonnet pour tout sauf le Monde ; jeux en
+  direct en **tour par tour seulement** pour 2–3 d'entre eux ; abandonner #61, #12, #10 ; surveillance à la demande.
+  Estimation : ~40 tâches, ~50–100 $ au tarif API, environ une limite hebdomadaire.
 
 ## Échéancier
 | Date | Jalon |
 |---|---|
-| 22 nov | Jeux à score (10, 22) + 2 jeux en direct ; en-tête refait ; mouvement dans le décor |
-| 25 nov | Tous les jeux jouables en démo |
+| ~~22 nov~~ (en retard) | Jeux à score (10, 22) + 2 jeux en direct ; en-tête refait ; mouvement dans le décor |
+| 25 nov (en retard) | Tous les jeux jouables en démo |
 | 27 nov | Supabase créé et branché par Alexandre (guide), tests à deux sur vrais téléphones |
 | 29 nov | Contenu réel (questions, souvenirs) remplacé par Alexandre, corrections |
 | 30 nov | Mise en ligne finale |
@@ -114,6 +116,8 @@ l'environnement cloud de l'ancien chef ; si le nouveau chef tourne ailleurs, rec
 ## Journal
 - 17 nov : terrain continu retenu ; organisation en 6 équipes ; backend démo + Supabase ; audio ; assemblage d'`App.tsx`.
 - 18 nov : rappels push, relance, éditeur, réglages, course, souvenirs, hors ligne, temps réel ; incident `git stash` (règle ajoutée).
+- 24 nov : point de reprise écrit (section « Reprendre le projet ») ; travail Audio #68 sauvegardé sur sa branche ; estimation du reste.
+- 20 nov : #72 (cadeaux lisibles), #73 (icône) fusionnées ; limite hebdomadaire atteinte, Audio interrompu.
 - 20 nov (nuit) : PR #69 (e2e), #70 (`npm run capture`, règle ajoutée dans `CLAUDE.md`), #71 (aurores, traîneau, cadeaux) fusionnées ; Audio lancé sur #68 (`audio/tone-exceptions`).
 - 19 nov (soir) : Qualité relancée (`qualite/e2e-integre`) ; PR #63, #64, #65 fusionnées ; hauteur de page : on garde le `resize` (#9) ; outil de capture commun décidé.
 - 19 nov : ouverture animée + crépuscule branchés, navigation au doigt fusionnée, passage de relais écrit.
