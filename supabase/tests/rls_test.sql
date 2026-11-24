@@ -104,6 +104,15 @@ do $$ begin
 end $$;
 reset role;
 select t.ok((select message from public.prepared_content where day = 8) = 'case 8', 'case ouverte ni modifiée ni supprimée');
+-- Les photos d'une case ouverte sont elles aussi figées ; les autres restent supprimables
+insert into storage.objects (bucket_id, name) values ('photos', 'flavie/tmp.jpg');
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000f', false);
+delete from storage.objects where name in ('flavie/a.jpg', 'flavie/tmp.jpg');
+update storage.objects set name = name where name = 'flavie/a.jpg';
+reset role;
+select t.ok((select count(*) from storage.objects where name = 'flavie/a.jpg') = 1, 'photo d''une case ouverte : suppression refusée');
+select t.ok((select count(*) from storage.objects where name = 'flavie/tmp.jpg') = 0, 'photo non utilisée : suppression permise');
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000f', false);
 insert into public.prepared_content (day, from_who, to_who, message) values (12, 'flavie', 'alexandre', 'case 12 v3')

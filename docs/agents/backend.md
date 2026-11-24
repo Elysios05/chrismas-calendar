@@ -134,3 +134,20 @@ dans les deux backends (pas d'appel immédiat : seulement aux changements).
 - Rendu : bandeau `<img>` (vraie balise) avec voile clair en haut de chaque case ; page de garde avec le décor du jour 24 ; flocons et liseré à losanges en SVG.
   `print-color-adjust: exact` pour que le voile s'imprime ; `break-inside: avoid` sur les lettres.
 - Test : `__tests__/souvenirs_decor_test.py` (8 vérifications, image factice en canvas, PDF A4 par Chrome headless).
+
+### 24 novembre 2026 — préparation du 27 (branche `backend/preparation-supabase`)
+**Relecture du guide contre le code** : variables (`VITE_SUPABASE_URL/ANON_KEY`, `VITE_EMAIL_*`, `VITE_VAPID_PUBLIC_KEY`), secrets
+GitHub de `deploy.yml`, tables, bucket `photos`, secrets de l'Edge Function (`VAPID_*`, `CRON_SECRET`), clés Vault (`project_url`,
+`rappel_cron_secret`), tâches pg_cron : tout correspond. Écarts corrigés :
+- guide : manquait « Settings → Pages → Source : GitHub Actions » ; la remise à zéro oubliait `reminder_log` et `day_override`
+  (et l'ordre `progress` d'abord, sinon les cases ouvertes en test restent figées) ; aide « Mot de passe incorrect » ;
+  nouvelle **§ 11 : checklist de test à deux** (connexion, case préparée, jeux, rappels, remise à zéro).
+- RLS : les photos d'une case **déjà ouverte** pouvaient encore être supprimées/remplacées par l'autrice (trou) →
+  `photo_frozen()` + politiques `photos_update` / `photos_delete` (dans `0001_init.sql`, pas encore exécuté en vrai) ; 2 tests SQL ajoutés.
+- Edge Function : un envoi de test (`day`/`force`) écrivait dans `reminder_log` et aurait bloqué le vrai rappel du jour → plus de journal pour un test.
+**Vérifié** : build avec variables factices OK (chunk `supabase-*.js` produit) ; en navigateur, écran de connexion Supabase sans erreur
+console hors réseau attendu ; 72 vérifications SQL. `npm run capture` réutilise un serveur déjà présent sur le port 4180 (autre copie) et
+passe par la connexion démo : il ne peut pas valider le mode Supabase (vérifié avec un script jetable sur un autre port).
+**Reste non testable sans vrai projet** : Edge Function sous Deno (`npm:web-push`), pg_cron/pg_net/Vault, Realtime privé, notifications sur
+iOS. Le déploiement de la fonction sans `supabase/config.toml` (`functions deploy` seul) n'a pas pu être vérifié.
+**Ticket Interface** : `LoginScreen.tsx` affiche « Mot de passe incorrect » pour toute erreur (réseau, profil non relié).
