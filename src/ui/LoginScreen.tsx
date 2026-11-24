@@ -6,6 +6,26 @@ import { PINGOU_LOGIN, type PingouLine } from "./pingou/lines";
 const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 const COULEUR: Record<Who, string> = { alexandre: "#2f6fd0", flavie: "#d9354b" };
 
+/** Ce qui a fait échouer la connexion : on ne dit « mot de passe » que si c'est vraiment lui (ticket #75). */
+export type EchecConnexion = { cause: "mot-de-passe" | "reseau" | "autre"; message: string };
+
+/** Messages bruts de Supabase (en anglais) qu'on sait dire en français. */
+const TRADUCTIONS: [RegExp, string][] = [
+  [/email not confirmed/i, "Adresse e-mail pas encore confirmée dans Supabase."],
+  [/rate limit|too many requests/i, "Trop d'essais d'affilée : patiente une minute avant de réessayer."],
+];
+
+export function classerEchec(e: unknown, enLigne = typeof navigator === "undefined" || navigator.onLine): EchecConnexion {
+  const brut = e instanceof Error ? e.message : String(e ?? "");
+  if (brut === "Mot de passe incorrect.") return { cause: "mot-de-passe", message: brut };
+  // fetch qui échoue : « Failed to fetch » (Chrome), « NetworkError… » (Firefox), « Load failed » (Safari)
+  if (!enLigne || /failed to fetch|networkerror|load failed|network request failed/i.test(brut)) {
+    return { cause: "reseau", message: "Pas de réseau : vérifie ta connexion internet, puis réessaie." };
+  }
+  const traduit = TRADUCTIONS.find(([motif]) => motif.test(brut))?.[1];
+  return { cause: "autre", message: `Connexion impossible : ${traduit ?? (brut || "erreur inconnue.")}` };
+}
+
 
 /**
  * Écran de connexion : on choisit son profil, puis son mot de passe.
@@ -40,10 +60,16 @@ export function LoginScreen({ backend, onSignedIn }: { backend: BackendApi; onSi
       await backend.signIn(who, password, { rester });
       setLines(PINGOU_LOGIN.bienvenue(PRENOM[who]));
       onSignedIn?.(who);
-    } catch {
-      setErreur("Mot de passe incorrect.");
-      setLines(PINGOU_LOGIN.mauvaisMotDePasse());
-      setPassword("");
+    } catch (e) {
+      const echec = classerEchec(e);
+      setErreur(echec.message);
+      if (echec.cause === "mot-de-passe") {
+        setLines(PINGOU_LOGIN.mauvaisMotDePasse());
+        setPassword("");
+      } else {
+        // le mot de passe n'y est pour rien : on le garde, il suffira de réessayer
+        setLines(echec.cause === "reseau" ? PINGOU_LOGIN.reseauCoupe() : PINGOU_LOGIN.connexionImpossible());
+      }
       champ.current?.focus();
     } finally {
       setBusy(false);

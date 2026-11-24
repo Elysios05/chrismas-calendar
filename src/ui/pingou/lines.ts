@@ -42,6 +42,14 @@ export const PINGOU_LOGIN = {
       { text: "Non. Un pingouin incorruptible, voilà ce que je suis.", face: "neutre" } as const,
     ]),
   ],
+  /** Le réseau ne répond pas : rien à voir avec le mot de passe */
+  reseauCoupe: (): PingouLine[] => [
+    { text: "Rien ne passe, le réseau a dû geler. Vérifie ta connexion et retente.", face: "triste" },
+  ],
+  /** Autre souci côté serveur : le détail s'affiche sous le champ */
+  connexionImpossible: (): PingouLine[] => [
+    { text: "Là, ce n'est pas toi : la porte coince de notre côté. Le détail est juste en dessous.", face: "surpris" },
+  ],
   bienvenue: (prenom: string): PingouLine[] => [
     { text: `Entre, ${prenom}, il fait meilleur dedans 🐧`, face: "content" },
   ],
