@@ -16,8 +16,8 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 `npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
 **avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
 
-Faits : 1, 2, 7, 11, 15, 17. Restent 12, **dans l'ordre d'ouverture des cases** :
-1. Jour **3** (défi photo croisé)
+Faits : 1, 2, **3** (PR en attente de fusion), 7, 11, 15, 17. Restent 11, **dans l'ordre d'ouverture des cases** :
+1. ~~Jour **3** (défi photo croisé)~~ — fait le 24 nov, branche `jeux/defi-photo-jour3`
 2. Jours **5** et **6** (en direct : `joinLive`, voir #56, avec version tour par tour si l'autre est absent)
 3. Jour **9** (dessin à deviner)
 4. Jour **10** (score à battre)
@@ -41,6 +41,29 @@ Avant de poser une question, relire les issues ouvertes (y compris celles des au
 du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
+
+### 24 novembre 2026 — jour 3, défi photo croisé (branche `jeux/defi-photo-jour3`)
+
+**Décisions prises avec Alexandre :**
+- On ne voit la photo de l'autre **qu'après avoir posté la sienne** ; si l'autre n'a rien posté, écran
+  d'attente (relecture toutes les 15 s, Pingou prévient quand elle arrive).
+- **Légende + devinette** : l'auteur choisit 1 question parmi 5 (réponse invisible sur la photo :
+  moment, bruit, température, boisson, ce qu'il préfère) et donne sa vraie réponse ; l'autre la devine
+  en découvrant la photo (photo « face cachée », on touche pour la retourner).
+- Photo **modifiable tant que l'autre ne l'a pas découverte**, figée ensuite (`vu:<qui>`).
+
+**Fait :** `src/games/photo/` (jeu générique `creerDefiPhoto`, **réutilisable tel quel pour le jour 19**
+avec un fichier de contenu `photo-jour19.ts`), contenu `src/data/games/photo-jour3.ts`, registre.
+Clés : `photo:<qui>`, `vu:<qui>`, `devine:<qui>`. Prise de vue : bouton appareil photo
+(`capture="environment"`) + galerie ; compression faite par `backend.uploadPhoto`.
+Mode démo : si l'autre n'a rien posté, une vue de fenêtre **dessinée au canevas** (`exemple.ts`) sert
+de photo de l'autre ; la devinette faite contre cet exemple **n'est pas enregistrée** (sinon elle
+serait comparée plus tard à la vraie question de l'autre — défaut trouvé en test, corrigé).
+Vérifié à deux joueurs dans l'atelier (téléphone + ordinateur), et `npm run capture -- --jour=3 --case=3` :
+0 erreur console.
+
+**Prochaine étape :** jours 5 et 6 (en direct, d'abord poser `partie.ts` sur `joinLive`, voir #56),
+en demandant d'abord leurs règles à Alexandre.
 
 ### 📍 État au 19 novembre 2026 — à lire en premier (reprise de session)
 
