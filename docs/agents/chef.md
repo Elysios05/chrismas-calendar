@@ -68,6 +68,7 @@ vent. HUD : badge joueur, ✏️ prochaine case préparée (`PreparedEditor`), �
 - Fin du monde : **scène finale** (traîneau qui décolle le 24). Nom du monde : **pastille crème permanente**.
 - **Une seule équipe Jeux** (pas de deuxième). Souvenirs : **page HTML imprimable en PDF**.
 - Allumage progressif des fenêtres : **pas pour le 30**.
+- **Salons (25 nov, 0 h 20)** : calendrier clé en main pour n'importe quel couple, création **ouverte à tous**, paramétrage complet (prénoms, couleurs, contenu perso des jeux), lien d'invitation (l'invité·e choisit juste son mot de passe), Flavie ne fait rien (Alexandre teste seul avec deux appareils). **Avant le 30.** Spécification : `docs/salons.md`, suivi : #84.
 - **Outil de capture commun** (19 nov, 20 h 53) : la Qualité ajoute `npm run capture` (sur `tests/qa/commun.mjs`, connexion démo, mobile + ordinateur) ; ensuite règle dans `CLAUDE.md` « n'écris pas ton propre script de capture ». Pas de mise en commun du reste du code (doublons négligeables). Scripts Python du Backend laissés tels quels.
 - Économie : sessions qui se vident (`/clear` après chaque tâche, voir `CLAUDE.md`), surveillance toutes les 15 min.
 
@@ -121,6 +122,7 @@ Ce qui ne suit pas d'un compte à l'autre : les conversations, les agents en cou
 | 30 nov | Mise en ligne finale |
 
 ## Journal
+- 25 nov (0 h 30) : décision « salons » (`docs/salons.md`, #84) ; Backend lancé sur le contrat `SalonApi` + DemoBackend.
 - 24 nov (soir) : Alexandre refuse toutes les coupes ; Audio, Backend, Qualité lancés ; PR #74 fusionnée.
 - 17 nov : terrain continu retenu ; organisation en 6 équipes ; backend démo + Supabase ; audio ; assemblage d'`App.tsx`.
 - 18 nov : rappels push, relance, éditeur, réglages, course, souvenirs, hors ligne, temps réel ; incident `git stash` (règle ajoutée).

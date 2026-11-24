@@ -16,6 +16,8 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 `npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
 **avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
 
+**🆕 Salons (décision d'Alexandre du 25 nov, avant le 30)** — lire `docs/salons.md`. Dès que le chef annonce dans **#84** la fusion du contrat `SalonApi`, ce point passe **avant les nouveaux jeux** : chaque jeu (déjà livré, puis chaque nouveau) lit son contenu depuis le salon (sinon le défaut de `src/data/games/`) et exporte un schéma de contenu pour l'éditeur ; plus aucun prénom en dur. En attendant, continue la liste ci-dessous en écrivant déjà le contenu de chaque nouveau jeu comme un objet séparé et remplaçable.
+
 Faits : 1, 2, **3** (PR en attente de fusion), 7, 11, 15, 17. Restent 11, **dans l'ordre d'ouverture des cases** :
 1. ~~Jour **3** (défi photo croisé)~~ — fait le 24 nov, branche `jeux/defi-photo-jour3`
 2. Jours **5** et **6** (en direct : `joinLive`, voir #56, avec version tour par tour si l'autre est absent)
