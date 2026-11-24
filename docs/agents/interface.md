@@ -23,8 +23,15 @@ et Pingou (répliques + 5 expressions).
 | `useDialog.ts` | tout ce qu'une fenêtre modale doit faire (voir Pièges) |
 | `dev/maquettes.tsx` | page de maquettes, `maquettes.html?vue=…` (outil de travail) |
 
-## À faire
-Voir les tickets GitHub ouverts marqués `[Interface]`. Au 19 novembre il n'en reste qu'un : **#51**.
+## À faire (par priorité) — mis à jour par le chef le 24 nov
+Méthode : prends le **premier point non fait** de cette liste, une branche et une PR par point, `npm run build`,
+`npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
+**avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
+
+1. **#75** : la connexion affiche « Mot de passe incorrect » pour toute erreur. Distinguer au moins mauvais mot de
+   passe / problème réseau / compte non relié. **À finir avant le 27 nov** (branchement de Supabase).
+2. **#51** : refaire la disposition des menus du haut (2–3 options avec captures d'abord).
+3. Ensuite : relire les issues `[Interface]` ouvertes ; s'il n'y en a plus, ouvrir une issue pour demander la suite au chef.
 
 ## Journal
 
