@@ -19,6 +19,13 @@ const FOCUSABLES =
  */
 const DELAI_CLIC_FANTOME = 400;
 
+/** Dernière façon dont on a touché à la page : sert à ne pas dessiner l'anneau de focus au doigt (#51). */
+let auClavier = false;
+if (typeof document !== "undefined") {
+  document.addEventListener("keydown", () => { auClavier = true; }, true);
+  document.addEventListener("pointerdown", () => { auClavier = false; }, true);
+}
+
 export function useDialog<T extends HTMLElement>(onClose: () => void) {
   const panneau = useRef<T>(null);
   const ouvertA = useRef(0);
@@ -35,9 +42,10 @@ export function useDialog<T extends HTMLElement>(onClose: () => void) {
     const ouvreur = document.activeElement as HTMLElement | null;
     const el = panneau.current;
 
-    // premier élément utile, sinon le panneau lui-même
+    // Au clavier : premier élément utile. Au doigt ou à la souris : le panneau lui-même,
+    // sinon le navigateur peut dessiner l'anneau de focus sur le ✕ (« gros contour sombre », #51).
     const premier = el?.querySelector<HTMLElement>(FOCUSABLES);
-    (premier ?? el)?.focus();
+    (auClavier ? premier ?? el : el ?? premier)?.focus();
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") { e.stopPropagation(); onClose(); return; }
@@ -46,7 +54,7 @@ export function useDialog<T extends HTMLElement>(onClose: () => void) {
       if (!cibles.length) return;
       const debut = cibles[0]!;
       const fin = cibles[cibles.length - 1]!;
-      if (e.shiftKey && document.activeElement === debut) { e.preventDefault(); fin.focus(); }
+      if (e.shiftKey && (document.activeElement === debut || document.activeElement === el)) { e.preventDefault(); fin.focus(); }
       else if (!e.shiftKey && document.activeElement === fin) { e.preventDefault(); debut.focus(); }
     };
 
