@@ -30,10 +30,34 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 
 1. **#75** : la connexion affiche « Mot de passe incorrect » pour toute erreur. Distinguer au moins mauvais mot de
    passe / problème réseau / compte non relié. **À finir avant le 27 nov** (branchement de Supabase).
-2. **#51** : refaire la disposition des menus du haut (2–3 options avec captures d'abord).
+2. ~~**#51**~~ — **fait le 24 nov**, PR `interface/menus-haut` : composant `<Hud />` livré, **à brancher par le chef dans `App.tsx`**.
 3. Ensuite : relire les issues `[Interface]` ouvertes ; s'il n'y en a plus, ouvrir une issue pour demander la suite au chef.
 
 ## Journal
+
+### 📍 Où j'en suis — 24 novembre 2026 (soir)
+
+**#51 livré** (branche `interface/menus-haut`, PR vers `main`). Alexandre a vu trois maquettes
+(`maquettes.html?vue=hud-a|hud-b|hud-c`) et a **choisi B, « deux îlots »** :
+- à gauche un îlot crème : « Alexandre & Flavie » + nom du monde dessous (badge « démo » en mode démo) ;
+- à droite une capsule ✏️ ☀️/🌙 (📜 le 24) ⚙️ + pastille ronde du joueur (initiale, couleur du manteau) ;
+- dessous, la course réduite à une pastille « 🏁 Flavie +1 » qui déplie le `RaceIndicator` au toucher
+  (se replie au toucher ailleurs ou sur Échap) ;
+- 📍 en bouton rond flottant en bas à droite (Pingou, z-index 20, passe par-dessus quand il parle).
+Écartées : A (une barre + menu ☰ : ✏️ caché derrière deux touchers) et C (barre d'actions en bas).
+
+`src/ui/Hud.tsx` reçoit tout en props (`HudProps`), **App.tsx n'est pas touché** : le chef doit remplacer
+le `<header className="hud">` par `<Hud …/>`, puis on pourra supprimer `.hud`, `.brand`, `.zone-pill`,
+`.who-badge`, `.round` (et la règle `.zone-pill` de nuit et du media 560 px) de `index.css`.
+Le jour où ✏️ et 📜 sont là ensemble (le 24), la pastille du joueur s'efface sur téléphone (`.entete--pleine`),
+sinon le titre ne tient plus. Aperçu du vrai composant : `maquettes.html?vue=entete` (`&nuit=1&j24=1&plein=1&egalite=1`).
+
+**Anneau du ✕ au toucher** : venait de `useDialog`, qui donnait le focus au ✕ à l'ouverture. Il retient
+maintenant la dernière façon d'interagir (clavier / pointeur) : au doigt, le focus va sur le panneau
+(`tabIndex=-1`, sans contour) ; au clavier, sur le premier bouton comme avant. Maj+Tab depuis le panneau
+renvoie au dernier élément.
+
+**Prochaine tâche** : relire les issues `[Interface]` ouvertes ; sinon, demander la suite au chef par une issue.
 
 ### 📍 Où j'en suis — 19 novembre 2026
 

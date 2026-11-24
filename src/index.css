@@ -574,3 +574,78 @@ html[data-nuit="oui"] .zone-pill { background: #1b2747; color: #fff; }
 .reg-ligne--bloc .reg-texte { display: block; cursor: default; }
 .reg-activer { margin-top: 12px; width: 100%; max-width: 280px; }
 .reg-actif { display: inline-block; margin-top: 10px; font-size: 14px; font-weight: 700; color: var(--green); }
+
+/* ---------- en-tête : deux îlots (ticket #51, piste B choisie par Alexandre le 24 nov) ----------
+   Un seul langage pour tout ce qui flotte sur la carte : crème, coins 18 px, même ombre,
+   cibles de 44 px. Remplace .hud / .brand / .zone-pill / .who-badge / .round une fois branché. */
+.entete {
+  position: fixed; z-index: 10; top: calc(10px + env(safe-area-inset-top)); left: 10px; right: 10px;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+  pointer-events: none;
+}
+.entete > * { pointer-events: auto; }
+.entete-ilot {
+  background: var(--cream); color: var(--ink); border: 0; border-radius: 18px;
+  box-shadow: 0 5px 0 rgba(27,39,71,.18);
+}
+html[data-nuit="oui"] .entete-ilot { background: #1b2747; color: #fff; box-shadow: 0 5px 0 rgba(0,0,0,.3); }
+.entete-titre { display: flex; flex-direction: column; gap: 5px; padding: 9px 14px 10px; min-width: 0; }
+.entete-nom { font-weight: 700; font-size: 15px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entete-et { color: var(--red); }
+.entete-demo {
+  margin-left: 6px; vertical-align: 2px; padding: 2px 6px; border-radius: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
+  background: var(--red-texte); color: #fff;
+}
+.entete-demo--large { display: none; }
+.entete-demo--etroit { margin: 0 5px 0 0; vertical-align: 1px; font-size: 9px; padding: 1px 5px; }
+.entete-monde {
+  font-size: 12px; font-weight: 600; color: var(--ink-soft); line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  animation: zoneIn .7s cubic-bezier(.2,1.5,.4,1);
+}
+html[data-nuit="oui"] .entete-monde { color: #c9d2ea; }
+
+.entete-droite { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
+.entete-capsule { display: flex; align-items: center; height: 52px; padding: 0 4px; }
+.entete-capsule button {
+  width: 44px; height: 44px; border: 0; background: transparent; border-radius: 12px;
+  font-size: 19px; transition: transform .1s;
+}
+.entete-capsule button:active { transform: translateY(2px); }
+.entete-capsule button + button { box-shadow: -1px 0 0 rgba(27,39,71,.1); }
+html[data-nuit="oui"] .entete-capsule button + button { box-shadow: -1px 0 0 rgba(255,255,255,.14); }
+.entete-avatar {
+  display: grid; place-items: center; width: 34px; height: 34px; margin: 0 5px 0 4px; border-radius: 50%;
+  color: #fff; font-weight: 700; font-size: 15px;
+}
+
+.entete-course { position: relative; }
+.entete-pastille {
+  height: 36px; padding: 0 12px; border-radius: 18px; font: inherit; font-weight: 700; font-size: 14px;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer;
+}
+/* 36 px de haut à l'œil, 44 px au doigt */
+.entete-pastille::after { content: ""; position: absolute; inset: -4px 0; }
+html[data-nuit="oui"] .entete-pastille { color: #fff !important; }
+.entete-chevron { font-size: 11px; opacity: .6; }
+.entete-course-detail { position: absolute; top: calc(100% + 8px); right: 0; }
+
+.entete-boussole {
+  position: fixed; z-index: 10; right: 14px; bottom: calc(18px + env(safe-area-inset-bottom));
+  width: 52px; height: 52px; border-radius: 50%; font-size: 22px; transition: transform .1s;
+}
+.entete-boussole:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(27,39,71,.18); }
+
+@media (max-width: 480px) {
+  .entete--pleine .entete-avatar { display: none; }
+  .entete--pleine .entete-capsule button { width: 42px; }
+}
+@media (min-width: 700px) {
+  .entete { top: calc(14px + env(safe-area-inset-top)); left: 16px; right: 16px; }
+  .entete-nom { font-size: 20px; }
+  .entete-demo--large { display: inline; }
+  .entete-demo--etroit { display: none; }
+  .entete-monde { font-size: 13px; }
+  .entete-boussole { right: 22px; bottom: 22px; }
+}
