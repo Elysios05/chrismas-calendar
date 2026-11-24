@@ -30,7 +30,11 @@ Décidé par Alexandre le 25 nov 2026 (0 h 20), **à livrer avant le 30 nov**. R
    (par appareil / par heure), purge possible des salons vides. Le chef surveille l'usage du Supabase gratuit.
 6. **Mode démo** (`/demo/`) : un salon fictif, inchangé pour l'utilisateur, et un parcours « créer un salon »
    simulé en local pour tester les écrans sans Supabase.
-7. Rappels, temps réel, cases préparées figées, ouverture à 7 h : **par salon**, mêmes règles qu'avant.
+7. **Textes sans accord de genre** : comme on ne connaît pas les personnes, aucune phrase ne doit dépendre de
+   « il/elle » (ex. à corriger : « S'il n'est pas là… il répondra » dans `DayWindow`). Tournures neutres :
+   « Si Flavie n'est pas là, tu joues ton tour et la réponse viendra plus tard. » À vérifier dans `src/ui/`
+   (Pingou compris), `src/games/`, les e-mails et les notifications.
+8. Rappels, temps réel, cases préparées figées, ouverture à 7 h : **par salon**, mêmes règles qu'avant.
 
 ## Qui fait quoi
 | Équipe | Lot |
