@@ -1,0 +1,64 @@
+/* ---------- défi photo croisé (jours 3 et 19) ---------- */
+.photo-prise { width: min(460px, 100%); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+.polaroid {
+  margin: 0; width: min(240px, 72vw); background: #fff; padding: 10px 10px 8px; border-radius: 4px;
+  box-shadow: 0 10px 24px rgba(27, 39, 71, .22), 0 2px 4px rgba(27, 39, 71, .12);
+  animation: polaroidIn .45s cubic-bezier(.2, 1.4, .5, 1);
+}
+.polaroid.g { transform: rotate(-2.5deg); }
+.polaroid.d { transform: rotate(2deg); }
+.polaroid-image { aspect-ratio: 3 / 4; background: #e6ecf4; overflow: hidden; border-radius: 2px; }
+.polaroid-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.polaroid-vide {
+  height: 100%; display: flex; align-items: center; justify-content: center; padding: 12px;
+  font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--ink-soft, #5b6680);
+  background: repeating-linear-gradient(135deg, #eef3f9 0 12px, #e4ebf4 12px 24px);
+}
+.polaroid figcaption { display: flex; flex-direction: column; gap: 2px; padding-top: 8px; min-height: 30px; text-align: center; }
+.polaroid-legende { font-size: 15px; line-height: 1.25; color: var(--ink, #1b2747); overflow-wrap: anywhere; }
+.polaroid-auteur { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--red, #d9354b); }
+@keyframes polaroidIn { from { opacity: 0; scale: .85; } to { opacity: 1; scale: 1; } }
+
+.photo-duo { display: flex; gap: 12px; justify-content: center; align-items: flex-start; width: 100%; }
+.photo-duo .polaroid { width: min(220px, calc(50% - 6px)); padding: 7px 7px 6px; }
+.photo-duo .polaroid-legende { font-size: 13px; }
+
+.photo-cadre-vide, .photo-dos {
+  width: min(240px, 72vw); aspect-ratio: 3 / 4; border: 3px dashed rgba(27, 39, 71, .25); border-radius: 18px;
+  background: rgba(255, 255, 255, .6); color: var(--ink-soft, #5b6680); font: inherit; font-size: 15px; line-height: 1.35;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 18px; cursor: pointer;
+}
+.photo-cadre-vide .emoji, .photo-dos .emoji { font-size: 54px; line-height: 1; }
+.photo-dos {
+  border: 0; background: linear-gradient(160deg, #fffaf2, #f6e6d8); color: var(--ink, #1b2747);
+  box-shadow: 0 10px 24px rgba(27, 39, 71, .2); transform: rotate(2deg); animation: photoDos 2.2s ease-in-out infinite;
+}
+.photo-dos b { color: var(--red, #d9354b); }
+@keyframes photoDos { 50% { transform: rotate(-1deg) translateY(-4px); } }
+
+.photo-champ { width: 100%; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.photo-champ > span { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--red, #d9354b); }
+.photo-champ input {
+  font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 14px; border: 0; color: var(--ink, #1b2747);
+  background: var(--cream, #fffaf2); box-shadow: 0 0 0 2px rgba(27, 39, 71, .1) inset;
+}
+.photo-champ input:focus { outline: none; box-shadow: 0 0 0 3px var(--red, #d9354b) inset; }
+.photo-questions { display: flex; flex-wrap: wrap; gap: 8px; }
+.photo-question {
+  font: inherit; font-size: 14px; line-height: 1.25; text-align: left; padding: 8px 12px; border: 0; border-radius: 12px; cursor: pointer;
+  background: var(--cream, #fffaf2); color: var(--ink, #1b2747); box-shadow: 0 3px 0 rgba(27, 39, 71, .12);
+}
+.photo-question.on { background: #fff; box-shadow: 0 0 0 3px var(--red, #d9354b) inset, 0 3px 0 rgba(27, 39, 71, .12); }
+
+.photo-texte { margin: 0; max-width: 420px; font-size: 15px; line-height: 1.4; color: var(--ink-soft, #5b6680); }
+.photo-aide { margin: 0; font-size: 13px; color: var(--ink-soft, #5b6680); min-height: 1em; }
+.photo-erreur { margin: 0; font-size: 14px; font-weight: 600; color: var(--red, #d9354b); }
+
+.photo-bilan { width: min(460px, 100%); display: grid; gap: 8px; }
+.photo-bilan div { background: var(--cream, #fffaf2); border-radius: 14px; padding: 10px 12px; text-align: left; box-shadow: 0 3px 0 rgba(27, 39, 71, .1); }
+.photo-bilan div.bon { box-shadow: 0 0 0 2px var(--green, #2fa37a) inset; }
+.photo-bilan div.rate { box-shadow: 0 0 0 2px #c9ccd6 inset; }
+.photo-bilan span { display: block; font-size: 12px; color: var(--ink-soft, #5b6680); font-weight: 600; }
+.photo-bilan b { font-size: 16px; }
+.photo-bilan .bon b { color: var(--green, #2fa37a); }
