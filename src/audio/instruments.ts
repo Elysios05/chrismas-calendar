@@ -5,23 +5,23 @@
 import type * as ToneNS from "tone";
 import { hz } from "./theory";
 import type { AudioIn, Instr, InstrFactory, Tone } from "./types";
+import { guard, VoicePool } from "./voices";
 
 type Voice = typeof ToneNS.Synth | typeof ToneNS.FMSynth | typeof ToneNS.MonoSynth | typeof ToneNS.AMSynth;
 
 /** PolySynth plafonné, éventuellement suivi d'une chaîne d'effets */
 function poly(T: Tone, out: AudioIn, voice: Voice, opts: object, max: number, chain: ToneNS.ToneAudioNode[] = []): Instr {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const s = new T.PolySynth(voice as any, opts as any);
-  s.maxPolyphony = max;
-  const nodes = [s, ...chain];
-  for (let k = 0; k < nodes.length - 1; k++) nodes[k].connect(nodes[k + 1]);
-  nodes[nodes.length - 1].connect(out);
+  // groupe de voix maison, programmé tout de suite (voir voices.ts, ticket #68)
+  const s = new VoicePool(T, voice, opts, max);
+  s.connect(chain[0] ?? out);
+  for (let k = 0; k < chain.length; k++) chain[k].connect(chain[k + 1] ?? out);
   return {
     play(time, notes, dur, vel) {
       s.triggerAttackRelease(notes.map(hz), dur, time, vel);
     },
     dispose() {
-      nodes.forEach((n) => n.dispose());
+      s.dispose();
+      chain.forEach((n) => n.dispose());
     },
   };
 }
@@ -29,12 +29,13 @@ function poly(T: Tone, out: AudioIn, voice: Voice, opts: object, max: number, ch
 /** Synthé monophonique (basse, flûte) : pas de clic au re-déclenchement */
 function mono(T: Tone, out: AudioIn, opts: object, chain: ToneNS.ToneAudioNode[] = []): Instr {
   const s = new T.Synth(opts);
+  const g = guard(s);
   const nodes = [s, ...chain];
   for (let k = 0; k < nodes.length - 1; k++) nodes[k].connect(nodes[k + 1]);
   nodes[nodes.length - 1].connect(out);
   return {
     play(time, notes, dur, vel) {
-      s.triggerAttackRelease(hz(notes[0]), dur, time, vel);
+      g(time, (at) => s.triggerAttackRelease(hz(notes[0]), dur, at, vel));
     },
     dispose() {
       nodes.forEach((n) => n.dispose());
@@ -172,11 +173,12 @@ export const subPad: InstrFactory = (T, out) =>
 function noiseHit(T: Tone, out: AudioIn, filter: object, env: object, type: "white" | "pink" = "white"): Instr {
   const f = new T.Filter(filter);
   const n = new T.NoiseSynth({ noise: { type }, envelope: env });
+  const g = guard(n);
   n.connect(f);
   f.connect(out);
   return {
     play(time, _notes, dur, vel) {
-      n.triggerAttackRelease(Math.min(dur, 0.05), time, vel);
+      g(time, (at) => n.triggerAttackRelease(Math.min(dur, 0.05), at, vel));
     },
     dispose() {
       n.dispose();
@@ -199,10 +201,11 @@ export const brush: InstrFactory = (T, out) =>
 
 function membrane(T: Tone, out: AudioIn, opts: object): Instr {
   const m = new T.MembraneSynth(opts);
+  const g = guard(m);
   m.connect(out);
   return {
     play(time, notes, dur, vel) {
-      m.triggerAttackRelease(hz(notes[0]), dur, time, vel);
+      g(time, (at) => m.triggerAttackRelease(hz(notes[0]), dur, at, vel));
     },
     dispose() {
       m.dispose();
@@ -221,12 +224,15 @@ export const timpani: InstrFactory = (T, out) =>
 /** Goutte d'eau qui tombe dans la grotte (sinus qui monte) */
 export const drip: InstrFactory = (T, out) => {
   const s = new T.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.002, decay: 0.12, sustain: 0, release: 0.08 } });
+  const g = guard(s);
   s.connect(out);
   return {
     play(time, notes, _dur, vel) {
       const f = hz(notes[0]);
-      s.triggerAttackRelease(f, 0.06, time, vel);
-      s.frequency.exponentialRampToValueAtTime(f * 1.9, time + 0.07);
+      g(time, (at) => {
+        s.triggerAttackRelease(f, 0.06, at, vel);
+        s.frequency.exponentialRampToValueAtTime(f * 1.9, at + 0.07);
+      });
     },
     dispose() {
       s.dispose();
