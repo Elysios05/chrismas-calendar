@@ -71,7 +71,7 @@ test("connexion démo : choisir Alexandre, mot de passe quelconque", async ({ pa
   await page.locator("#mdp").fill("nimportequoi");
   await page.getByRole("button", { name: "Entrer" }).click();
   await C.attendreScene(page);
-  await expect(page.locator(".who-badge")).toHaveText("Alexandre");
+  await expect(page.locator(".entete-avatar")).toHaveAttribute("title", "Alexandre");
   await expect(page.locator(".brand-kicker")).toContainText("démo");
   expect(await diversite(page), "le canvas semble vide").toBeGreaterThan(20);
   expect(erreurs(), JSON.stringify(erreurs(), null, 1)).toEqual([]);
@@ -85,7 +85,7 @@ test("« Voir la démo sans compte » entre directement", async ({ page }) => {
   await page.goto("./?jour=9&demo-reset");
   await page.getByRole("button", { name: "Voir la démo sans compte" }).click();
   await C.attendreScene(page);
-  await expect(page.locator(".who-badge")).toBeVisible();
+  await expect(page.locator(".entete-avatar")).toBeVisible();
 });
 
 test("mode jour à midi, mode nuit à 21 h", async ({ page, context }) => {
@@ -225,7 +225,7 @@ test("deux onglets : Flavie écrit la case 16, Alexandre la lit le 16", async ({
   // même contexte = même localStorage (comme deux onglets du même navigateur en démo)
   const flavie = await context.newPage();
   await C.ouvrirDemo(flavie, { jour: 15, moi: "flavie" });
-  await expect(flavie.locator(".who-badge")).toHaveText("Flavie");
+  await expect(flavie.locator(".entete-avatar")).toHaveAttribute("title", "Flavie");
   await flavie.locator(".rappel").getByRole("button", { name: "Écrire" }).click();
   await flavie.locator("#mot").fill("Coucou depuis l'autre onglet 🐧");
   await flavie.getByRole("button", { name: "Mettre sous enveloppe" }).click();
@@ -235,7 +235,7 @@ test("deux onglets : Flavie écrit la case 16, Alexandre la lit le 16", async ({
   await flavie.close();
   const alex = await context.newPage();
   await C.ouvrirDemo(alex, { jour: 16, moi: "alexandre", reset: false });
-  await expect(alex.locator(".who-badge")).toHaveText("Alexandre");
+  await expect(alex.locator(".entete-avatar")).toHaveAttribute("title", "Alexandre");
   await ouvrirCase(alex, 16, isMobile);
   await lancerCase(alex);
   await alex.locator(".prep-enveloppe").click();

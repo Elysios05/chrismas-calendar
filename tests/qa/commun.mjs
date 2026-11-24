@@ -120,7 +120,7 @@ export async function attendreScene(page, timeout = 30000) {
   try {
     await page.waitForFunction(() => {
       const app = globalThis.__qaApp;
-      if (!app?.stage || !document.querySelector(".hud")) return false;
+      if (!app?.stage || !document.querySelector(".entete")) return false;
       let n = 0;
       const visit = (c) => { if (c.meta && c.eventMode === "static") n++; for (const k of c.children ?? []) visit(k); };
       visit(app.stage);
