@@ -74,7 +74,8 @@ Coups `manche:<qui>:<m>` (prises + trace de la hotte à 10 Hz). En direct, les m
 personne n'a jouées s'enchaînent sur l'horloge commune (45 s + 6 s de pause).
 Contenu : `src/data/games/friandises-jour6.ts`.
 
-**Vérifié :** à deux onglets (direct) et en différé, aucune erreur console.
+**Vérifié :** à deux onglets (direct, 3 manches du duel avec le même score des deux côtés) et en différé (rejeu, fantôme), jour 11 non cassé, aucune erreur console. PR #83 (brouillon).
+Défaut trouvé puis corrigé : en fin de direct, Pingou annonçait « score posé » avant que la dernière manche de l'autre arrive → on l'attend 4 s.
 
 **Prochaine étape :** jour 9 (dessin à deviner, différé) — il pourra reprendre `pictionary/dessin.ts`
 et `Tableau.tsx` tels quels. Demander d'abord ses règles à Alexandre.
