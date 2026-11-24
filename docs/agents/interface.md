@@ -28,12 +28,40 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 `npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
 **avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
 
-1. ~~**#75**~~ — **fait le 24 nov**, PR `interface/erreurs-connexion` en attente de fusion. La connexion affiche « Mot de passe incorrect » pour toute erreur. Distinguer au moins mauvais mot de
-   passe / problème réseau / compte non relié. **À finir avant le 27 nov** (branchement de Supabase).
-2. ~~**#51**~~ — **fait le 24 nov**, PR `interface/menus-haut` : composant `<Hud />` livré, **à brancher par le chef dans `App.tsx`**.
-3. Ensuite : relire les issues `[Interface]` ouvertes ; s'il n'y en a plus, ouvrir une issue pour demander la suite au chef.
+1. ~~**#75**~~ — fait et fusionné (PR #76).
+2. ~~**#51**~~ — fait et fusionné (PR #79), branché par le chef dans `App.tsx`.
+3. ~~Relire les issues `[Interface]`~~ — fait le 24 nov : aucune ouverte. Suite demandée au chef dans **#81**
+   (avec le signalement de `npm run capture` cassé). PR `interface/nettoyage-entete` en attente de fusion.
+4. ~~Réponse du chef dans #81~~ : reçue (25 nov), PR #82 fusionnée.
+5. **Nom du monde tronqué sur téléphone** (« La Forêt et le Lac … ») : proposer 2–3 options à Alexandre avec captures
+   (ligne plus petite, nom court par monde, défilement), puis faire celle qu'il choisit.
+6. **À partir du 27 nov** (Supabase branché) : vérification complète de l'interface en vrai — messages d'erreur de #75
+   avec de vraies erreurs, audit axe-core, revue des 24 jours (`--jour=1..24`, jour et nuit).
+7. Ensuite : issue au chef pour la suite (aide aux Jeux côté interface si besoin).
 
 ## Journal
+
+### 📍 Où j'en suis — 24 novembre 2026 (nuit)
+
+**#75 et #51 sont fusionnés**, et le chef a branché `<Hud />` dans `App.tsx`. Aucune issue `[Interface]` ouverte.
+
+**PR `interface/nettoyage-entete`** (en attente de fusion), `src/index.css` seulement :
+- suppression des styles morts de l'ancien en-tête : `.hud`, `.brand*`, `.zone-pill` (+ `zoneIn`, + sa règle de nuit),
+  `.who`, `.hud-actions`, `.who-badge`, `.round`, et leurs règles du media 560 px ;
+- la ligne `.rappel-host { top: 96px }` du media 560 px était morte : la règle à 118 px, placée plus loin, l'emportait.
+  Heureusement, car 96 px chevaucherait la pastille de la course. Supprimée, avec un commentaire sur les 118 px ;
+- **bug corrigé** : la veille d'une case préparée, la course dépliée s'ouvrait **sous** le bandeau de rappel
+  (z-index 15 contre 10). `.entete:has(.entete-course-detail)` passe maintenant à 16.
+
+**`npm run capture` est cassé sur `main`** depuis le branchement de `<Hud />` : `tests/qa/commun.mjs:111` attend `.hud`.
+Signalé dans **#81** (avec `.zone-pill` et `.who-badge` dans d'autres tests). En attendant, pour capturer :
+remplacer en local `".hud"` par `".entete"` dans ce fichier, capturer, puis `git checkout tests/qa/commun.mjs`.
+**Ne pas commiter ce fichier**, il appartient à la Qualité.
+
+**Repéré, non traité** : sur téléphone, le nom du monde est tronqué (« La Forêt et le Lac … »). C'est une question de goût,
+proposée au chef comme piste B dans #81. Il faudra des options à montrer à Alexandre avant de coder.
+
+**Prochaine tâche** : lire la réponse du chef dans #81.
 
 ### 📍 Où j'en suis — 24 novembre 2026 (soir)
 
