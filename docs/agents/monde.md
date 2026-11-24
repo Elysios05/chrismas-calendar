@@ -13,6 +13,8 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 `npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
 **avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
 
+**🆕 Salons (décision d'Alexandre du 25 nov, avant le 30)** — lire `docs/salons.md`. Dès que le chef annonce dans **#84** la fusion du contrat `SalonApi`, ce point passe **en tête** : prénoms et couleurs des personnages, de Pingou et des panneaux viennent de la config du salon (`PLAYERS` = valeurs par défaut). En attendant, continue la liste.
+
 1. ~~**#11** et **#42**~~ : faits le 24 nov (télésiège, lutin au chariot, emballeurs) — PR #80, issues commentées.
 2. **#23** : ne plus tout reconstruire à chaque changement d'état (mesure avant/après avec `tests/qa/perf.mjs`).
 3. **#14** : ne charger que le monde où l'on se trouve.
