@@ -3,6 +3,8 @@
  * `npm run dev` puis http://localhost:5173/maquettes.html?vue=connexion
  * Vues : connexion (+ &erreur=mdp|reseau|compte pour simuler un échec) · connexion-erreur · case-intro · case-jeu · case-fini · lettre
  *         editeur · editeur-vide · rappel · course · reglages · final · pingou
+ *         hud-a · hud-b · hud-c (pistes de l'en-tête, #51 ; &ouvert=1, &nuit=1)
+ *         entete (le vrai <Hud />, piste B ; &nuit=1, &egalite=1, &j24=1)
  */
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -16,6 +18,8 @@ import { FinalScreen } from "../FinalScreen";
 import { MascotDialog, PenguinPortrait } from "../Mascot";
 import type { Expression } from "../pingou/lines";
 import { DemoBackend } from "../../backend";
+import { HudMaquette } from "./hudMaquettes";
+import { Hud } from "../Hud";
 import "../../index.css";
 
 // le vrai mode démo, celui qu'utilise l'application publique : plus de faux backend d'atelier.
@@ -63,6 +67,28 @@ function Maquettes() {
   const [lines, setLines] = useState([
     { text: "Case 12 ouverte. Flavie a déjà fait 1 400 points, au cas où.", face: "clin" as Expression },
   ]);
+
+  if (vue === "hud-a" || vue === "hud-b" || vue === "hud-c") {
+    return <HudMaquette piste={vue.slice(4) as "a" | "b" | "c"} />;
+  }
+
+  if (vue === "entete") {
+    const q = new URLSearchParams(location.search);
+    const nuit = q.has("nuit");
+    if (nuit) document.documentElement.dataset.nuit = "oui";
+    const six = [1, 2, 3, 4, 5, 6];
+    return (
+      <div className="hm-fond">
+        <Hud
+          me="alexandre"
+          progress={{ alexandre: { opened: six, completed: [] }, flavie: { opened: q.has("egalite") ? six : [...six, 7], completed: [] } }}
+          zoneName="La Forêt et le Lac gelé" zoneKey={2} couleur="#2f6fd0" demo night={nuit}
+          nextToWrite={q.has("plein") ? 24 : 16} souvenirs={q.has("j24")}
+          onEdit={() => {}} onToggleNight={() => {}} onGoToday={() => {}} onSouvenirs={() => {}} onSettings={() => {}}
+        />
+      </div>
+    );
+  }
 
   if (vue === "connexion" || vue === "connexion-erreur") {
     const echec = ECHECS[new URLSearchParams(location.search).get("erreur") ?? ""];
