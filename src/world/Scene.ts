@@ -810,7 +810,9 @@ export class Scene {
     // habitants : seuls ceux qui sont à l'écran vivent ; les autres attendent, figés
     const leftX = (-this.world.x) / this.scale - 60, rightX = (innerWidth - this.world.x) / this.scale + 60;
     for (const cr of this.life) {
-      const vis = cr.zIndex <= limiteDecor && cr.y > topY - 60 && cr.y < botY + 60 && cr.x > leftX && cr.x < rightX;
+      // les pylônes du télésiège portent leur câble loin au-dessus de leur pied : marge plus large
+      const m = cr.species === "pylon" ? 240 : cr.species === "chair" ? 120 : 60;
+      const vis = cr.zIndex <= limiteDecor && cr.y > topY - 60 && cr.y < botY + m && cr.x > leftX - m + 60 && cr.x < rightX + m - 60;
       cr.visible = vis;
       if (vis) updateCritter(cr, dt, this.lifeGround, this.terrain);
     }
