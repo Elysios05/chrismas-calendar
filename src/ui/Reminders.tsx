@@ -8,7 +8,7 @@ import type { BackendApi, ReminderStatus } from "../core/contracts";
  */
 
 const EXPLICATION: Record<ReminderStatus, string> = {
-  active: "Tu seras prévenu·e la veille, à 20 h, si la case du lendemain est encore vide.",
+  active: "Un rappel t'arrivera la veille, à 20 h, si la case du lendemain est encore vide.",
   off: "Un rappel la veille à 20 h, si la case du lendemain est encore vide. Six fois en tout.",
   denied:
     "Les notifications sont bloquées pour ce site. Pour les réautoriser : touche le cadenas (ou « Aa ») à côté de l'adresse, puis Notifications → Autoriser.",
