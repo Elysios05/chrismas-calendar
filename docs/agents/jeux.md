@@ -58,8 +58,9 @@ Textes neutres (#84 point 7) : « a quitté la partie », « On y va ! », « Jo
 ⚠️ `npm run capture` toujours cassé (#87).
 
 **À trancher avec Alexandre :** le contenu par défaut contient des choses à eux (« LJUBLJANA », mots « à vous deux »
-du Pictionary…) qui deviennent le défaut de **tous** les salons. Proposé dans #59 : le copier dans le contenu de
-leur salon et rendre le défaut générique.
+du Pictionary…) qui deviennent le défaut de **tous** les salons. Question posée à Alexandre le 25 nov (session
+directe) : options A) copier ce contenu dans leur salon et rendre le défaut générique (recommandé), B) tout laisser,
+C) défaut générique seulement. Réponse : à reporter ici. Forme du schéma annoncée dans #84 (PR #94).
 
 **Prochaine étape :** jour 10 (attrape-flocons, score à battre, PixiJS) — demander ses règles à Alexandre, et le
 faire directement « salon » (schéma si quelque chose se personnalise).
