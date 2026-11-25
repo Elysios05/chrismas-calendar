@@ -12,6 +12,7 @@
  * et des mots de 4 à 9 lettres se croisent beaucoup mieux que des mots très longs ou très courts.
  */
 
+import type { SchemaContenu } from "../../games/shared/contenu";
 export type MotCroise = { mot: string; definition: string; perso?: boolean };
 
 export type MotsCroisesContent = {
@@ -60,3 +61,20 @@ export const MOTSCROISES_VERDICTS: { min: number; ligne: string }[] = [
   { min: 1, ligne: "Un début de grille… la prochaine fois, prends un chocolat chaud avec." },
   { min: 0, ligne: "Grille vide. Même moi j'aurais trouvé « SAPIN » 🐧" },
 ];
+
+/** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */
+export const SCHEMA_MOTSCROISES_JOUR17: SchemaContenu = {
+  jour: 17,
+  titre: "Jour 17 — Mots croisés de votre histoire",
+  intro: "La grille se construit toute seule à partir de la liste : 8 mots sont retenus, en alternant Noël et « à vous deux ». Donne au moins 12 mots ; ceux de 4 à 9 lettres se croisent le mieux.",
+  champs: [
+    {
+      type: "liste", cle: "mots", label: "Mots", libelleElement: "Mot", min: 8, max: 40, modele: {},
+      champs: [
+        { type: "texte", cle: "mot", label: "Mot", aide: "Un seul mot, sans espace ni tiret.", max: 12, motif: "^\\p{L}{2,12}$", motifAide: "Un seul mot de 2 à 12 lettres.", exemple: "CANNELLE" },
+        { type: "texte", cle: "definition", label: "Définition", max: 60, exemple: "L'épice qui sent décembre" },
+        { type: "case", cle: "perso", label: "Mot à vous deux" },
+      ],
+    },
+  ],
+};

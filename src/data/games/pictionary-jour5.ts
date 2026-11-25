@@ -11,6 +11,7 @@
  * articles et tirets sont pardonnés quand on devine.
  */
 
+import type { SchemaContenu } from "../../games/shared/contenu";
 export type MotADessiner = { mot: string; variantes?: string[] };
 
 export type PictionaryContent = {
@@ -54,5 +55,21 @@ export const PICTIONARY_JOUR5: PictionaryContent = {
     { mot: "Pizza du dimanche", variantes: ["pizza"] },
     { mot: "Plaid sur le canapé", variantes: ["plaid", "canape"] },
     { mot: "Billet de retour", variantes: ["billet"] },
+  ],
+};
+
+const CHAMPS_MOT: SchemaContenu["champs"] = [
+  { type: "texte", cle: "mot", label: "Mot à dessiner", max: 40, exemple: "Train de nuit" },
+  { type: "textes", cle: "variantes", label: "Autres réponses acceptées", aide: "Facultatif. Accents, majuscules et articles sont déjà pardonnés.", min: 0, max: 6, maxLongueur: 40, exemple: "train" },
+];
+
+/** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */
+export const SCHEMA_PICTIONARY_JOUR5: SchemaContenu = {
+  jour: 5,
+  titre: "Jour 5 — Pictionary de Noël",
+  intro: "À chaque dessin, on choisit entre un mot de Noël et un mot « à vous deux » (souvenirs, private jokes). Il faut au moins 6 mots dans chaque liste.",
+  champs: [
+    { type: "liste", cle: "nous", label: "Vos mots à vous", libelleElement: "Mot", min: 6, max: 30, modele: {}, champs: CHAMPS_MOT },
+    { type: "liste", cle: "noel", label: "Mots de Noël", libelleElement: "Mot", min: 6, max: 30, modele: {}, champs: CHAMPS_MOT },
   ],
 };

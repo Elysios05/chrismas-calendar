@@ -13,11 +13,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GameContext, GameModule, Who } from "../../core/contracts";
-import { QUIZ_JOUR1, QUIZ_VERDICTS, type QuizContent } from "../../data/games/quiz-jour1";
+import { QUIZ_JOUR1, SCHEMA_QUIZ_JOUR1, reparerQuiz, QUIZ_VERDICTS } from "../../data/games/quiz-jour1";
+import { prenomsDe, lireContenu } from "../shared/contenu";
 import { Cadre, PanneauFin, PanneauRegles, Points, Puce } from "../shared/ui";
 import { monterReact } from "../shared/monter";
 
-const PRENOMS: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 const LETTRES = ["A", "B", "C", "D", "E", "F"];
 
 type Etape = "chargement" | "regles" | "moi" | "devine" | "fin";
@@ -31,7 +31,8 @@ function verdict(score: number, total: number) {
 }
 
 function Quiz({ ctx }: { ctx: GameContext }) {
-  const contenu = (ctx.content as QuizContent | null) ?? QUIZ_JOUR1;
+  const contenu = useMemo(() => lireContenu(ctx.content, QUIZ_JOUR1, SCHEMA_QUIZ_JOUR1, reparerQuiz), [ctx.content]);
+  const PRENOMS = prenomsDe(ctx);
   const questions = useMemo(
     () => contenu.questions.slice(0, Math.max(1, contenu.nombre)),
     [contenu],

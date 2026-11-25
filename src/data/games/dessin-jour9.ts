@@ -11,6 +11,7 @@
  *                  (les dessins eux-mêmes sont tracés par le jeu, dans `src/games/dessin/exemple.ts`).
  */
 
+import type { SchemaContenu } from "../../games/shared/contenu";
 export type ThemeDessin = { id: string; texte: string; idee: string };
 
 export type ExempleDessin = { theme: string; reponse: string; variantes: string[]; mot: string };
@@ -45,3 +46,27 @@ export const DESSIN_JOUR9: DessinContent = {
     { theme: "bientot", reponse: "un câlin", variantes: ["calin", "se serrer dans les bras", "un bisou"], mot: "Le premier truc qu'on fera, promis 💞" },
   ],
 };
+
+/** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */
+export const SCHEMA_DESSIN_JOUR9: SchemaContenu = {
+  jour: 9,
+  titre: "Jour 9 — Vos souvenirs dessinés",
+  intro: "Pour chaque dessin, on choisit un thème, on dessine son souvenir et l'autre le devine. Il faut au moins autant de thèmes que de dessins.",
+  champs: [
+    { type: "nombre", cle: "nbDessins", label: "Dessins chacun", min: 1, max: 5 },
+    {
+      type: "liste", cle: "themes", label: "Thèmes proposés", libelleElement: "Thème", min: 3, max: 12, modele: { id: "" },
+      champs: [
+        { type: "texte", cle: "texte", label: "Thème", max: 60, exemple: "Un voyage qu'on a fait" },
+        { type: "texte", cle: "idee", label: "Exemple de réponse (en gris)", max: 40, facultatif: true, exemple: "ex. Venise" },
+      ],
+    },
+  ],
+};
+
+export function reparerDessin(c: DessinContent): DessinContent {
+  const themes = c.themes.map((t) => ({ ...t, idee: t.idee ?? "" }));
+  // les dessins d'exemple du mode démo gardent un thème qui existe
+  const exemples = c.exemples.map((e, i) => (themes.some((t) => t.id === e.theme) ? e : { ...e, theme: themes[i % themes.length].id }));
+  return { ...c, themes, exemples, nbDessins: Math.min(c.nbDessins, themes.length) };
+}
