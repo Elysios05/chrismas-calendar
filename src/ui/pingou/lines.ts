@@ -195,7 +195,7 @@ export const PINGOU_SALON = {
   /** Page d'invitation (?invitation=…) */
   invitation: (invite: string, createur: string): PingouLine => ({ text: `Salut ${invite} ! ${createur} t'a préparé un calendrier de l'Avent. Choisis juste un mot de passe, et c'est parti.`, face: "content" }),
   invitationUtilisee: (invite: string): PingouLine => ({ text: `Ce lien a déjà servi, ${invite}. Tu as ton mot de passe : entre par la porte habituelle.`, face: "clin" }),
-  /** Réglages du salon (Réglages → Notre calendrier) */
+  /** Réglages du salon (Réglages → Notre calendrier) — validées par Alexandre le 25 nov */
   reglages: (): PingouLine => ({ text: "Ici, tout se règle : vos prénoms, vos manteaux, et les liens pour entrer.", face: "content" }),
   changerPrenom: (pourMoi: boolean, actuel: string): PingouLine => ({ text: pourMoi ? `On garde « ${actuel} », ou tu préfères autre chose ?` : `Comment on écrit son prénom, finalement ? Pour l'instant, c'est « ${actuel} ».`, face: "clin" }),
   changerManteau: (prenom: string): PingouLine => ({ text: `Et le manteau de ${prenom}, on le change ?`, face: "content" }),
