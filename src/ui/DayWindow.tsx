@@ -1,13 +1,15 @@
 import { silentSound } from "../core/silent";
 import { useEffect, useRef, useState } from "react";
-import type { BackendApi, GameModule, GameResult, PreparedResult, SoundApi, Who } from "../core/contracts";
+import type { BackendApi, GameModule, GameResult, PreparedResult, Salon, SoundApi, Who } from "../core/contracts";
 import { PLANNING, KIND_LABEL } from "../data/planning";
 import { MascotDialog } from "./Mascot";
 import { PreparedCase } from "./PreparedCase";
 import { PINGOU_CASE, type PingouLine } from "./pingou/lines";
 import { useDialog } from "./useDialog";
+import { contenuDuJour, prenomsDuSalon, useSalon } from "./useSalon";
 
-const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
+/** Repli sans salon (faux backend d'atelier) : jamais de prénom en dur. */
+const SANS_PRENOM = "ton binôme";
 
 /** Son silencieux : utilisé tant que l'équipe Audio n'est pas branchée. */
 const MUET: SoundApi = silentSound;
@@ -46,6 +48,11 @@ export function DayWindow({
     dejaTerminee ? PINGOU_CASE.termine() : PINGOU_CASE.avantJeu(info.title),
   );
   const zone = useRef<HTMLDivElement>(null);
+  // prénoms affichés : suivent le salon courant (config modifiée pendant que la fenêtre est ouverte)
+  const salon = useSalon(backend);
+  const prenomPartenaire = salon?.config.joueurs[partner].prenom ?? SANS_PRENOM;
+  // salon lu au moment de lancer le jeu : le jeu monté ne change plus de contenu en cours de partie
+  const salonAuLancement = useRef<Salon | null>(null);
   // focus piégé, Échap, et retour du focus sur la case au moment de fermer
   const { panneau, surFond } = useDialog<HTMLElement>(onClose);
 
@@ -69,7 +76,8 @@ export function DayWindow({
       partner,
       backend,
       sound,
-      content: undefined,
+      content: contenuDuJour(salonAuLancement.current, day),
+      prenoms: prenomsDuSalon(salonAuLancement.current),
       say: (l) => setLines(l),
       complete: (r) => {
         setResultat(r);
@@ -85,6 +93,8 @@ export function DayWindow({
     setLines([]);
     await backend.markOpened(day).catch(() => { /* on continue même hors ligne */ });
     sound.play("open");
+    // relu ici (et pas pris dans `salon`) : il peut ne pas être encore arrivé, ou avoir changé depuis l'ouverture
+    salonAuLancement.current = (await backend.salons?.getSalon().catch(() => null)) ?? salon;
     if (estPreparee) {
       // le serveur décide de ce qui est lisible : on ne devine rien côté interface
       const r = await backend.getPrepared(day, me).catch((): PreparedResult => ({ status: "locked" }));
@@ -110,7 +120,7 @@ export function DayWindow({
             <p className="sheet-day">{day} décembre · {KIND_LABEL[info.kind]}</p>
             {/* pour une case préparée, le titre du planning est redondant avec l'étiquette */}
             <h2 className="sheet-title" id="case-titre">
-              {estPreparee ? `Une lettre de ${PRENOM[partner]}` : info.title}
+              {estPreparee ? `Une lettre de ${prenomPartenaire}` : info.title}
             </h2>
           </div>
           <button className="sheet-close" type="button" onClick={onClose} aria-label="Fermer la case">✕</button>
@@ -121,10 +131,10 @@ export function DayWindow({
             <div className="sheet-intro">
               <p className="sheet-intro-text">
                 {info.kind === "direct"
-                  ? `À jouer avec ${PRENOM[partner]}. S'il n'est pas là, tu joues ton tour et il répondra plus tard.`
+                  ? `À jouer avec ${prenomPartenaire}. En son absence, tu joues ton tour et la réponse viendra plus tard.`
                   : info.kind === "prepare"
-                    ? `${PRENOM[partner]} a préparé cette case pour toi.`
-                    : "Prêt ? Tu pourras revoir cette case autant de fois que tu veux."}
+                    ? `${prenomPartenaire} a préparé cette case pour toi.`
+                    : "C'est quand tu veux ! Cette case se rejoue autant de fois que tu le souhaites."}
               </p>
               <button className="btn sheet-cta" type="button" onClick={commencer}>
                 {info.kind === "prepare" ? "Ouvrir l'enveloppe" : "C'est parti"}

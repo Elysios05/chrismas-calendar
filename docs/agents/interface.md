@@ -43,6 +43,29 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 
 ## Journal
 
+### 📍 Où j'en suis — 25 novembre 2026
+
+**Salons, étape 1 livrée** (branche `interface/salon-dans-la-case`, PR vers `main`) — demandée par le chef dans #84 :
+- nouveau `src/ui/useSalon.ts` : `useSalon(backend)` (salon courant, suivi par `onSalonChange`), `prenomsDuSalon()`,
+  `contenuDuJour()`. **À réutiliser** pour tous les écrans des salons et le balayage des prénoms ;
+- `DayWindow` remplit `ctx.content` (`salon.config.contenu[jour]`) et `ctx.prenoms`. Le salon est **relu au clic
+  « C'est parti »** (dans une ref) : le jeu monté ne change pas de contenu en cours de partie si la config bouge ;
+- textes de `DayWindow` sans prénom en dur et sans accord : « En son absence, tu joues ton tour et la réponse viendra
+  plus tard. » ; « Prêt ? » → « C'est quand tu veux ! Cette case se rejoue autant de fois que tu le souhaites. »
+  (choix technique imposé par la règle du point 7 ; formulation à faire valider par Alexandre, signalé dans la PR).
+  Repli sans salon (faux backend d'atelier) : « ton binôme ».
+
+**Captures** : `npm run capture` toujours cassé sur `main` (`.hud`), et modifier `tests/qa/commun.mjs` en local est
+maintenant refusé par les permissions. Contournement : copier `tests/qa/*.mjs` dans le brouillon, y remplacer `RACINE`
+(commun.mjs et serveur.mjs) par le chemin absolu du dépôt, `createRequire(...)` par `package.json` du dépôt,
+`@playwright/test` par `node_modules/@playwright/test/index.mjs`, `.hud` par `.entete`, puis `node <copie>/capture.mjs …`.
+
+**Reste en `src/ui/`** : 37 occurrences de « Alexandre »/« Flavie »/`PLAYERS` en dur (Hud, LoginScreen, Settings,
+RaceIndicator, FinalScreen, PreparedCase, PreparedEditor, `pingou/lines.ts`) + accords à vérifier.
+
+**Prochaine tâche** : balayage des prénoms en dur dans `src/ui/` avec `useSalon` (technique, pas de goût), puis maquettes
+des écrans des salons (accueil, assistant, lien à envoyer, invitation) à montrer à Alexandre.
+
 ### 📍 Où j'en suis — 24 novembre 2026 (nuit)
 
 **#75 et #51 sont fusionnés**, et le chef a branché `<Hud />` dans `App.tsx`. Aucune issue `[Interface]` ouverte.
