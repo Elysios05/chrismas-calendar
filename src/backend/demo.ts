@@ -8,19 +8,38 @@
  *  - ?rappels=off   simule l'état des rappels (off | active | denied | unsupported | needs-install) ;
  *                   sans ce paramètre, la démo répond « unsupported » (pas de notification en démo)
  *
- * Les mots de passe sont ignorés. La session est gardée par onglet (sessionStorage), ce qui
- * permet d'avoir Alexandre dans un onglet et Flavie dans un autre ; les données (progression,
- * cases préparées, état des jeux) sont partagées entre onglets via localStorage.
+ *  - ?salon=ID      ouvre ce salon (lien de connexion) ; ?invitation=JETON : lien d'invitation (voir lireInvitation)
+ *
+ * Salons (docs/salons.md) : le salon fictif « demo » (Alexandre et Flavie, données d'exemple) est le salon par
+ * défaut, inchangé. Les salons créés avec `salons.creerSalon` sont simulés dans localStorage, SANS exemples :
+ * ils partent de zéro. Les liens d'invitation ne marchent donc que dans le même navigateur (autre onglet).
+ *
+ * Mots de passe : ignorés dans le salon démo ; dans un salon créé, vérifiés (stockés en clair dans localStorage :
+ * c'est une simulation locale, rien n'est envoyé nulle part). La session est gardée par onglet (sessionStorage), ce
+ * qui permet d'avoir une place dans un onglet et l'autre dans un autre ; les données (progression, cases préparées,
+ * état des jeux) sont partagées entre onglets via localStorage.
  */
-import type { BackendApi, DayNumber, PreparedContent, PreparedResult, Progress, RealtimeRoom, ReminderStatus, Who } from "../core/contracts";
+import type {
+  BackendApi, DayNumber, InvitationInfo, PreparedContent, PreparedResult, Progress, RealtimeRoom, ReminderStatus,
+  Salon, SalonApi, SalonConfig, SalonCree, SalonId, Who,
+} from "../core/contracts";
 import type { PasswordRecovery } from "./index";
 import {
-  DEMO_DAY_OUTSIDE_DECEMBER, DEMO_PHOTO_MAX_DIMENSION, FROZEN_MESSAGE, PREPARED_DAYS,
-  adventDayFor, checkPhotoSize, compressImage, isWho, partnerOf,
+  DEMO_DAY_OUTSIDE_DECEMBER, DEMO_PHOTO_MAX_DIMENSION, DEMO_SALON_ID, FROZEN_MESSAGE, PREPARED_DAYS,
+  SALON_CREATIONS_PAR_HEURE, SALON_DEMO_CONFIG, adventDayFor, checkMotDePasse, checkPhotoSize, checkSalonConfig,
+  compressImage, isWho, lienInvitationUrl, lienSalonUrl, partnerOf, randomToken, salonError,
 } from "./config";
 
 const PREFIX = "cc-demo:";
-const SESSION_KEY = PREFIX + "session";
+/** Clés propres à un salon. Le salon démo garde les clés d'avant (données existantes intactes). */
+const sessionKey = (salon: SalonId) => (salon === DEMO_SALON_ID ? PREFIX + "session" : `${PREFIX}s:${salon}:session`);
+const dataKey = (salon: SalonId) => (salon === DEMO_SALON_ID ? PREFIX + "data-v2" : `${PREFIX}s:${salon}:data`);
+/** Salon courant : par onglet (sessionStorage) puis pour le navigateur (localStorage). */
+const CURRENT_SALON_KEY = PREFIX + "salon";
+/** Registre des salons simulés (créés ou modifiés). */
+const SALONS_KEY = PREFIX + "salons";
+/** Horodatages des créations récentes (limite par heure). */
+const CREATIONS_KEY = PREFIX + "creations";
 
 type DemoData = {
   progress: Record<Who, Progress>;
@@ -93,8 +112,6 @@ const safe = {
   sset(k: string, v: string | null) { try { if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch { /* idem */ } },
 };
 
-// v2 : seules les actions de l'utilisateur sont enregistrées (les exemples sont recalculés, ticket #32)
-const DATA_KEY = PREFIX + "data-v2";
 const emptyData = (): DemoData => ({
   progress: { alexandre: { opened: [], completed: [] }, flavie: { opened: [], completed: [] } },
   prepared: [],
@@ -102,16 +119,17 @@ const emptyData = (): DemoData => ({
 });
 
 /** Ce que l'utilisateur a fait dans la démo (sans les exemples). */
-function load(): DemoData {
-  const raw = safe.get(DATA_KEY);
+function load(salon: SalonId): DemoData {
+  const raw = safe.get(dataKey(salon));
   if (raw) { try { return { ...emptyData(), ...(JSON.parse(raw) as DemoData) }; } catch { /* données corrompues */ } }
   return emptyData();
 }
 
 /** Vue complète pour le jour simulé : exemples + actions de l'utilisateur, rien au-delà de `today`. */
-function view(today: DayNumber): DemoData {
-  const seed = seedData(today);
-  const user = load();
+function view(salon: SalonId, today: DayNumber): DemoData {
+  // v2 : seules les actions de l'utilisateur sont enregistrées ; les exemples (salon démo seulement) sont recalculés
+  const seed = salon === DEMO_SALON_ID ? seedData(today) : emptyData();
+  const user = load(salon);
   const progress = {} as Record<Who, Progress>;
   for (const w of ["alexandre", "flavie"] as Who[]) {
     const s = seed.progress[w], u = user.progress[w] ?? { opened: [], completed: [] };
@@ -127,31 +145,85 @@ function view(today: DayNumber): DemoData {
     gameState: { ...seed.gameState, ...user.gameState },
   };
 }
-function save(d: DemoData) {
-  try { localStorage.setItem(DATA_KEY, JSON.stringify(d)); }
+function save(salon: SalonId, d: DemoData) {
+  try { localStorage.setItem(dataKey(salon), JSON.stringify(d)); }
   catch { throw new Error("Stockage du navigateur plein (mode démo) : supprime quelques photos."); }
 }
 
 const uniqSorted = (a: number[]) => [...new Set(a)].sort((x, y) => x - y);
 const delay = <T>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 0));
 
+/* ---------- registre des salons simulés ---------- */
+
+type DemoSalonRecord = {
+  config: SalonConfig;
+  createdAt: string;
+  /** Mots de passe des places (simulation locale, en clair). Absent pour le salon démo : tout est accepté. */
+  passwords: Partial<Record<Who, string>>;
+  /** Jeton d'invitation en cours (null une fois utilisé) et jetons déjà consommés. */
+  jeton: string | null;
+  jetonsUtilises: string[];
+  inviteArrive: boolean;
+};
+
+const DEMO_RECORD: DemoSalonRecord = {
+  config: SALON_DEMO_CONFIG, createdAt: "2026-11-17T00:00:00.000Z", passwords: {},
+  jeton: null, jetonsUtilises: [], inviteArrive: true,
+};
+
+function loadSalons(): Record<SalonId, DemoSalonRecord> {
+  try { return JSON.parse(safe.get(SALONS_KEY) ?? "{}") as Record<SalonId, DemoSalonRecord>; } catch { return {}; }
+}
+function saveSalons(r: Record<SalonId, DemoSalonRecord>) {
+  try { localStorage.setItem(SALONS_KEY, JSON.stringify(r)); }
+  catch { throw new Error("Stockage du navigateur plein (mode démo)."); }
+}
+/** Salon simulé, ou null s'il n'existe pas. Le salon démo existe toujours (config modifiable, sinon par défaut). */
+function salonRecord(id: SalonId): DemoSalonRecord | null {
+  const r = loadSalons()[id];
+  if (id === DEMO_SALON_ID) return { ...DEMO_RECORD, ...r, passwords: {}, inviteArrive: true };
+  return r ?? null;
+}
+
 /* ---------- backend ---------- */
 
 export class DemoBackend implements BackendApi, PasswordRecovery {
   readonly mode = "demo" as const;
   private authListeners = new Set<(who: Who | null) => void>();
+  private salonListeners = new Set<(salon: Salon | null) => void>();
   private params = new URLSearchParams(typeof location !== "undefined" ? location.search : "");
 
   constructor() {
     safe.del(PREFIX + "data"); // ancien format (exemples figés, avant le ticket #32)
-    if (this.params.has("demo-reset")) { safe.del(DATA_KEY); safe.sset(SESSION_KEY, null); safe.del(SESSION_KEY); }
+    if (this.params.has("demo-reset")) {
+      // tout effacer : données de chaque salon, salons créés, sessions, salon courant
+      for (const st of [() => localStorage, () => sessionStorage]) {
+        try {
+          const store = st();
+          for (const k of Object.keys(store)) if (k.startsWith(PREFIX) && k !== PREFIX + "rappels") store.removeItem(k);
+        } catch { /* navigation privée */ }
+      }
+    }
+    const fromUrl = this.params.get("salon");
+    if (fromUrl && salonRecord(fromUrl)) this.setCurrentSalon(fromUrl);
     const forced = this.params.get("moi");
-    if (isWho(forced)) safe.sset(SESSION_KEY, forced);
+    if (isWho(forced)) safe.sset(sessionKey(this.salonId()), forced);
   }
 
-  /** Utilisateur de cet onglet (synchrone, utile pour joinRoom) */
+  /** Salon courant de cet onglet (le salon démo par défaut, ou si le salon retenu n'existe plus). */
+  private salonId(): SalonId {
+    const id = safe.sget(CURRENT_SALON_KEY) ?? safe.get(CURRENT_SALON_KEY);
+    return id && salonRecord(id) ? id : DEMO_SALON_ID;
+  }
+  private setCurrentSalon(id: SalonId) {
+    safe.sset(CURRENT_SALON_KEY, id);
+    safe.set(CURRENT_SALON_KEY, id);
+  }
+
+  /** Utilisateur de cet onglet dans le salon courant (synchrone, utile pour joinRoom) */
   private current(): Who | null {
-    const s = safe.sget(SESSION_KEY) ?? safe.get(SESSION_KEY);
+    const k = sessionKey(this.salonId());
+    const s = safe.sget(k) ?? safe.get(k);
     return isWho(s) ? s : null;
   }
   private requireMe(): Who {
@@ -162,21 +234,37 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
 
   async me() { return delay(this.current()); }
 
-  async signIn(who: Who, _password: string, options?: { rester?: boolean }) {
-    void _password; // n'importe quel mot de passe est accepté en démo
+  async signIn(who: Who, password: string, options?: { rester?: boolean }) {
     if (!isWho(who)) throw new Error("Utilisateur inconnu.");
+    // salon démo : n'importe quel mot de passe ; salon créé : vérifié
+    const rec = salonRecord(this.salonId());
+    if (rec && this.salonId() !== DEMO_SALON_ID) {
+      const expected = rec.passwords[who];
+      if (expected === undefined) {
+        throw new Error(who === "flavie"
+          ? `${rec.config.joueurs.flavie.prenom} n'a pas encore ouvert son lien d'invitation.`
+          : "Ce compte n'existe pas.");
+      }
+      if (expected !== password) throw new Error("Mot de passe incorrect.");
+    }
+    this.openSession(who, options?.rester);
+  }
+  /** Ouvre la session de `who` dans le salon courant. */
+  private openSession(who: Who, rester?: boolean) {
     const before = this.current();
-    safe.sset(SESSION_KEY, who);
+    const k = sessionKey(this.salonId());
+    safe.sset(k, who);
     // rester (défaut) : mémorisé aussi pour les prochaines visites ; sinon, seulement pour cet onglet
-    if (options?.rester === false) safe.del(SESSION_KEY);
-    else safe.set(SESSION_KEY, who);
+    if (rester === false) safe.del(k);
+    else safe.set(k, who);
     if (before !== who) this.emitAuth(who);
   }
 
   async signOut() {
     const before = this.current();
-    safe.sset(SESSION_KEY, null);
-    safe.del(SESSION_KEY);
+    const k = sessionKey(this.salonId());
+    safe.sset(k, null);
+    safe.del(k);
     if (before !== null) this.emitAuth(null);
   }
 
@@ -199,7 +287,7 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
   async today() { return delay(this.todaySync()); }
 
   async getProgress(who: Who): Promise<Progress> {
-    const p = view(this.todaySync()).progress[who];
+    const p = view(this.salonId(), this.todaySync()).progress[who];
     return delay({ opened: [...p.opened], completed: [...p.completed] });
   }
 
@@ -207,12 +295,12 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
     const me = this.requireMe();
     if (!Number.isInteger(day) || day < 1 || day > 24) throw new Error(`Jour invalide : ${day}`);
     if (day > this.todaySync()) throw new Error(`La case ${day} n'est pas encore ouverte.`);
-    const d = load();
+    const d = load(this.salonId());
     const p = d.progress[me] ?? { opened: [], completed: [] };
     p.opened = uniqSorted([...p.opened, day]);
     if (completed) p.completed = uniqSorted([...p.completed, day]);
     d.progress[me] = p;
-    save(d);
+    save(this.salonId(), d);
   }
   async markOpened(day: DayNumber) { this.mark(day, false); }
   async markCompleted(day: DayNumber) { this.mark(day, true); }
@@ -222,7 +310,7 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
     const from = partnerOf(to);
     // Même règle que le serveur : le destinataire ne lit qu'à partir du jour J, l'auteur toujours.
     if (me !== from && day > this.todaySync()) return delay({ status: "locked" });
-    const c = view(this.todaySync()).prepared.find((x) => x.day === day && x.from === from);
+    const c = view(this.salonId(), this.todaySync()).prepared.find((x) => x.day === day && x.from === from);
     return delay(c ? { status: "ready", content: { ...c, photos: [...c.photos] } } : { status: "empty" });
   }
 
@@ -231,9 +319,9 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
     if (!PREPARED_DAYS.includes(day)) throw new Error(`Le jour ${day} n'est pas une case préparée.`);
     // Figée dès que le destinataire l'a ouverte (même règle que le serveur)
     // (on regarde aussi les ouvertures réelles non filtrées : un autre onglet peut simuler un jour plus avancé)
-    const d = load();
+    const d = load(this.salonId());
     const other = partnerOf(me);
-    if (view(this.todaySync()).progress[other].opened.includes(day) || d.progress[other]?.opened.includes(day)) {
+    if (view(this.salonId(), this.todaySync()).progress[other].opened.includes(day) || d.progress[other]?.opened.includes(day)) {
       throw new Error(FROZEN_MESSAGE);
     }
     const item: PreparedContent = {
@@ -241,7 +329,7 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
       updatedAt: new Date().toISOString(),
     };
     d.prepared = [...d.prepared.filter((x) => !(x.day === day && x.from === me)), item];
-    save(d);
+    save(this.salonId(), d);
   }
 
   async uploadPhoto(file: Blob): Promise<string> {
@@ -257,19 +345,148 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
   }
 
   async getGameState<T>(day: DayNumber, key: string): Promise<T | null> {
-    const v = view(this.todaySync()).gameState[`${day}:${key}`];
+    const v = view(this.salonId(), this.todaySync()).gameState[`${day}:${key}`];
     return delay(v === undefined ? null : (structuredClone(v) as T));
   }
   async setGameState<T>(day: DayNumber, key: string, value: T) {
     this.requireMe();
-    const d = load();
+    const d = load(this.salonId());
     d.gameState[`${day}:${key}`] = value;
-    save(d);
+    save(this.salonId(), d);
   }
 
   joinRoom(roomId: string): RealtimeRoom {
-    return new DemoRoom(roomId, this.requireMe());
+    const salon = this.salonId();
+    // le salon démo garde le nom de canal d'avant ; les autres salons ont leurs propres salles
+    return new DemoRoom(salon === DEMO_SALON_ID ? roomId : `${salon}:${roomId}`, this.requireMe());
   }
+
+  /* ----- salons (docs/salons.md) : simulés dans localStorage ----- */
+
+  private toSalon(id: SalonId, rec: DemoSalonRecord, member: boolean): Salon {
+    const config = structuredClone(rec.config);
+    if (!member) config.contenu = {}; // le contenu des jeux n'est lisible que par les membres connectés
+    return { id, config, inviteArrive: rec.inviteArrive, demo: id === DEMO_SALON_ID, createdAt: rec.createdAt };
+  }
+  private currentSalon(): Salon {
+    const id = this.salonId();
+    return this.toSalon(id, salonRecord(id)!, this.current() !== null);
+  }
+  private updateRecord(id: SalonId, change: (r: DemoSalonRecord) => void) {
+    const all = loadSalons();
+    const rec = salonRecord(id);
+    if (!rec) throw salonError("SALON_INCONNU");
+    change(rec);
+    all[id] = rec;
+    saveSalons(all);
+  }
+  private emitSalon() {
+    const s = this.currentSalon();
+    this.salonListeners.forEach((cb) => cb(s));
+  }
+  /** Change de salon courant et prévient (salon + session, qui dépend du salon). */
+  private switchTo(id: SalonId) {
+    const beforeWho = this.current();
+    this.setCurrentSalon(id);
+    const afterWho = this.current();
+    if (beforeWho !== afterWho) this.emitAuth(afterWho);
+    this.emitSalon();
+  }
+  private findInvitation(jeton: string): { id: SalonId; rec: DemoSalonRecord; used: boolean } | null {
+    for (const [id, rec] of Object.entries(loadSalons())) {
+      if (rec.jeton === jeton) return { id, rec, used: false };
+      if (rec.jetonsUtilises?.includes(jeton)) return { id, rec, used: true };
+    }
+    return null;
+  }
+
+  readonly salons: SalonApi = {
+    getSalon: async () => delay(this.currentSalon()),
+
+    onSalonChange: (cb) => {
+      this.salonListeners.add(cb);
+      return () => { this.salonListeners.delete(cb); };
+    },
+
+    creerSalon: async ({ config, motDePasse, rester }): Promise<SalonCree> => {
+      const now = Date.now();
+      let recent: number[] = [];
+      try { recent = (JSON.parse(safe.get(CREATIONS_KEY) ?? "[]") as number[]).filter((t) => now - t < 3600_000); } catch { /* vide */ }
+      if (recent.length >= SALON_CREATIONS_PAR_HEURE) throw salonError("LIMITE_CREATION");
+      checkMotDePasse(motDePasse);
+      const clean = checkSalonConfig(config);
+      const id = randomToken(9);
+      const jeton = randomToken();
+      const all = loadSalons();
+      all[id] = {
+        config: clean, createdAt: new Date().toISOString(), passwords: { alexandre: motDePasse },
+        jeton, jetonsUtilises: [], inviteArrive: false,
+      };
+      saveSalons(all);
+      safe.set(CREATIONS_KEY, JSON.stringify([...recent, now]));
+      this.setCurrentSalon(id);
+      this.openSession("alexandre", rester);
+      this.emitSalon();
+      return { salon: this.currentSalon(), lienConnexion: lienSalonUrl(id), lienInvitation: lienInvitationUrl(jeton) };
+    },
+
+    modifierSalon: async (config) => {
+      this.requireMe();
+      const clean = checkSalonConfig(config);
+      this.updateRecord(this.salonId(), (r) => { r.config = clean; });
+      this.emitSalon();
+      return this.currentSalon();
+    },
+
+    lienConnexion: async () => lienSalonUrl(this.salonId()),
+
+    lienInvitation: async (options) => {
+      const id = this.salonId();
+      if (this.current() !== "alexandre") throw salonError("NON_AUTORISE", "Seule la personne qui a créé le calendrier peut inviter.");
+      const rec = salonRecord(id)!;
+      if (rec.inviteArrive) {
+        throw salonError("INVITATION_UTILISEE", `${rec.config.joueurs.flavie.prenom} a déjà rejoint le calendrier.`);
+      }
+      let jeton = rec.jeton;
+      if (options?.nouveau || !jeton) {
+        jeton = randomToken();
+        this.updateRecord(id, (r) => { r.jeton = jeton; });
+      }
+      return lienInvitationUrl(jeton);
+    },
+
+    lireInvitation: async (jeton?: string): Promise<InvitationInfo> => {
+      const j = jeton ?? this.params.get("invitation");
+      const found = j ? this.findInvitation(j) : null;
+      if (!j || !found) return delay({ statut: "invalide" });
+      const joueurs = structuredClone(found.rec.config.joueurs);
+      return delay(found.used
+        ? { statut: "utilisee", salonId: found.id, joueurs }
+        : { statut: "valide", jeton: j, salonId: found.id, joueurs });
+    },
+
+    accepterInvitation: async (jeton, motDePasse, options) => {
+      const found = this.findInvitation(jeton);
+      if (!found) throw salonError("INVITATION_INVALIDE");
+      if (found.used) throw salonError("INVITATION_UTILISEE");
+      checkMotDePasse(motDePasse);
+      this.updateRecord(found.id, (r) => {
+        r.passwords.flavie = motDePasse;
+        r.inviteArrive = true;
+        r.jeton = null;
+        r.jetonsUtilises = [...(r.jetonsUtilises ?? []), jeton];
+      });
+      this.setCurrentSalon(found.id);
+      this.openSession("flavie", options?.rester);
+      this.emitSalon();
+    },
+
+    ouvrirSalon: async (id) => {
+      if (!salonRecord(id)) throw salonError("SALON_INCONNU");
+      this.switchTo(id);
+      return this.currentSalon();
+    },
+  };
 
   /* ----- rappels : simulés seulement avec ?rappels=… (aucune vraie notification en démo) ----- */
   private static REMINDER_STATES: readonly ReminderStatus[] = ["active", "off", "denied", "unsupported", "needs-install"];

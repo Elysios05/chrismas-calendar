@@ -122,6 +122,7 @@ Ce qui ne suit pas d'un compte à l'autre : les conversations, les agents en cou
 | 30 nov | Mise en ligne finale |
 
 ## Journal
+- 25 nov (12 h 45) : PR #85 (contrat des salons + démo) fusionnée, annoncée sur #84 ; #59 → option A (mot de passe obligatoire à la 1re connexion). Backend (lot 2 Supabase, `opus`) et Qualité (sélecteurs `.entete`, `sonnet`) relancés après la limite des 5 h. Reste dans les briefs : `DayWindow` doit remplir `ctx.content` et `ctx.prenoms` (Interface).
 - 25 nov (0 h 30) : décision « salons » (`docs/salons.md`, #84) ; Backend lancé sur le contrat `SalonApi` + DemoBackend.
 - 24 nov (soir) : Alexandre refuse toutes les coupes ; Audio, Backend, Qualité lancés ; PR #74 fusionnée.
 - 17 nov : terrain continu retenu ; organisation en 6 équipes ; backend démo + Supabase ; audio ; assemblage d'`App.tsx`.

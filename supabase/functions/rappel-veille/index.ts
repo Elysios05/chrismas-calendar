@@ -17,7 +17,8 @@ import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { reminderMessage, type Kind, type Who } from "./message.ts";
 
-type Target = { day: number; who: Who; kind: Kind; endpoint: string; p256dh: string; auth: string };
+type Target = { day: number; who: Who; kind: Kind; endpoint: string; p256dh: string; auth: string;
+  salon_id: string; prenom: string | null; prenom_autre: string | null };
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body, null, 2), { status, headers: { "Content-Type": "application/json" } });
@@ -43,16 +44,16 @@ Deno.serve(async (req) => {
   if (error) return json(500, { error: error.message });
   const targets = (data ?? []) as Target[];
   if (!targets.length) return json(200, { sent: 0, message: "personne à prévenir maintenant" });
-  if (opts.dry) return json(200, { dry: true, targets: targets.map((t) => ({ day: t.day, who: t.who, kind: t.kind })) });
+  if (opts.dry) return json(200, { dry: true, targets: targets.map((t) => ({ salon: t.salon_id, day: t.day, who: t.who, kind: t.kind })) });
 
   const perWho = new Map<string, number>();
   const report: unknown[] = [];
   for (const t of targets) {
-    const payload = JSON.stringify(reminderMessage(t.day, t.who, t.kind));
+    const payload = JSON.stringify(reminderMessage(t.day, t.who, t.kind, { prenom: t.prenom, autre: t.prenom_autre, salonId: t.salon_id }));
     try {
       await webpush.sendNotification({ endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } }, payload,
         { TTL: 12 * 3600, urgency: "high" });
-      const key = `${t.day}:${t.who}:${t.kind}`;
+      const key = `${t.salon_id}:${t.day}:${t.who}:${t.kind}`;
       perWho.set(key, (perWho.get(key) ?? 0) + 1);
       report.push({ who: t.who, kind: t.kind, ok: true });
     } catch (e) {
@@ -66,8 +67,8 @@ Deno.serve(async (req) => {
   const isTest = opts.force === true || opts.day != null;
   if (!isTest) {
     for (const [k, devices] of perWho) {
-      const [day, who, kind] = k.split(":");
-      await db.from("reminder_log").upsert({ day: Number(day), who, kind, devices, sent_at: new Date().toISOString() });
+      const [salon_id, day, who, kind] = k.split(":");
+      await db.from("reminder_log").upsert({ salon_id, day: Number(day), who, kind, devices, sent_at: new Date().toISOString() });
     }
   }
   return json(200, { sent: [...perWho.values()].reduce((a, b) => a + b, 0), report });
