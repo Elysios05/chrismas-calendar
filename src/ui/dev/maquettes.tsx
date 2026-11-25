@@ -6,9 +6,10 @@
  *         hud-a · hud-b · hud-c (pistes de l'en-tête, #51 ; &ouvert=1, &nuit=1)
  *         entete (le vrai <Hud />, piste B ; &nuit=1, &egalite=1, &j24=1)
  *         salon-a · salon-b · salon-c (pistes des salons, #84 ; &ecran=accueil|assistant|lien|invitation)
+ *         reglages-salon (réglages du salon Sam & Camille, Camille pas encore arrivée)
  *         creer (le vrai assistant des salons, piste B) · invitation (crée un salon fictif Sam & Camille puis ouvre son lien)
  */
-import { StrictMode, useState } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { GameModule } from "../../core/contracts";
 import { LoginScreen } from "../LoginScreen";
@@ -25,6 +26,7 @@ import { Hud } from "../Hud";
 import { SalonMaquette, type Ecran } from "./salonMaquettes";
 import { CreerSalon } from "../salons/CreerSalon";
 import { Invitation } from "../salons/Invitation";
+import { ReglagesSalon } from "../salons/ReglagesSalon";
 import { PLAYERS } from "../../world/actors";
 import "../../index.css";
 
@@ -67,8 +69,8 @@ const ECHECS: Record<string, string> = {
   compte: "Ce compte n'est pas relié à alexandre (table profiles).",
 };
 
-/** Crée un salon fictif dans le DemoBackend puis recharge la page avec son lien d'invitation. */
-async function inviterSamEtCamille() {
+/** Crée un salon fictif Sam & Camille dans le DemoBackend (Sam connecté, Camille pas encore arrivée). */
+async function creerSamEtCamille() {
   const c = (w: "alexandre" | "flavie") => {
     const { coat, hat, pompom, hair, longHair } = PLAYERS[w];
     return { coat, hat, pompom, hair, longHair };
@@ -77,8 +79,24 @@ async function inviterSamEtCamille() {
     motDePasse: "flocon",
     config: { joueurs: { alexandre: { prenom: "Sam", couleurs: c("alexandre") }, flavie: { prenom: "Camille", couleurs: c("flavie") } }, contenu: {} },
   });
+  return cree;
+}
+
+/** Crée le salon fictif puis recharge la page avec son lien d'invitation. */
+async function inviterSamEtCamille() {
+  const cree = await creerSamEtCamille();
   const jeton = new URL(cree.lienInvitation, location.href).searchParams.get("invitation");
   location.replace(`${location.pathname}?vue=invitation&invitation=${jeton}`);
+}
+
+let samEtCamille: Promise<unknown> | undefined;
+/** Réglages du salon sur un salon Sam & Camille tout neuf (`?vue=reglages-salon`). */
+function MaquetteReglagesSalon() {
+  const [pret, setPret] = useState(false);
+  // une seule création, même si StrictMode lance l'effet deux fois
+  useEffect(() => { void (samEtCamille ??= creerSamEtCamille()).then(() => setPret(true)); }, []);
+  if (!pret) return null;
+  return <div className="maq-monde"><ReglagesSalon backend={backend} me="alexandre" onFermer={() => alert("→ les réglages")} /></div>;
 }
 
 function Maquettes() {
@@ -99,6 +117,9 @@ function Maquettes() {
     if (!new URLSearchParams(location.search).has("invitation")) void inviterSamEtCamille();
     else return <Invitation backend={backend} onEntree={() => alert("→ le calendrier")} onConnexion={() => alert("→ la connexion")} />;
     return null;
+  }
+  if (vue === "reglages-salon") {
+    return <MaquetteReglagesSalon />;
   }
   if (vue.startsWith("salon-")) {
     const ecran = (new URLSearchParams(location.search).get("ecran") ?? "accueil") as Ecran;

@@ -355,6 +355,11 @@ button { font-family: inherit; cursor: pointer; }
   padding: 13px 4px; border-bottom: 1px solid #efe8dc;
 }
 .reg-texte { font-size: 16px; font-weight: 600; cursor: pointer; }
+.reg-salon {
+  width: 100%; border: 0; border-bottom: 1px solid #efe8dc; background: transparent;
+  color: inherit; font-family: inherit; text-align: left;
+}
+.reg-fleche { flex: none; font-size: 26px; line-height: 1; color: var(--ink-soft); }
 .reg-aide { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--ink-soft); }
 .reg-switch {
   flex: none; width: 56px; height: 32px; border: 0; border-radius: 16px; background: #d8d1c5;
