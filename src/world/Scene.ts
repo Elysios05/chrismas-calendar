@@ -56,6 +56,31 @@ function cloudTexture() {
 /** Les grands bâtiments débordent de leur case : on les range un peu plus loin pour qu'ils passent derrière ce qui les entoure */
 const BATIMENTS_LARGES = new Set(["wheel", "workshop", "santaHouse", "postOffice", "stable"]);
 
+/** Durée d'une tranche de reconstruction en arrière-plan (ms). Les tranches sont des tâches à part,
+ *  pas liées aux images : le navigateur glisse ses images entre elles, et la reconstruction avance
+ *  aussi vite sur un téléphone qui rame que sur un ordinateur (environ la moitié du temps chacun). */
+const TRANCHE_MS = 8;
+
+/** Une scène complète dessinée avec une palette, prête à prendre la place de l'actuelle (issue #23) */
+type Built = {
+  pal: Palette;
+  /** états des cases au moment où elle a été dessinée : on rattrape à l'échange ce qui a changé depuis */
+  states: Map<number, NodeState>;
+  flying: boolean;
+  ground: Container;
+  objects: Container;
+  labels: Container;
+  finCarte: Container;
+  panneauFin: Container;
+  gifts: Map<number, Container>;
+  groundBands: { c: Container; min: number; max: number; k: number }[];
+  slabs: { c: Container; min: number; max: number; k: number }[];
+  anims: AnimPart[];
+  people: Record<Who, Person>;
+  penguin: Penguin | null;
+  life: Critter[];
+};
+
 export class Scene {
   app: Application;
   cb: SceneCallbacks;
@@ -117,6 +142,16 @@ export class Scene {
   life: Critter[] = [];
   lifeGround = makeGround(this.terrain);
   sound: SoundApi | null = null;
+  /** Reconstruction en cours, morceau par morceau, à raison de quelques millisecondes par image */
+  pending: { b: Built; steps: Generator<void, void> } | null = null;
+  /** Anciens dessins à détruire, eux aussi par petits paquets : tout détruire d'un coup gelait l'image */
+  trash: Container[] = [];
+  /** Boucle de tâches qui fait avancer la reconstruction et le ménage, hors des images */
+  pompe = new MessageChannel();
+  pompeEnAttente = false;
+  /** Pour la Qualité : durée de la dernière reconstruction en arrière-plan */
+  derniereReconstruction = { calculMs: 0, dureeMs: 0, tranches: 0, echangeMs: 0 };
+  enCours = { calculMs: 0, debut: 0, tranches: 0 };
   lifeEnv: LifeEnv = {
     play: (s) => this.sound?.play(s),
     giftNear: (x, y) => {
@@ -164,6 +199,7 @@ export class Scene {
     const L = this.terrain.path;
     for (let i = 1; i < L.length; i++) if (L[i].zone !== L[i - 1].zone) this.boundaries.push(P(L[i].x + 0.5, L[i].y + 0.5).y);
     this.build();
+    this.pompe.port1.onmessage = () => this.pomper();
     this.installerNavigation(app.canvas as HTMLCanvasElement);
     app.ticker.add((t) => this.tick(t.deltaTime));
     // crochet de test : la Qualité interroge la scène sans dépendre de sa structure interne.
@@ -180,6 +216,8 @@ export class Scene {
         giftState: (day: number) => this.states.get(day) ?? "locked",
         scrollForDay: (day: number) => this.scrollForDay(day),
         playOpen: (day: number) => this.playOpen(day),
+        /** bascule jour/nuit : reconstruction en cours ? et durée de la dernière (calcul pur et totale) */
+        reconstruction: () => ({ enCours: !!this.pending, ...this.derniereReconstruction }),
         /** habitants visibles à l'écran : espèce, position du milieu du corps, réaction en cours */
         life: () => this.life.filter((cr) => cr.visible).map((cr) => {
           const b = cr.getBounds();
@@ -224,33 +262,187 @@ export class Scene {
       setTimeout(() => dispatchEvent(new Event("resize")), 0);
     }
     if (!this.gifts.size) { this.build(); return; }
-    // le traîneau du 24 dépend de l'état de la dernière case : là, il faut tout refaire (une fois)
-    if ((before.get(24) ?? "locked") !== (states.get(24) ?? "locked")) { this.build(); return; }
+    this.refreshGifts(before);
+    // le traîneau du 24 dépend de l'état de la dernière case : là, il faut tout redessiner (une fois),
+    // en arrière-plan ; le cadeau, lui, a déjà changé
+    if (this.wantsFlying() !== (this.pending ? this.pending.b.flying : this.flying)) this.rebuildLater(this.pending?.b.pal ?? this.pal);
+  }
+
+  /** Redessine les cadeaux dont l'état diffère de `before` */
+  refreshGifts(before: Map<number, NodeState>) {
     for (const n of this.terrain.nodes) {
-      if ((before.get(n.day) ?? "locked") === (states.get(n.day) ?? "locked")) continue;
+      if ((before.get(n.day) ?? "locked") === (this.states.get(n.day) ?? "locked")) continue;
       const old = this.gifts.get(n.day);
       if (old) { this.objects.removeChild(old); this.dropLabel(old); old.destroy({ children: true }); }
       this.objects.addChild(this.makeGift(n));
     }
   }
 
+  wantsFlying() { return this.states.get(24) === "opened"; }
+  /** le traîneau dessiné actuellement est-il en vol ? */
+  flying = false;
+
   /** Lumière continue : 0 = plein jour, 1 = nuit noire. Ne reconstruit qu'au passage du seuil de nuit. */
   setLight(amount: number) {
     const a = Math.max(0, Math.min(1, amount));
     const wasNight = this.pal.night;
     this.light = a;
+    // la teinte du ciel (`tint`) suit `light` tout de suite ; les couleurs du décor suivent dès que
+    // la scène de nuit est prête, une fraction de seconde plus tard
     const isNight = a >= 0.4;
-    if (isNight !== wasNight) { this.pal = makePalette(isNight); this.build(); }
+    const vise = this.pending ? this.pending.b.pal.night : wasNight;
+    if (isNight !== vise) this.rebuildLater(makePalette(isNight));
   }
 
   /* ------------------------------------------------------------------ */
+  /** Reconstruit tout, d'un coup : au démarrage seulement (la page n'est pas encore affichée) */
   build() {
-    this.ground.removeChildren().forEach((c) => c.destroy());
-    this.objects.removeChildren().forEach((c) => c.destroy({ children: true }));
-    this.labels.removeChildren().forEach((c) => c.destroy({ children: true }));
-    this.gifts.clear();
+    this.abortPending();
+    const b = this.emptyBuilt(this.pal);
+    for (const _ of this.buildSteps(b)) void _;
+    this.commit(b, false);
+  }
+
+  /** Reconstruit en arrière-plan avec la palette donnée, quelques millisecondes par image, puis
+   *  échange d'un coup (issue #23) : la bascule jour/nuit ne gèle plus l'écran. */
+  rebuildLater(pal: Palette) {
+    this.abortPending();
+    // retour à la palette affichée avant la fin du travail (double toucher jour/nuit) : rien à refaire,
+    // sauf si c'est le traîneau du 24 qui a changé
+    if (pal.night === this.pal.night && this.wantsFlying() === this.flying) return;
+    const b = this.emptyBuilt(pal);
+    this.pending = { b, steps: this.buildSteps(b) };
+    this.enCours = { calculMs: 0, debut: performance.now(), tranches: 0 };
+    this.relancer();
+  }
+
+  relancer() {
+    if (this.pompeEnAttente) return;
+    this.pompeEnAttente = true;
+    this.pompe.port2.postMessage(0);
+  }
+
+  /** Une tranche : avance la reconstruction, sinon fait le ménage ; se relance s'il reste du travail */
+  pomper() {
+    this.pompeEnAttente = false;
+    const t0 = performance.now();
+    if (this.pending) {
+      this.stepPending();
+      this.enCours.calculMs += performance.now() - t0;
+      this.enCours.tranches++;
+    } else if (this.trash.length) this.emptyTrash();
+    if (this.pending && this.focus) { setTimeout(() => this.relancer(), 250); return; }
+    if (this.pending || this.trash.length) this.relancer();
+  }
+
+  emptyBuilt(pal: Palette): Built {
+    const objects = new Container();
+    objects.sortableChildren = true;
+    const finCarte = new Container();
+    finCarte.sortableChildren = true;
+    return {
+      pal, states: new Map(this.states), flying: this.wantsFlying(),
+      ground: new Container(), objects, labels: new Container(), finCarte, panneauFin: new Container(),
+      gifts: new Map(), groundBands: [], slabs: [], anims: [], people: {} as Record<Who, Person>, penguin: null, life: [],
+    };
+  }
+
+  abortPending() {
+    if (!this.pending) return;
+    const b = this.pending.b;
+    this.pending = null;
+    this.trash.push(b.ground, b.objects, b.labels);
+    // pas encore rangés dans `objects` si l'on s'est arrêté avant : à détruire à part
+    for (const c of [b.finCarte, b.panneauFin]) if (!c.parent) this.trash.push(c);
+    this.relancer();
+  }
+
+  /** Avance la reconstruction en cours dans le budget de l'image ; échange quand elle est finie */
+  stepPending() {
+    const t0 = performance.now();
+    // sur un appareil dont chaque image est longue, des tranches plus longues : la reconstruction garde
+    // environ la moitié du temps au lieu de s'étirer sur des dizaines d'images
+    const tranche = Math.max(TRANCHE_MS, Math.min(50, this.app.ticker.deltaMS * 0.5));
+    while (this.pending && performance.now() - t0 < tranche) {
+      if (!this.pending.steps.next().done) continue;
+      // pendant l'ouverture d'une case, l'animation tient les anciens cadeaux : on attend qu'elle finisse
+      if (this.focus) return;
+      const b = this.pending.b;
+      this.pending = null;
+      const tc = performance.now();
+      this.commit(b, true);
+      const echangeMs = performance.now() - tc;
+      this.enCours.calculMs += performance.now() - t0;
+      this.derniereReconstruction = { calculMs: Math.round(this.enCours.calculMs), dureeMs: Math.round(performance.now() - this.enCours.debut), tranches: this.enCours.tranches + 1, echangeMs: Math.round(echangeMs) };
+      return;
+    }
+  }
+
+  /** Détruit les anciens dessins par petits paquets */
+  emptyTrash() {
+    const t0 = performance.now();
+    while (this.trash.length && performance.now() - t0 < TRANCHE_MS) {
+      const c = this.trash[this.trash.length - 1];
+      const enfant = c.children[c.children.length - 1];
+      if (enfant) { c.removeChild(enfant); enfant.destroy({ children: true }); }
+      else { this.trash.pop(); c.destroy(); }
+    }
+  }
+
+  /** Met la scène construite à la place de l'actuelle */
+  commit(b: Built, later: boolean) {
+    const oldGround = this.ground, oldObjects = this.objects, oldLabels = this.labels;
+    const oldPeople = this.people, oldPenguin = this.penguin;
+    this.world.addChildAt(b.ground, this.world.getChildIndex(oldGround));
+    this.world.removeChild(oldGround);
+    this.world.addChildAt(b.objects, this.world.getChildIndex(oldObjects));
+    this.world.removeChild(oldObjects);
+    this.overlay.addChildAt(b.labels, this.overlay.getChildIndex(oldLabels));
+    this.overlay.removeChild(oldLabels);
+    this.pal = b.pal;
+    this.flying = b.flying;
+    this.ground = b.ground; this.objects = b.objects; this.labels = b.labels;
+    this.finCarte = b.finCarte; this.panneauFin = b.panneauFin;
+    this.gifts = b.gifts;
+    this.groundBands = b.groundBands; this.slabs = b.slabs; this.anims = b.anims; this.life = b.life;
+    this.people = b.people; this.penguin = b.penguin!;
+    // les personnages continuent ce qu'ils faisaient
+    for (const who of ["alexandre", "flavie"] as Who[]) {
+      const o = oldPeople[who];
+      if (o) { b.people[who].walking = o.walking; b.people[who].t = o.t; b.people[who].body.scale.x = o.body.scale.x; }
+    }
+    if (oldPenguin) { this.penguin.walking = oldPenguin.walking; this.penguin.t = oldPenguin.t; }
+    if (later) {
+      this.trash.push(oldGround, oldObjects, oldLabels);
+      this.relancer();
+      // ce qui a changé pendant la reconstruction : cadeaux, fin de carte, traîneau
+      if ([...this.terrain.nodes].some((n) => (b.states.get(n.day) ?? "locked") !== (this.states.get(n.day) ?? "locked"))) {
+        this.refreshGifts(b.states);
+        if (this.lastOpenDayOf(b.states) !== this.lastOpenDay) this.majFinDeCarte();
+      }
+      if (this.wantsFlying() !== this.flying) this.rebuildLater(this.pal);
+    } else {
+      for (const c of [oldGround, oldObjects, oldLabels]) c.destroy({ children: true });
+    }
+    this.nodeY = this.terrain.nodes.map((n) => P(n.x + 0.5, n.y + 0.5, heightAt(this.terrain, n.x + 0.5, n.y + 0.5)).y);
+    const ys = this.terrain.path.map((p) => P(p.x, p.y).y);
+    this.minY = Math.min(...ys) - 260;
+    this.maxY = Math.max(...ys) + 160;
+    this.resize();
+    this.placeActors();
+  }
+
+  lastOpenDayOf(states: Map<number, NodeState>) {
+    let d = 1;
+    for (const [day, st] of states) if (st !== "locked" && day > d) d = day;
+    return d;
+  }
+
+  /** Dessine toute la scène dans `b`, en rendant la main régulièrement (chaque `yield`) */
+  *buildSteps(b: Built): Generator<void, void> {
     const { cells, path, props, nodes } = this.terrain;
-    const c = this.pal.c;
+    const pal = b.pal;
+    const c = pal.c;
     // le terrain est lui aussi découpé en bandes de profondeur : au lieu d'un seul immense dessin
     // toujours envoyé en entier, on ne dessine que les bandes qui touchent l'écran
     let g = new Graphics();
@@ -303,7 +495,9 @@ export class Scene {
     };
     let bandK = list.length ? list[0].x + list[0].y : 0;
     const bandKs: number[] = [bandK];
+    let n0 = 0;
     for (const cell of list) {
+      if (++n0 % 150 === 0) yield;
       const { x, y } = cell;
       if (x + y >= bandK + 10) { bandK = x + y; g = new Graphics(); bands.push(g); bandKs.push(bandK); }
       const A: [number, number, number] = [x, y, hv(x, y)], B: [number, number, number] = [x + 1, y, hv(x + 1, y)];
@@ -312,7 +506,8 @@ export class Scene {
       face([A, C, D], cell);
       if (cell.lake && (x + y) % 3 === 0) poly(g, [P(x + 0.2, y + 0.3, 0), P(x + 0.6, y + 0.1, 0), P(x + 0.65, y + 0.18, 0), P(x + 0.25, y + 0.38, 0)], c(0xeaf8fd));
     }
-    for (const b of bands) this.ground.addChild(b);
+    for (const band of bands) b.ground.addChild(band);
+    yield;
     // route posée sur le relief, dans son propre dessin (fine, et au-dessus de toutes les bandes)
     g = new Graphics();
     const T = this.terrain;
@@ -338,6 +533,7 @@ export class Scene {
     const roads: Graphics[] = [g];
     const roadKs: number[] = [path.length ? path[0].x + path[0].y : 0];
     for (let i = 0; i < path.length; i++) {
+      if (i % 30 === 29) yield;
       const a = path[i], b = path[i + 1];
       if (a.x + a.y >= roadKs[roadKs.length - 1] + 10) {
         g = new Graphics(); roads.push(g); roadKs.push(a.x + a.y);
@@ -380,13 +576,14 @@ export class Scene {
         g.moveTo(p1.x, p1.y).lineTo(p2.x, p2.y).stroke({ width: 1.5, color: c(0xffffff), alpha: 0.8 });
       }
     }
-    for (const r of roads) this.ground.addChild(r);
-    this.groundBands = [
-      ...bands.map((b, i) => ({ c: b, k: bandKs[i] })),
+    for (const r of roads) b.ground.addChild(r);
+    yield;
+    b.groundBands = [
+      ...bands.map((band, i) => ({ c: band, k: bandKs[i] })),
       ...roads.map((r, i) => ({ c: r, k: roadKs[i] })),
-    ].map(({ c: b, k }) => { const r = b.getLocalBounds(); return { c: b, min: r.minY, max: r.maxY, k }; });
+    ].map(({ c: band, k }) => { const r = band.getLocalBounds(); return { c: band, min: r.minY, max: r.maxY, k }; });
+    yield;
 
-    this.anims = [];
     // Les décors sont rangés par tranche de profondeur plutôt qu'un par un : la scène trie et transforme
     // quelques dizaines de conteneurs au lieu de plusieurs centaines d'objets, et on peut masquer d'un coup
     // tout ce qui est hors de l'écran.
@@ -398,53 +595,71 @@ export class Scene {
         c = new Container();
         c.zIndex = k + 0.5;
         slabs.set(k, c);
-        this.objects.addChild(c);
+        b.objects.addChild(c);
       }
       return c;
     };
+    let n1 = 0;
     for (const p of props) {
-      const flying = p.kind === "sleigh" && this.states.get(24) === "opened";
-      const o = drawProp(p.kind, p.x, p.y, this.pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop, alongX: p.alongX, flying });
-      if (o.anim) this.anims.push(...o.anim);
+      if (++n1 % 12 === 0) yield;
+      const flying = p.kind === "sleigh" && b.flying;
+      const o = drawProp(p.kind, p.x, p.y, pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop, alongX: p.alongX, flying });
+      if (o.anim) b.anims.push(...o.anim);
       o.y = -p.z * ZH;
       const depth = p.x + p.y + (p.kind === "mountain" ? -1.4 : BATIMENTS_LARGES.has(p.kind) ? -0.6 : 0.5);
       slabOf(depth).addChild(o);
     }
-    for (const n of nodes) this.objects.addChild(this.makeGift(n));
-    this.finCarte.sortableChildren = true;
-    this.objects.addChild(this.finCarte, this.panneauFin);
-    this.majFinDeCarte();
+    yield;
+    for (const n of nodes) b.objects.addChild(this.makeGift(n, b));
+    b.objects.addChild(b.finCarte, b.panneauFin);
+    yield;
+    yield* this.majFinDeCarteSteps(b);
     // hauteur occupée par chaque tranche, pour ne dessiner que celles qui entrent dans l'écran
-    this.slabs = [...slabs.entries()].map(([k, c]) => {
-      const b = c.getLocalBounds();
-      return { c, min: b.minY, max: b.maxY, k };
+    b.slabs = [...slabs.entries()].map(([k, sc]) => {
+      const r = sc.getLocalBounds();
+      return { c: sc, min: r.minY, max: r.maxY, k };
     });
+    yield;
     for (const who of ["alexandre", "flavie"] as Who[]) {
-      const p = new Person(who, this.pal);
-      this.people[who] = p;
-      this.objects.addChild(p);
+      const p = new Person(who, pal);
+      b.people[who] = p;
+      b.objects.addChild(p);
     }
-    this.penguin = new Penguin(this.pal);
-    this.objects.addChild(this.penguin);
+    b.penguin = new Penguin(pal);
+    b.objects.addChild(b.penguin);
+    yield;
     // les habitants : recréés à chaque reconstruction (leur dessin suit la palette jour / nuit)
-    this.life = spawnLife(this.terrain, this.pal);
-    for (const cr of this.life) {
+    b.life = spawnLife(this.terrain, pal);
+    yield;
+    for (const cr of b.life) {
       cr.on("pointertap", () => poke(cr, this.lifeEnv, this.lifeGround));
       updateCritter(cr, 0, this.lifeGround, this.terrain);
-      this.objects.addChild(cr);
+      b.objects.addChild(cr);
     }
-
-    this.nodeY = nodes.map((n) => P(n.x + 0.5, n.y + 0.5, heightAt(this.terrain, n.x + 0.5, n.y + 0.5)).y);
-    const ys = path.map((p) => P(p.x, p.y).y);
-    this.minY = Math.min(...ys) - 260;
-    this.maxY = Math.max(...ys) + 160;
-    this.resize();
-    this.placeActors();
+    yield* this.prepareGpu(b);
   }
 
-  makeGift(n: DayNode) {
-    const st = this.states.get(n.day) ?? "locked";
-    const c = this.pal.c;
+  /** Triangule d'avance tous les dessins de la nouvelle scène. Sans cela, PixiJS le fait au premier
+   *  rendu qui suit l'échange, pour tout ce qui est à l'écran d'un coup : c'était le plus gros du gel. */
+  *prepareGpu(b: Built): Generator<void, void> {
+    const sys = (this.app.renderer as unknown as { graphicsContext?: { updateGpuContext?: (c: unknown) => void } }).graphicsContext;
+    if (typeof sys?.updateGpuContext !== "function") return; // API interne de PixiJS : on s'en passe si elle change
+    const pile: Container[] = [b.ground, b.objects, b.labels];
+    let n = 0;
+    while (pile.length) {
+      const c = pile.pop()!;
+      if (c instanceof Graphics) {
+        try { sys.updateGpuContext(c.context); } catch { return; }
+        if (++n % 8 === 0) yield;
+      }
+      for (const k of c.children) pile.push(k);
+    }
+  }
+
+  /** Dessine un cadeau ; par défaut dans la scène affichée, sinon dans une scène en construction */
+  makeGift(n: DayNode, b?: Built) {
+    const st = (b ? b.states : this.states).get(n.day) ?? "locked";
+    const c = (b?.pal ?? this.pal).c;
     const cont = new Container();
     const inner = new Container();
     const base = st === "locked" ? 0xaab3c5 : GIFT_COLORS[n.day % GIFT_COLORS.length];
@@ -498,13 +713,13 @@ export class Scene {
     // l'étiquette vit dans le calque du dessus ; on retient sa hauteur de repos pour la faire sauter avec le cadeau
     const labelY = cont.y + top.y - 48;
     label.position.set(o.x, labelY);
-    this.labels.addChild(label);
+    (b?.labels ?? this.labels).addChild(label);
     cont.zIndex = n.x + n.y + 0.55;
     cont.eventMode = "static";
     cont.cursor = "pointer";
     cont.on("pointertap", () => this.cb.onNodeTap(n.day));
     (cont as Container & { meta: object }).meta = { inner, glow, lid, st, wx: o.x, wy: cont.y, label, labelY };
-    this.gifts.set(n.day, cont);
+    (b?.gifts ?? this.gifts).set(n.day, cont);
     return cont;
   }
 
@@ -607,7 +822,8 @@ export class Scene {
         const dt = Math.min(3, (now - last) / 16.667);
         last = now;
         const d = target - this.pos[who];
-        if (Math.abs(d) < 0.08) { this.pos[who] = target; p.walking = 0; this.marcheScriptee = false; res(); return; }
+        // `this.people[who]` et non `p` : la scène a pu être redessinée (jour/nuit) pendant la marche
+        if (Math.abs(d) < 0.08) { this.pos[who] = target; this.people[who].walking = 0; this.marcheScriptee = false; res(); return; }
         const pt = this.pointAt(this.pos[who], 0);
         const speed = (pt.lake ? 0.16 : pt.slope < 0 && pt.zone === "montagnes" ? 0.2 : pt.slope > 0 ? 0.06 : 0.09) * dt;
         this.pos[who] += Math.sign(d) * Math.min(Math.abs(d), speed);
@@ -619,12 +835,19 @@ export class Scene {
 
   /** Ferme la carte après la dernière case ouverte : le monde s'arrête dans un banc de nuages,
    *  et un panneau planté au bord du chemin dit que la suite est pour demain. */
-  majFinDeCarte() {
-    this.finCarte.removeChildren().forEach((c) => c.destroy({ children: true }));
-    this.panneauFin.removeChildren().forEach((c) => c.destroy({ children: true }));
+  majFinDeCarte() { for (const _ of this.majFinDeCarteSteps()) void _; }
+
+  /** Version découpée : dans la scène affichée, ou dans une scène en construction (`b`) */
+  *majFinDeCarteSteps(b?: Built): Generator<void, void> {
+    const finCarte = b?.finCarte ?? this.finCarte, panneauFin = b?.panneauFin ?? this.panneauFin;
+    const pal = b?.pal ?? this.pal;
+    finCarte.removeChildren().forEach((c) => c.destroy({ children: true }));
+    panneauFin.removeChildren().forEach((c) => c.destroy({ children: true }));
     const L = this.terrain.path;
-    const dernier = Math.min(24, this.lastOpenDay);
-    if (dernier >= 24) { this.limiteDepth = Infinity; this.limiteCadeaux = Infinity; this.yFin = null; return; } // tout est ouvert : plus rien à cacher
+    const dernier = Math.min(24, b ? this.lastOpenDayOf(b.states) : this.lastOpenDay);
+    // une scène en construction dessinée avec d'anciens états ne touche pas aux limites actuelles
+    const aJour = !b || this.lastOpenDayOf(b.states) === this.lastOpenDay;
+    if (dernier >= 24) { if (aJour) { this.limiteDepth = Infinity; this.limiteCadeaux = Infinity; this.yFin = null; } return; } // tout est ouvert : plus rien à cacher
     const nd = this.terrain.nodes[dernier - 1];
 
     // La lisière de nuages est une seule droite, à x constant, comme le bord du lac : elle part du
@@ -646,21 +869,24 @@ export class Scene {
     const demain = L[iDemain];
     // sol et décors un peu au-delà du bas de l'écran (le défilement s'arrête avant) ;
     // les cadeaux verrouillés s'arrêtent après celui de demain
-    this.limiteDepth = profondeur + 14;
-    this.limiteCadeaux = demain.x + demain.y + 1;
+    if (aJour) {
+      this.limiteDepth = profondeur + 14;
+      this.limiteCadeaux = demain.x + demain.y + 1;
+    }
     // les nuages passent devant tout : une ligne en diagonale ne se range pas dans une tranche de profondeur
-    this.finCarte.zIndex = 1e6;
-    this.yFin = P(bout.x + 0.5, bout.y + 0.5, heightAt(this.terrain, bout.x + 0.5, bout.y + 0.5)).y;
+    finCarte.zIndex = 1e6;
+    if (aJour) this.yFin = P(bout.x + 0.5, bout.y + 0.5, heightAt(this.terrain, bout.x + 0.5, bout.y + 0.5)).y;
 
     // pavage de la zone cachée : la première rangée dessine la lisière, les suivantes remplissent.
     // Elle court sur toute la largeur du monde, d'un bord à l'autre.
     for (let rang = 0; rang < 10; rang++) {
+      yield;
       for (let t = -40; t <= 40; t += 2.5) {
         const gx = xLis + 0.6 + rang * 2.6;
         const gy = nd.y + t + (rang % 2) * 1.25;
-        const n = drawProp("cloudBank", gx, gy, this.pal, Math.floor(Math.abs(t) * 7919 + rang * 101 + 7));
+        const n = drawProp("cloudBank", gx, gy, pal, Math.floor(Math.abs(t) * 7919 + rang * 101 + 7));
         n.zIndex = gx + gy;
-        this.finCarte.addChild(n);
+        finCarte.addChild(n);
       }
     }
     // le panneau « route barrée » : planté en travers du chemin, juste devant les nuages, là où la
@@ -673,11 +899,11 @@ export class Scene {
     for (let i = iJour + 2; i <= iMax; i++) if (Math.abs(L[i].x - L[i].y - colJour) <= 4) iPano = i;
     const pano = L[iPano];
     const sx = pano.x, sy = pano.y;
-    const sg = drawProp("signpost", sx, sy, this.pal, 4242, {});
+    const sg = drawProp("signpost", sx, sy, pal, 4242, {});
     sg.y = -heightAt(this.terrain, sx + 0.5, sy + 0.5) * ZH;
     // au-dessus des nuages : il est planté devant eux, et ne doit jamais s'y perdre
-    this.panneauFin.zIndex = 1e6 + 1;
-    this.panneauFin.addChild(sg);
+    panneauFin.zIndex = 1e6 + 1;
+    panneauFin.addChild(sg);
   }
 
   /* ---------------------------- navigation --------------------------- */

@@ -16,7 +16,7 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 **🆕 Salons (décision d'Alexandre du 25 nov, avant le 30)** — lire `docs/salons.md`. Dès que le chef annonce dans **#84** la fusion du contrat `SalonApi`, ce point passe **en tête** : prénoms et couleurs des personnages, de Pingou et des panneaux viennent de la config du salon (`PLAYERS` = valeurs par défaut). En attendant, continue la liste.
 
 1. ~~**#11** et **#42**~~ : faits le 24 nov (télésiège, lutin au chariot, emballeurs) — PR #80, issues commentées.
-2. **#23** : ne plus tout reconstruire à chaque changement d'état (mesure avant/après avec `tests/qa/perf.mjs`).
+2. ~~**#23**~~ : fait le 25 nov (bascule jour/nuit reconstruite en arrière-plan) — PR à fusionner.
 3. **#14** : ne charger que le monde où l'on se trouve.
 4. **#12** : courte présentation à l'arrivée dans un nouveau monde.
 5. **#10** : neige au gyroscope, lumière des maisons, halo sur le joueur.
@@ -326,3 +326,33 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     ne trouvaient pas de place.
   - Reste possible (non demandé) : le chargement du traîneau par les lutins le 24.
   - Prochaine étape : **#23** (mesure avant/après avec `tests/qa/perf.mjs`).
+
+- 25 nov — fin de #23 (priorité 2 du chef), branche `claude/intelligent-ride-qdbkzh` repartie de `main` (PR #80 fusionnée) :
+  - **Déjà fait par la PR #47** : mise à jour ciblée des cadeaux (`setStates`), marche au temps écoulé,
+    crochet `window.__calendrier`. **Restait** : la bascule jour/nuit (et le traîneau du 24) qui refaisait
+    toute la scène d'un coup — 3,6 s de gel à CPU ×4, 1,5 s à CPU ×1 (`perf.mjs` du 24 nov, avant).
+  - **Solution** : `build()` devient un générateur `buildSteps(b)` qui dessine dans des conteneurs neufs
+    (`Built` : sol, décors, étiquettes, fin de carte, cadeaux, habitants, personnages). `rebuildLater(pal)`
+    le fait avancer par **tranches de 8 ms** dans une boucle `MessageChannel` (hors des images, donc
+    indépendante de leur fréquence ; tranche portée à la moitié de l'image si l'appareil rame), puis
+    `commit()` échange les conteneurs. Les anciens sont détruits par tranches (`trash`).
+    Seul le démarrage reste synchrone (`build()`).
+  - **Triangulation d'avance** (`prepareGpu`) : PixiJS 8 triangule un `Graphics` à son premier rendu ;
+    sans ça, l'image qui suit l'échange faisait tout le travail d'un coup. On appelle
+    `renderer.graphicsContext.updateGpuContext` (API interne, protégée : si elle disparaît, on s'en passe).
+  - **Cohérence** : la teinte du soir suit la lumière tout de suite, les couleurs du décor dès que la scène
+    est prête. Un double toucher annule le travail. Les cadeaux changés pendant la reconstruction sont
+    rattrapés à l'échange ; la fin de carte d'une scène en construction ne touche pas aux limites
+    actuelles si les états ont changé ; l'échange attend la fin d'une ouverture de case (`focus`) ;
+    les personnages gardent marche et orientation (`walkTo` relit `this.people[who]`).
+  - **Mesures** (script de mesure de la bascule sur 4 à 30 s, SwiftShader très lent : ~1 img/s) :
+    clic 2–66 ms (avant : reconstruction de 1 à 1,6 s dans l'effet React) ; calcul total réparti
+    ~0,3–0,5 s (CPU ×1), ~1,3 s (CPU ×4) ; `commit()` 2–3 ms ; première image après l'échange
+    62–104 ms à CPU ×1, ~270 ms à CPU ×4 (avant : 570–725 ms, en plus du gel). Sur un vrai téléphone
+    à 60 img/s, la nouvelle palette arrive ~1 à 3 s après le toucher, sans à-coup.
+  - `__calendrier.reconstruction()` → `{ enCours, calculMs, dureeMs, tranches, echangeMs }` pour la Qualité.
+  - **Bloquant pour tout le monde (issue ouverte)** : depuis le nouvel en-tête (#51), `attendreScene` des
+    outils Qualité attend `.hud` qui n'existe plus → `npm run capture` et `qa:perf` échouent (« Carte non
+    atteinte »), et le bouton s'appelle « Passer en nuit/jour » (plus « Jour / nuit »). Mes captures de
+    vérification sont donc faites avec mon script de mesure.
+  - Prochaine étape : **Salons** dès l'annonce du contrat `SalonApi` dans #84, sinon **#14**.
