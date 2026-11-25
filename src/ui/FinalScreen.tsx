@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Progress, SoundApi, Who } from "../core/contracts";
+import { PRENOMS_PAR_DEFAUT } from "./useSalon";
 import { MascotDialog, PenguinPortrait } from "./Mascot";
 import { PINGOU_CASE, type PingouLine } from "./pingou/lines";
 import { avancee } from "./RaceIndicator";
 
-const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
 /** Une gerbe de feu d'artifice : des étincelles qui partent dans toutes les directions. */
 function Gerbe({ x, y, teinte, retard }: { x: number; y: number; teinte: number; retard: number }) {
@@ -32,12 +32,15 @@ function Gerbe({ x, y, teinte, retard }: { x: number; y: number; teinte: number;
 export function FinalScreen({
   me,
   progress,
+  prenoms: PRENOM = PRENOMS_PAR_DEFAUT,
   sound,
   onRevoir,
   onFermer,
 }: {
   me: Who;
   progress: Record<Who, Progress>;
+  /** Prénoms du salon (`usePrenoms`) ; repli : `PRENOMS_PAR_DEFAUT`. */
+  prenoms?: Record<Who, string>;
   sound?: SoundApi;
   /** Retour sur la route pour relire les lettres */
   onRevoir?: () => void;
@@ -72,7 +75,7 @@ export function FinalScreen({
         <p className="final-kicker">24 décembre</p>
         <h1 className="final-titre">Vous y êtes</h1>
         <p className="final-sous">
-          Vingt-quatre cases, deux pays, une seule route. Et vous êtes arrivés ensemble.
+          Vingt-quatre cases, deux pays, une seule route. Et vous voilà au bout, ensemble.
         </p>
 
         <ul className="final-compte">
