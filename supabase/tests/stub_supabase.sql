@@ -35,3 +35,5 @@ grant usage on sequence realtime.messages_id_seq to anon, authenticated;
 grant usage on schema public to anon, authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+set client_min_messages = error;
+create publication supabase_realtime;  -- comme sur Supabase (vide au départ)
