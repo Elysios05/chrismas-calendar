@@ -8,27 +8,29 @@ import { PenguinPortrait } from "../Mascot";
 import { faceOf, textOf, type PingouLine } from "../pingou/lines";
 import "./salons.css";
 
-export function EcranPingou({ ligne, progression, grand, children, onRetour }: {
+export function EcranPingou({ ligne, progression, grand, children, onRetour, libelleRetour }: {
   ligne: PingouLine;
   /** 0 à 1 : barre de progression de l'assistant (absente sinon). */
   progression?: number;
   /** Pingou en grand (accueil). */
   grand?: boolean;
   onRetour?: () => void;
+  /** Texte lu du bouton retour (par défaut : question précédente). */
+  libelleRetour?: string;
   children: ReactNode;
 }) {
   return (
     <div className="salon">
       <div className="login-flakes" aria-hidden="true">{Array.from({ length: 20 }, (_, i) => <span key={i}>❄</span>)}</div>
-      {progression !== undefined && (
+      {(progression !== undefined || onRetour) && (
           <div className="salon-barre-ligne">
             {onRetour
-              ? <button type="button" className="salon-retour" onClick={onRetour} aria-label="Revenir à la question précédente">‹</button>
+              ? <button type="button" className="salon-retour" onClick={onRetour} aria-label={libelleRetour ?? "Revenir à la question précédente"}>‹</button>
               : <span className="salon-retour-vide" />}
-            <div className="salon-barre" role="progressbar" aria-label="Avancement" aria-valuemin={0} aria-valuemax={100}
+            {progression !== undefined && <div className="salon-barre" role="progressbar" aria-label="Avancement" aria-valuemin={0} aria-valuemax={100}
               aria-valuenow={Math.round(progression * 100)}>
               <span style={{ width: `${Math.round(progression * 100)}%` }} />
-            </div>
+            </div>}
           </div>
       )}
       <div className="salon-haut">

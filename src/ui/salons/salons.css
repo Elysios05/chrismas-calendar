@@ -83,3 +83,21 @@
 .salon-couleurs.compact { gap: 4px; }
 .salon-couleurs.compact .salon-nuancier { gap: 8px; }
 .salon-couleurs.compact .salon-nuancier button { width: 34px; height: 34px; }
+
+/* Réglages du salon (Réglages → Notre calendrier) */
+.salon-dialogue:focus { outline: none; }
+.salon-joueurs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.salon-joueur {
+  display: flex; align-items: center; gap: 12px; background: var(--cream); color: var(--ink);
+  border-radius: 20px; padding: 6px 12px 6px 8px; box-shadow: 0 6px 0 rgba(12,20,48,.3); text-align: left;
+}
+.salon-joueur svg { flex: none; }
+.salon-joueur-nom { flex: 1; min-width: 0; font-size: 18px; font-weight: 700; overflow-wrap: anywhere; }
+.salon-toi { font-weight: 500; font-size: 14px; color: var(--ink-soft, #4a5578); }
+.salon-modifier { flex: none; min-height: 44px; padding: 0 16px; }
+.salon-bloc { display: flex; flex-direction: column; gap: 6px; text-align: left; margin-top: 6px; }
+.salon-bloc .salon-etiq, .salon-bloc .salon-aide { margin: 0; }
+.salon-enveloppe.petite { padding: 6px 6px 6px 14px; gap: 10px; box-shadow: 0 6px 0 rgba(12,20,48,.3); }
+.salon-enveloppe.petite span { font-size: 24px; }
+.salon-copier { flex: none; min-height: 44px; padding: 0 16px; }
+.salon-confirmer { display: flex; flex-direction: column; gap: 8px; }
