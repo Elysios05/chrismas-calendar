@@ -32,6 +32,8 @@ export type ProprietesFenetreJeu = {
   say: (lignes: string[]) => void;
   /** Contenu du jeu ; par défaut celui de src/data via le registre */
   contenu?: unknown;
+  /** Prénoms du salon (sinon le jeu prend un repli neutre) */
+  prenoms?: Record<Who, string>;
   onTermine?: (resultat: GameResult) => void;
   onFermer: () => void;
 };
@@ -59,6 +61,7 @@ export function FenetreJeu(p: ProprietesFenetreJeu) {
         sound: p.sound,
         say: (lignes) => dernieres.current.say(lignes),
         content: p.contenu ?? contenuDuJour(p.jour),
+        prenoms: p.prenoms,
         complete: (resultat) => {
           dernieres.current.onTermine?.(resultat);
           dernieres.current.onFermer();

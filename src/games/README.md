@@ -52,3 +52,14 @@ qui ne servent qu'à l'atelier de test (`npm run dev` puis `/jeux.html`).
 `onTermine` puis `onFermer`. Les jeux ne l'appellent donc pas à la fin d'une partie, mais
 seulement quand le joueur appuie sur « Fermer » depuis l'écran de résultat — il peut relancer
 une descente sans que la fenêtre se referme.
+
+## Salons : contenu personnalisé et prénoms (issue #84)
+- Chaque jeu lit `ctx.prenoms` (via `prenomsDe(ctx)`, `shared/contenu.ts`) : plus aucun prénom en dur.
+- Chaque jeu lit `ctx.content` via `lireContenu(ctx.content, DEFAUT, SCHEMA, reparer?)` : le contenu du salon
+  est fusionné **champ par champ** sur le contenu par défaut de `src/data/games/`, et chaque champ est vérifié
+  avec le schéma. Un champ absent ou abîmé garde sa valeur par défaut : un salon mal rempli ne casse rien.
+- **Éditeur (Interface)** : `schemasDesJeux()` / `schemaDuJour(jour)` (registry.ts) décrivent les champs à
+  proposer (type `SchemaContenu`, objet JSON pur) ; `contenuDuJour(jour)` donne le contenu par défaut pour
+  pré-remplir. Enregistrer dans `salon.config.contenu["<jour>"]` seulement les champs du schéma.
+  Jours 2 et 6 (adresse) : pas de schéma, rien à personnaliser.
+- Atelier : `jeux.html?jour=11&salon=perso` (prénoms Camille et Sam, contenu de test) ou `salon=abime`.

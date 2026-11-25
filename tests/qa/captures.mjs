@@ -59,7 +59,7 @@ try {
     const shoot = async (nom) => {
       const fichier = `${app}-${mode}-j${String(jour).padStart(2, "0")}-${nom}.png`;
       await page.screenshot({ path: path.join(sortie, fichier) });
-      const info = await page.evaluate(() => ({ scrollY: Math.round(scrollY), max: document.documentElement.scrollHeight - innerHeight, zone: document.querySelector(".zone-pill")?.textContent }));
+      const info = await page.evaluate(() => ({ scrollY: Math.round(scrollY), max: document.documentElement.scrollHeight - innerHeight, zone: document.querySelector(".entete-monde")?.textContent }));
       entree.captures.push({ nom, fichier, ...info });
       n++;
     };

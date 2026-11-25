@@ -15,6 +15,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { GameContext, GameModule, Who } from "../../core/contracts";
 import { FRIANDISES_JOUR6, type FriandisesContent } from "../../data/games/friandises-jour6";
+import { prenomsDe, de } from "../shared/contenu";
 import { Cadre, Flash, PanneauRegles, Points, Puce } from "../shared/ui";
 import { monterReact } from "../shared/monter";
 import { ouvrirPartie, type Partie } from "../shared/partie";
@@ -22,16 +23,15 @@ import { lancerManche, type Hud, type Manche } from "./moteur";
 import { decompter, idManche, pluie, type CoupManche, type Prise } from "./pluie";
 import "./friandises.css";
 
-const PRENOMS: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 const TITRE = "Jour 6 · Duel";
-const de = (prenom: string) => (/^[AEIOUYÉ]/i.test(prenom) ? `d'${prenom}` : `de ${prenom}`);
 
 type Mode = "chargement" | "regles" | "attente" | "salon" | "jeu" | "entre";
 /** Une manche à jouer : heure locale de départ, et si c'est du direct */
 type Plan = { m: number; debut: number; direct: boolean };
 
 function Duel({ ctx }: { ctx: GameContext }) {
-  const contenu = (ctx.content as FriandisesContent | null) ?? FRIANDISES_JOUR6;
+  const contenu = (ctx.content as FriandisesContent | null) ?? FRIANDISES_JOUR6; // rien à personnaliser dans le salon
+  const PRENOMS = prenomsDe(ctx);
   const nb = Math.max(1, contenu.manches);
   const autre = PRENOMS[ctx.partner];
 
@@ -129,7 +129,7 @@ function Duel({ ctx }: { ctx: GameContext }) {
     setPlan(p);
     setIPlan(0);
     setMode("jeu");
-    ctx.say(["Hottes prêtes… Que le plus gourmand gagne ! 🍬"]);
+    ctx.say(["Les hottes sont en place… Que la plus gourmande des hottes gagne ! 🍬"]);
   };
 
   /* ---------- une manche ---------- */
@@ -184,7 +184,7 @@ function Duel({ ctx }: { ctx: GameContext }) {
     if (mode === "attente" && ensemble) {
       setMode("salon");
       ctx.sound.play("notify");
-      ctx.say([`${autre} est là ! Dites-vous « prêt » et les friandises tombent 🍭`]);
+      ctx.say([`${autre} est là ! Cliquez sur « On y va ! » et les friandises tombent 🍭`]);
     } else if (mode === "salon" && !ensemble) {
       setAttente(0);
       setMode("attente");
@@ -192,7 +192,7 @@ function Duel({ ctx }: { ctx: GameContext }) {
       // la manche en cours se termine seul ; les suivantes se jouent contre le fantôme, plus tard
       setPlan((l) => l.slice(0, iPlan + 1));
       partie.current?.live?.setReady(false);
-      ctx.say([`${autre} est parti… Finis ta manche, la suite se jouera contre son fantôme 👻`]);
+      ctx.say([`${autre} a quitté la partie… Finis ta manche, la suite se jouera contre son fantôme 👻`]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ensemble, mode]);
@@ -270,7 +270,7 @@ function Duel({ ctx }: { ctx: GameContext }) {
             `🍭 🍬 +${contenu.points.sucre} · 🍪 +${contenu.points.pain} · charbon ${contenu.points.charbon} et ta hotte ralentit.`,
             `⭐ L'étoile dorée : +${contenu.points.etoile} chacun, seulement si vous l'attrapez TOUS LES DEUX.`,
             ensemble
-              ? `${autre} est connecté : vous jouez en direct.`
+              ? `${autre} est là : vous jouez en direct.`
               : `${autre} n'est pas là : tu joueras contre son fantôme, ou tu poseras un score à battre.`,
           ]}
           onJouer={commencer}
@@ -311,16 +311,16 @@ function Duel({ ctx }: { ctx: GameContext }) {
             <h2>{autre} est là !</h2>
             <p>
               {pret.me
-                ? (pret.partner ? "Attention… 3, 2, 1…" : `Tu es prêt·e. On attend ${autre}…`)
-                : (pret.partner ? `${autre} est prêt·e et t'attend !` : "Dès que vous êtes prêts tous les deux, la pluie commence.")}
+                ? (pret.partner ? "Attention… 3, 2, 1…" : `C'est noté. On attend ${autre}…`)
+                : (pret.partner ? `${autre} n'attend plus que toi !` : "Dès que chacun a cliqué, la pluie commence.")}
             </p>
             <div className="duel-pret">
               <span className={pret.me ? "ok" : ""}>{PRENOMS[ctx.me]} {pret.me ? "✅" : "…"}</span>
               <span className={pret.partner ? "ok" : ""}>{autre} {pret.partner ? "✅" : "…"}</span>
             </div>
             <div className="jeu-actions">
-              <button className="jeu-btn clair" onClick={() => { partie.current?.live?.setReady(false); setMode("entre"); }}>Jouer seul·e</button>
-              {!pret.me && <button className="jeu-btn" onClick={() => { ctx.sound.play("tap"); partie.current?.live?.setReady(true); }}>Je suis prêt·e !</button>}
+              <button className="jeu-btn clair" onClick={() => { partie.current?.live?.setReady(false); setMode("entre"); }}>Jouer en solo</button>
+              {!pret.me && <button className="jeu-btn" onClick={() => { ctx.sound.play("tap"); partie.current?.live?.setReady(true); }}>On y va !</button>}
             </div>
           </div>
         </div>
@@ -365,7 +365,7 @@ function Duel({ ctx }: { ctx: GameContext }) {
       <div className="jeu-centre">
         <div className="jeu-panneau">
           <div className="emoji">{moiFini ? (bilan.complet ? (t[ctx.me] >= t[ctx.partner] ? "🏆" : "🍬") : "👻") : "🎅"}</div>
-          <h2>{moiFini ? (bilan.complet ? "Les hottes sont pleines !" : "Score posé !") : derniere ? `Fin de la manche ${derniere.m + 1}` : "Prêt·e pour la pluie ?"}</h2>
+          <h2>{moiFini ? (bilan.complet ? "Les hottes sont pleines !" : "Score posé !") : derniere ? `Fin de la manche ${derniere.m + 1}` : "La pluie suivante arrive !"}</h2>
           <Points etats={etats} />
           {b && !moiFini && (
             <div className="jeu-compare">

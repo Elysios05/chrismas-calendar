@@ -65,7 +65,7 @@ réglages du salon, éditeur de contenu générique. ~~Ancien texte :~~
 **Prochaine tâche** : réglages du salon (prénoms, couleurs, lien de connexion, nouveau lien d'invitation),
 puis éditeur de contenu générique dès que les Jeux publient leurs schémas (#84).
 
-### 📍 Où j'en suis — 25 novembre 2026 (midi)
+### 25 novembre 2026 (midi) — salons, étape 2
 
 **Salons, étape 2 : plus aucun prénom en dur dans `src/ui/`** (branche `interface/prenoms-du-salon`, partie de
 `interface/salon-dans-la-case` → PR #86 à fusionner d'abord) :

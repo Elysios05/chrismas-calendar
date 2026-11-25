@@ -1,6 +1,9 @@
 /**
  * Jour 3 — Défi photo croisé : la vue de ta fenêtre.
  *
+ * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
+ * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ *
  * ALEXANDRE : tout se remplace ici.
  *  - `consigne`   : ce que Pingou demande de photographier
  *  - `idees`      : exemples de légende proposés en gris dans le champ (un au hasard)
@@ -12,6 +15,7 @@
  * Le même jeu sert au jour 19 (« ta déco de Noël ») avec un autre fichier de contenu.
  */
 
+import type { SchemaContenu } from "../../games/shared/contenu";
 export type QuestionPhoto = { id: string; texte: string; options: string[] };
 
 export type PhotoContent = {
@@ -40,5 +44,31 @@ export const PHOTO_JOUR3: PhotoContent = {
     { id: "boisson", texte: "Qu'est-ce que j'ai dans la main (à part le téléphone) ?", options: ["Un café", "Un thé", "Un chocolat chaud", "Rien du tout"] },
     { id: "prefere", texte: "Ce que je préfère dans cette vue ?", options: ["La lumière", "Le calme", "Le ciel", "Rien : tu n'y es pas"] },
   ],
-  exemple: { legende: "Les toits sous la neige, et toi trop loin 💙", question: "boisson", reponse: 2 },
+  exemple: { legende: "Les toits sous la neige, il ne manque que toi 💙", question: "boisson", reponse: 2 },
 };
+
+/** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */
+export const SCHEMA_PHOTO_JOUR3: SchemaContenu = {
+  jour: 3,
+  titre: "Jour 3 — Défi photo croisé",
+  intro: "Chacun prend une photo, choisit une question et donne sa vraie réponse ; l'autre la devine en découvrant la photo. Choisis des questions dont la réponse ne se voit pas sur la photo.",
+  champs: [
+    { type: "texte", cle: "emoji", label: "Emoji", max: 8, exemple: "🪟" },
+    { type: "texte", cle: "titre", label: "Titre du défi", max: 40, exemple: "La vue de ta fenêtre" },
+    { type: "texte", cle: "consigne", label: "Consigne", long: true, max: 160, exemple: "Prends en photo ce que tu vois de ta fenêtre, là, maintenant." },
+    { type: "textes", cle: "idees", label: "Idées de légende", aide: "Proposées en gris dans le champ.", min: 1, max: 6, maxLongueur: 80, exemple: "Mon petit bout de ciel aujourd'hui" },
+    {
+      type: "liste", cle: "questions", label: "Questions à deviner", libelleElement: "Question", min: 2, max: 8, modele: { id: "" },
+      champs: [
+        { type: "texte", cle: "texte", label: "Question", max: 100, exemple: "À quel moment de la journée j'ai pris cette photo ?" },
+        { type: "textes", cle: "options", label: "Réponses possibles", min: 2, max: 4, maxLongueur: 40, exemple: "Le matin" },
+      ],
+    },
+  ],
+};
+
+/** L'exemple du mode démo doit pointer vers une question qui existe encore */
+export function reparerPhoto(c: PhotoContent): PhotoContent {
+  const q = c.questions.find((x) => x.id === c.exemple.question) ?? c.questions[0];
+  return { ...c, exemple: { ...c.exemple, question: q.id, reponse: Math.min(c.exemple.reponse, q.options.length - 1) } };
+}
