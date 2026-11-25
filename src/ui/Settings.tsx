@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { BackendApi, SoundApi, Who } from "../core/contracts";
 import { usePrenoms } from "./useSalon";
 import { PenguinPortrait } from "./Mascot";
 import { useDialog } from "./useDialog";
 import { RemindersRow } from "./Reminders";
+import { ReglagesSalon } from "./salons/ReglagesSalon";
 
 
 export const CLE_SON = "interface:son";
@@ -71,7 +72,12 @@ export function Settings({
   const [son, setSon] = useState(() => lire(CLE_SON, true));
   const [animations, setAnimations] = useState(() => lire(CLE_ANIMATIONS, true));
 
-  const { panneau, surFond } = useDialog<HTMLElement>(onClose);
+  // « Notre calendrier » s'ouvre par-dessus : tant qu'il est ouvert, c'est lui qui répond à Échap.
+  const [salonOuvert, setSalonOuvert] = useState(false);
+  const salonOuvertRef = useRef(false);
+  salonOuvertRef.current = salonOuvert;
+  const fermer = useCallback(() => { if (!salonOuvertRef.current) onClose(); }, [onClose]);
+  const { panneau, surFond } = useDialog<HTMLElement>(fermer);
 
   const changerSon = (v: boolean) => {
     setSon(v); ecrire(CLE_SON, v); sound?.setEnabled(v);
@@ -82,6 +88,7 @@ export function Settings({
   };
 
   return (
+    <>
     <div className="sheet" role="presentation" onClick={surFond}>
       <section
         ref={panneau}
@@ -113,6 +120,15 @@ export function Settings({
             on={animations} onChange={changerAnimations}
           />
           <RemindersRow backend={backend} />
+          {backend.salons && (
+            <button type="button" className="reg-ligne reg-salon" onClick={() => setSalonOuvert(true)}>
+              <span className="reg-texte">
+                Notre calendrier
+                <span className="reg-aide">Prénoms, manteaux et liens pour entrer.</span>
+              </span>
+              <span className="reg-fleche" aria-hidden="true">›</span>
+            </button>
+          )}
         </div>
 
         <div className="reg-pied">
@@ -127,5 +143,7 @@ export function Settings({
         </div>
       </section>
     </div>
+    {salonOuvert && <ReglagesSalon backend={backend} me={me} onFermer={() => setSalonOuvert(false)} />}
+    </>
   );
 }

@@ -195,5 +195,12 @@ export const PINGOU_SALON = {
   /** Page d'invitation (?invitation=…) */
   invitation: (invite: string, createur: string): PingouLine => ({ text: `Salut ${invite} ! ${createur} t'a préparé un calendrier de l'Avent. Choisis juste un mot de passe, et c'est parti.`, face: "content" }),
   invitationUtilisee: (invite: string): PingouLine => ({ text: `Ce lien a déjà servi, ${invite}. Tu as ton mot de passe : entre par la porte habituelle.`, face: "clin" }),
+  /** Réglages du salon (Réglages → Notre calendrier) — validées par Alexandre le 25 nov */
+  reglages: (): PingouLine => ({ text: "Ici, tout se règle : vos prénoms, vos manteaux, et les liens pour entrer.", face: "content" }),
+  changerPrenom: (pourMoi: boolean, actuel: string): PingouLine => ({ text: pourMoi ? `On garde « ${actuel} », ou tu préfères autre chose ?` : `Comment on écrit son prénom, finalement ? Pour l'instant, c'est « ${actuel} ».`, face: "clin" }),
+  changerManteau: (prenom: string): PingouLine => ({ text: `Et le manteau de ${prenom}, on le change ?`, face: "content" }),
+  reglagesEnregistres: (): PingouLine => ({ text: "C'est noté ! Tout le calendrier suit, jusqu'aux personnages sur la route.", face: "content" }),
+  lienGarde: (): PingouLine => ({ text: "Copié ! Garde-le bien au chaud : il ouvre votre calendrier sur n'importe quel appareil.", face: "clin" }),
+  nouveauLien: (prenom: string): PingouLine => ({ text: `Voilà un lien tout neuf pour ${prenom}. L'ancien ne marche plus.`, face: "content" }),
   invitationInvalide: (): PingouLine => ({ text: "Ce lien ne marche plus. Demande un nouveau lien à la personne qui te l'a envoyé.", face: "triste" }),
 } as const;

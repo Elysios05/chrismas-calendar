@@ -45,7 +45,27 @@ réglages du salon, éditeur de contenu générique. ~~Ancien texte :~~
 
 ## Journal
 
-### 📍 Où j'en suis — 25 novembre 2026 (après-midi)
+### 📍 Où j'en suis — 25 novembre 2026 (soir)
+
+**Salons, étape 4 : réglages du salon** (branche `interface/reglages-salon`, PR en brouillon).
+- **Décidé avec Alexandre (25 nov)** : on **réutilise les écrans de l'assistant** (piste B « Pingou »), ouverts depuis
+  une ligne « Notre calendrier › » de la feuille Réglages (affichée si `backend.salons` existe) ; **chacun peut
+  modifier les deux personnages**.
+- `src/ui/salons/ReglagesSalon.tsx` : accueil (les deux personnages + « Modifier », « Ton lien de connexion » à copier,
+  et pour le créateur tant que `!salon.inviteArrive` : lien d'invitation + « Lien perdu ? Fabriquer un nouveau lien »
+  avec confirmation) → Modifier = écran prénom → écran manteau (tous les nuanciers dépliés) → `modifierSalon`
+  (le `contenu` est gardé tel quel). Échap / ‹ : remonte d'un écran, puis ferme.
+- `Settings` : la feuille reste montée dessous ; tant que « Notre calendrier » est ouvert, Échap n'est pas pris par
+  la feuille (`salonOuvertRef`). `EcranPingou` : bouton ‹ possible sans barre de progression (`libelleRetour`).
+- Maquette : `maquettes.html?vue=reglages-salon` (crée un salon Sam & Camille, Camille pas encore arrivée).
+- Répliques `PINGOU_SALON.reglages / changerPrenom / changerManteau / reglagesEnregistres / lienGarde / nouveauLien` :
+  **validées telles quelles par Alexandre (25 nov)**.
+- Captures : `npm run capture` ne sait pas ouvrir `maquettes.html` → petit Playwright jetable dans le brouillon.
+
+**Prochaine tâche** : éditeur de contenu générique (schémas des Jeux dans #84 / PR #94 : `schemasDesJeux`,
+`schemaDuJour`, `contenuDuJour` de `src/games/registry`), à ranger dans « Notre calendrier ».
+
+### 25 novembre 2026 (après-midi) — salons, étape 3
 
 **Salons, étape 3 : création d'un salon et invitation** (branche `interface/maquettes-salons`, PR à fusionner).
 - **Alexandre a choisi la piste B « Pingou »** (25 nov) parmi trois maquettes (`maquettes.html?vue=salon-a|b|c&ecran=…`) :
