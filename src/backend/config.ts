@@ -6,7 +6,7 @@
  * dans la table `app_settings` (voir supabase/migrations/0001_init.sql). C'est le serveur
  * qui fait foi en mode Supabase ; ces constantes servent au mode démo.
  */
-import type { DayNumber, Who } from "../core/contracts";
+import type { DayNumber, SalonConfig, SalonErreurCode, Who } from "../core/contracts";
 
 /** Fuseau horaire de référence pour l'ouverture des cases (Paris = Ljubljana, même fuseau). */
 export const TIMEZONE = "Europe/Paris";
@@ -99,4 +99,102 @@ export function checkPhotoSize(b: Blob) {
   if (b.size > MAX_PHOTO_BYTES) {
     throw new Error(`Photo trop lourde (${(b.size / 1048576).toFixed(1)} Mo, max ${MAX_PHOTO_BYTES / 1048576} Mo).`);
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Salons (docs/salons.md)                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Configuration du salon fictif de la démo, et du premier salon (Alexandre et Flavie).
+ * Couleurs identiques à PLAYERS (src/world/actors.ts) pour que rien ne change à l'écran.
+ */
+export const SALON_DEMO_CONFIG: SalonConfig = {
+  joueurs: {
+    alexandre: { prenom: "Alexandre", couleurs: { coat: 0x2f6fb5, hat: 0x1f3d6b, pompom: 0xffffff, hair: 0x4a2e1f, longHair: false } },
+    flavie: { prenom: "Flavie", couleurs: { coat: 0xd9354b, hat: 0xffffff, pompom: 0xd9354b, hair: 0x6b3a22, longHair: true } },
+  },
+  contenu: {},
+};
+
+/** Identifiant du salon fictif de la démo. */
+export const DEMO_SALON_ID = "demo";
+
+/** Garde-fous (mêmes valeurs côté serveur, migration des salons). */
+export const SALON_PRENOM_MAX = 30;
+/** Taille maximale de la config JSON d'un salon (contenu des jeux compris), en octets. */
+export const SALON_CONFIG_MAX_BYTES = 200 * 1024;
+/** Nombre de salons qu'un même appareil peut créer par heure. */
+export const SALON_CREATIONS_PAR_HEURE = 5;
+/** Longueur minimale d'un mot de passe (minimum de Supabase Auth). */
+export const MOT_DE_PASSE_MIN = 6;
+
+/** Erreur des salons : message en français prêt à afficher + code (voir SalonErreurCode). */
+export class SalonError extends Error {
+  readonly code: SalonErreurCode;
+  constructor(code: SalonErreurCode, message: string) {
+    super(message);
+    this.name = "SalonError";
+    this.code = code;
+  }
+}
+
+const MESSAGES: Record<SalonErreurCode, string> = {
+  INVITATION_INVALIDE: "Ce lien d'invitation n'est pas (ou plus) valable. Demande un nouveau lien.",
+  INVITATION_UTILISEE: "Ce lien d'invitation a déjà servi : connecte-toi avec ton mot de passe.",
+  LIMITE_CREATION: "Trop de calendriers créés depuis cet appareil. Réessaie dans une heure.",
+  NON_AUTORISE: "Tu n'as pas accès à ce calendrier.",
+  SALON_INCONNU: "Ce calendrier n'existe pas (ou plus).",
+  MOT_DE_PASSE_FAIBLE: `Le mot de passe doit faire au moins ${MOT_DE_PASSE_MIN} caractères.`,
+  CONFIG_INVALIDE: "Réglages du calendrier invalides.",
+  INDISPONIBLE: "Cette fonction n'est pas encore disponible.",
+};
+export const salonError = (code: SalonErreurCode, message?: string) => new SalonError(code, message ?? MESSAGES[code]);
+
+export function checkMotDePasse(pw: string) {
+  if (typeof pw !== "string" || pw.length < MOT_DE_PASSE_MIN) throw salonError("MOT_DE_PASSE_FAIBLE");
+}
+
+/** Vérifie une config de salon et la renvoie nettoyée (prénoms rognés). Lève CONFIG_INVALIDE. */
+export function checkSalonConfig(config: SalonConfig): SalonConfig {
+  const bad = (m: string) => salonError("CONFIG_INVALIDE", m);
+  if (!config || typeof config !== "object" || !config.joueurs) throw bad("Réglages du calendrier manquants.");
+  const joueurs = {} as SalonConfig["joueurs"];
+  for (const w of WHO_LIST) {
+    const j = config.joueurs[w];
+    const prenom = typeof j?.prenom === "string" ? j.prenom.trim() : "";
+    if (!prenom) throw bad("Il manque un prénom.");
+    if (prenom.length > SALON_PRENOM_MAX) throw bad(`Prénom trop long (${SALON_PRENOM_MAX} caractères maximum).`);
+    const c = j.couleurs;
+    const isColor = (n: unknown) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 0xffffff;
+    if (!c || ![c.coat, c.hat, c.pompom, c.hair].every(isColor) || typeof c.longHair !== "boolean") {
+      throw bad("Couleurs du personnage invalides.");
+    }
+    joueurs[w] = { prenom, couleurs: { coat: c.coat, hat: c.hat, pompom: c.pompom, hair: c.hair, longHair: c.longHair } };
+  }
+  const contenu = config.contenu ?? {};
+  if (typeof contenu !== "object" || Array.isArray(contenu)) throw bad("Contenu des jeux invalide.");
+  for (const k of Object.keys(contenu)) {
+    if (!/^([1-9]|1\d|2[0-4])$/.test(k)) throw bad(`Jour de jeu invalide : ${k}.`);
+  }
+  const out: SalonConfig = { joueurs, contenu: JSON.parse(JSON.stringify(contenu)) as SalonConfig["contenu"] };
+  if (new Blob([JSON.stringify(out)]).size > SALON_CONFIG_MAX_BYTES) {
+    throw bad(`Contenu trop volumineux (${SALON_CONFIG_MAX_BYTES / 1024} Ko maximum).`);
+  }
+  return out;
+}
+
+/** Adresse de base du site (racine ou /demo/), sans paramètres : sert à fabriquer les liens. */
+export function siteBaseUrl(): string {
+  if (typeof location === "undefined") return "";
+  return location.origin + location.pathname;
+}
+export const lienSalonUrl = (id: string) => `${siteBaseUrl()}?salon=${encodeURIComponent(id)}`;
+export const lienInvitationUrl = (jeton: string) => `${siteBaseUrl()}?invitation=${encodeURIComponent(jeton)}`;
+
+/** Jeton aléatoire (URL-safe), pour les invitations et les identifiants de salon en démo. */
+export function randomToken(bytes = 18): string {
+  const a = new Uint8Array(bytes);
+  crypto.getRandomValues(a);
+  return btoa(String.fromCharCode(...a)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }

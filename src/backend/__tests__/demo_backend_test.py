@@ -243,6 +243,109 @@ def main():
             v.close()
             s24.close()
 
+            print("Salons (docs/salons.md)")
+            ERR = "async (f) => { try { await f(); return null; } catch (e) { return [e.code ?? null, e.message]; } }"
+
+            def err(page, expr):
+                return page.evaluate(f"({ERR})(() => {expr})")
+
+            s0 = open_page(ctx, "demo-reset&jour=12&moi=alexandre")
+            sd = s0.evaluate("backend.salons.getSalon()")
+            check(sd["id"] == "demo" and sd["demo"] and sd["inviteArrive"], "salon démo par défaut")
+            check(sd["config"]["joueurs"]["flavie"]["prenom"] == "Flavie"
+                  and sd["config"]["joueurs"]["alexandre"]["couleurs"]["coat"] == 0x2F6FB5, "config démo = PLAYERS")
+            check(len(s0.evaluate("backend.getProgress('flavie')")["opened"]) > 0, "salon démo : exemples conservés")
+            cfg = ("{ joueurs: { alexandre: { prenom: ' Léo ', couleurs: { coat: 1, hat: 2, pompom: 3, hair: 4, longHair: false } },"
+                   " flavie: { prenom: 'Inès', couleurs: { coat: 5, hat: 6, pompom: 7, hair: 8, longHair: true } } },"
+                   " contenu: { '1': { questions: [{ q: 'Notre film ?', choix: ['A', 'B'], bonne: 0 }] } } }")
+            e = err(s0, "backend.salons.creerSalon({ config: " + cfg + ", motDePasse: '123' })")
+            check(e and e[0] == "MOT_DE_PASSE_FAIBLE", f"mot de passe trop court refusé ({e})")
+            bad = cfg.replace("' Léo '", "'  '")
+            e = err(s0, "backend.salons.creerSalon({ config: " + bad + ", motDePasse: 'secret1' })")
+            check(e and e[0] == "CONFIG_INVALIDE", f"prénom vide refusé ({e})")
+            e = err(s0, "backend.salons.creerSalon({ config: " + cfg.replace("'1':", "'25':") + ", motDePasse: 'secret1' })")
+            check(e and e[0] == "CONFIG_INVALIDE", f"jour de contenu invalide refusé ({e})")
+            cree = s0.evaluate("backend.salons.creerSalon({ config: " + cfg + ", motDePasse: 'secret1' })")
+            sid = cree["salon"]["id"]
+            check(sid != "demo" and not cree["salon"]["inviteArrive"], "salon créé, invité·e pas encore arrivé·e")
+            check(cree["salon"]["config"]["joueurs"]["alexandre"]["prenom"] == "Léo", "prénom rogné")
+            check(f"?salon={sid}" in cree["lienConnexion"] and "?invitation=" in cree["lienInvitation"], "deux liens fournis")
+            check(s0.evaluate("backend.me()") == "alexandre", "créateur connecté (place alexandre)")
+            p0 = s0.evaluate("backend.getProgress('flavie')")
+            check(p0["opened"] == [] and s0.evaluate("backend.getGameState(2, 'score:flavie')") is None,
+                  "nouveau salon : aucune donnée d'exemple")
+            check(s0.evaluate("backend.getPrepared(4, 'flavie')")["status"] == "empty", "nouveau salon : cases vides")
+            check(s0.evaluate("backend.salons.lienInvitation()") == cree["lienInvitation"], "lien d'invitation stable")
+            jeton = cree["lienInvitation"].split("invitation=")[1]
+            nouveau = s0.evaluate("backend.salons.lienInvitation({ nouveau: true })")
+            check(nouveau != cree["lienInvitation"], "nouveau lien fabriqué")
+            check(s0.evaluate(f"backend.salons.lireInvitation('{jeton}')")["statut"] == "invalide", "ancien lien invalidé")
+            jeton = nouveau.split("invitation=")[1]
+            s0.evaluate("backend.markOpened(3)")
+
+            # l'invité·e, dans un autre onglet, par le lien
+            inv = open_page(ctx, f"invitation={jeton}&jour=12")
+            info = inv.evaluate("backend.salons.lireInvitation()")
+            check(info["statut"] == "valide" and info["joueurs"]["flavie"]["prenom"] == "Inès", "lireInvitation lit l'adresse")
+            e = err(inv, f"backend.salons.accepterInvitation('{jeton}', 'abc')")
+            check(e and e[0] == "MOT_DE_PASSE_FAIBLE", "invité·e : mot de passe trop court refusé")
+            inv.evaluate(f"backend.salons.accepterInvitation('{jeton}', 'motdepasse')")
+            check(inv.evaluate("backend.me()") == "flavie", "invité·e connecté·e (place flavie)")
+            si = inv.evaluate("backend.salons.getSalon()")
+            check(si["id"] == sid and si["inviteArrive"], "invité·e dans le bon salon")
+            check(si["config"]["contenu"]["1"]["questions"][0]["q"] == "Notre film ?", "contenu des jeux lisible par l'invité·e")
+            check(inv.evaluate("backend.getProgress('alexandre')")["opened"] == [3], "données partagées dans le salon")
+            check(inv.evaluate(f"backend.salons.lireInvitation('{jeton}')")["statut"] == "utilisee", "jeton consommé")
+            e = err(inv, f"backend.salons.accepterInvitation('{jeton}', 'autre123')")
+            check(e and e[0] == "INVITATION_UTILISEE", "jeton à usage unique")
+            e = err(inv, "backend.salons.lienInvitation()")
+            check(e and e[0] == "NON_AUTORISE", "seul le créateur invite")
+            e = err(s0, "backend.salons.lienInvitation()")
+            check(e and e[0] == "INVITATION_UTILISEE", "plus d'invitation une fois l'invité·e arrivé·e")
+
+            # modification de la config, vue par l'autre
+            seen = inv.evaluate("""() => new Promise((res) => {
+                const off = backend.salons.onSalonChange((s) => { off(); res(s.config.joueurs.flavie.prenom); });
+                backend.salons.modifierSalon({ ...%s, joueurs: { ...%s.joueurs, flavie: { prenom: 'Inès-Marie',
+                  couleurs: { coat: 5, hat: 6, pompom: 7, hair: 8, longHair: true } } } });
+            })""" % (cfg, cfg))
+            check(seen == "Inès-Marie", "modifierSalon prévient onSalonChange")
+            check(s0.evaluate("backend.salons.getSalon()")["config"]["joueurs"]["flavie"]["prenom"] == "Inès-Marie",
+                  "modification lue par l'autre membre")
+
+            # connexion par lien sur un « autre appareil » (onglet sans session) : mot de passe vérifié
+            ln = open_page(ctx, f"salon={sid}&jour=12")
+            check(ln.evaluate("backend.salons.getSalon()")["id"] == sid, "?salon= ouvre ce salon")
+            # la session « rester » du créateur est retrouvée (même navigateur) : on la ferme pour tester
+            ln.evaluate("backend.signOut()")
+            check(ln.evaluate("backend.me()") is None, "déconnecté du salon")
+            check(ln.evaluate("backend.salons.getSalon()")["config"]["contenu"] == {}, "contenu caché si non connecté")
+            e = err(ln, "backend.signIn('alexandre', 'mauvais')")
+            check(e and "incorrect" in e[1], "mauvais mot de passe refusé")
+            ln.evaluate("backend.signIn('alexandre', 'secret1')")
+            check(ln.evaluate("backend.me()") == "alexandre", "bon mot de passe accepté")
+
+            # retour au salon démo : inchangé, et isolé du nouveau salon
+            s0.evaluate("backend.setGameState(5, 'isole', 42)")
+            sw = ln.evaluate("backend.salons.ouvrirSalon('demo')")
+            check(sw["demo"] and ln.evaluate("backend.me()") is None, "ouvrirSalon : pas de session dans le salon démo")
+            ln.evaluate("backend.signIn('alexandre', 'nimporte')")
+            check(ln.evaluate("backend.getPrepared(4, 'flavie')")["status"] == "ready", "salon démo intact (exemples)")
+            check(ln.evaluate("backend.getGameState(5, 'isole')") is None
+                  and s0.evaluate("backend.getGameState(5, 'isole')") == 42, "données des salons isolées")
+            e = err(ln, "backend.salons.ouvrirSalon('nexistepas')")
+            check(e and e[0] == "SALON_INCONNU", "salon inconnu refusé")
+            e = err(ln, "backend.salons.lireInvitation('nimportequoi').then((r) => { if (r.statut !== 'invalide') throw 0; })")
+            check(e is None, "jeton inconnu → invalide")
+
+            # limite de création par heure
+            for _ in range(4):
+                s0.evaluate("backend.salons.creerSalon({ config: " + cfg + ", motDePasse: 'secret1' })")
+            e = err(s0, "backend.salons.creerSalon({ config: " + cfg + ", motDePasse: 'secret1' })")
+            check(e and e[0] == "LIMITE_CREATION", "6e salon dans l'heure refusé")
+            for p_ in (s0, inv, ln):
+                p_.close()
+
             print("Jour réel")
             c = open_page(ctx, "moi=alexandre")
             t = c.evaluate("backend.today()")
