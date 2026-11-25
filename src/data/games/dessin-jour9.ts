@@ -1,6 +1,9 @@
 /**
  * Jour 9 — Dessin à deviner : vos souvenirs dessinés (en différé).
  *
+ * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
+ * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ *
  * ALEXANDRE : tout se remplace ici.
  *  - `themes`    : les sujets proposés. Pour chaque dessin, on en choisit un (pas deux fois le même),
  *                  on dessine SON souvenir sur ce thème, puis on écrit la réponse à trouver.
@@ -38,7 +41,7 @@ export const DESSIN_JOUR9: DessinContent = {
     { id: "plat", texte: "Un plat qu'on adore", idee: "ex. la raclette" },
     { id: "rire", texte: "Un moment où on a beaucoup ri", idee: "ex. la panne de voiture" },
     { id: "objet", texte: "Un objet qui me fait penser à toi", idee: "ex. ton écharpe" },
-    { id: "bientot", texte: "Ce qu'on fera quand on se reverra", idee: "ex. un gros câlin" },
+    { id: "bientot", texte: "Ce qu'on fera la prochaine fois", idee: "ex. un gros câlin" },
   ],
   exemples: [
     { theme: "plat", reponse: "la pizza", variantes: ["pizza", "pizzas"], mot: "Celle du petit resto, on n'a jamais retrouvé la même 🍕" },

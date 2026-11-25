@@ -1,6 +1,9 @@
 /**
  * Jour 7 — Rébus en emojis.
  *
+ * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
+ * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ *
  * ALEXANDRE : tout se remplace ici.
  *  - `emojis`   : la suite d'emojis affichée en grand (2 à 4, c'est le plus lisible)
  *  - `reponse`  : écris-la normalement, avec accents et article. La correction est tolérante :
@@ -42,11 +45,11 @@ export const REBUS_JOUR7: RebusContent = {
     { id: "chaussette", emojis: "🧦🔥", reponse: "la chaussette sur la cheminée", variantes: ["chaussette de Noël", "la chaussette"], indice: "On l'accroche la veille, on la vide le matin." },
     { id: "bonhomme", emojis: "☃️🥕", reponse: "le nez du bonhomme de neige", variantes: ["le bonhomme de neige", "carotte"], indice: "Un légume qui sert de visage." },
 
-    // --- À vous deux (à remplacer par vos vraies histoires) ---
-    { id: "distance", emojis: "✈️💻❤️", reponse: "l'amour à distance", variantes: ["amour longue distance", "la distance"], indice: "C'est toute notre année, ça." },
-    { id: "raclette", emojis: "🧀🥔♨️", reponse: "la raclette", variantes: ["soirée raclette"], indice: "Le plat qui vous réconcilie avec l'hiver." },
-    { id: "film", emojis: "🎬🛋️🍿", reponse: "la soirée film", variantes: ["soirée cinéma", "notre soirée film"], indice: "Chacun chez soi, mais on appuie sur « lecture » en même temps." },
-    { id: "appel", emojis: "📞🌙", reponse: "l'appel du soir", variantes: ["le coup de fil du soir", "appel du soir"], indice: "Tous les jours, et souvent trop court." },
+    // --- À deux (génériques : chaque couple met les siens dans l'éditeur du salon) ---
+    { id: "lune", emojis: "🍯🌙", reponse: "la lune de miel", variantes: ["lune de miel"], indice: "Le voyage juste après le « oui »." },
+    { id: "raclette", emojis: "🧀🥔♨️", reponse: "la raclette", variantes: ["soirée raclette"], indice: "Le plat qui réconcilie avec l'hiver." },
+    { id: "film", emojis: "🎬🛋️🍿", reponse: "la soirée film", variantes: ["soirée cinéma", "soirée canapé"], indice: "Un plaid, un écran, et on se dispute pour choisir." },
+    { id: "coeur", emojis: "❤️🔥", reponse: "le coup de foudre", variantes: ["coup de foudre"], indice: "Ça tombe dessus sans prévenir." },
   ],
 };
 

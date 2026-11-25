@@ -1,6 +1,9 @@
 /**
  * Jour 5 — Pictionary de Noël (en direct, ou chacun son tour).
  *
+ * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
+ * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ *
  * ALEXANDRE : tout se remplace ici.
  *  - `noel`  : mots de Noël, faciles à dessiner.
  *  - `nous`  : vos mots à vous (souvenirs, private jokes). Ils sont annoncés « À vous deux »
@@ -45,16 +48,16 @@ export const PICTIONARY_JOUR5: PictionaryContent = {
     { mot: "Chaussette", variantes: ["chaussettes", "chaussette de noel"] },
     { mot: "Boule de Noël", variantes: ["boule", "boules"] },
   ],
-  // ⚠️ Exemples à remplacer par vos souvenirs et private jokes
+  // Génériques (valables pour tous les salons) : chaque couple met les siens dans l'éditeur du salon
   nous: [
-    { mot: "Train de nuit", variantes: ["train"] },
-    { mot: "Appel vidéo", variantes: ["visio", "facetime", "appel"] },
-    { mot: "Valise" },
-    { mot: "Aéroport", variantes: ["avion"] },
-    { mot: "Carte postale", variantes: ["carte"] },
+    { mot: "Premier rendez-vous", variantes: ["rendez-vous", "rencard"] },
+    { mot: "Pique-nique", variantes: ["picnic"] },
+    { mot: "Câlin", variantes: ["calins", "se serrer dans les bras"] },
+    { mot: "Petit-déjeuner au lit", variantes: ["petit dejeuner", "petit-dej"] },
+    { mot: "Soirée film", variantes: ["film", "cinema"] },
     { mot: "Pizza du dimanche", variantes: ["pizza"] },
     { mot: "Plaid sur le canapé", variantes: ["plaid", "canape"] },
-    { mot: "Billet de retour", variantes: ["billet"] },
+    { mot: "Voyage", variantes: ["vacances", "valise"] },
   ],
 };
 

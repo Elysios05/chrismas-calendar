@@ -1,6 +1,9 @@
 /**
  * Jour 1 — Quiz « Est-ce que tu me connais ? »
  *
+ * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
+ * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ *
  * ALEXANDRE : c'est ici que tu remplaces tout. Rien d'autre à toucher.
  *  - `surMoi`    : la question telle qu'on te la pose à toi (« … toi ? »)
  *  - `surAutre`  : la même question posée sur l'autre, {autre} est remplacé par son prénom
@@ -119,7 +122,7 @@ export const QUIZ_VERDICTS: { min: number; ligne: string }[] = [
   { min: 8, ligne: "Très fort ! Il reste juste un ou deux petits secrets… c'est mieux comme ça 😌" },
   { min: 6, ligne: "Bien joué ! Vous vous connaissez bien, mais il y a de la marge pour les 23 jours qui viennent 😄" },
   { min: 4, ligne: "Pas mal… mais là, il va falloir s'appeler un peu plus souvent 📞" },
-  { min: 0, ligne: "Aïe. Bon. On va dire que c'est la distance, hein ? 🐧" },
+  { min: 0, ligne: "Aïe. Bon. On va dire que c'est la faute de Noël, hein ? 🐧" },
 ];
 
 /** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */

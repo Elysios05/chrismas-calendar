@@ -57,10 +57,12 @@ Textes neutres (#84 point 7) : « a quitté la partie », « On y va ! », « Jo
 `?jour=` et `?salon=` dans l'URL. Vérifié : 10 jeux × 3 salons sans erreur, synchro « Qui ? » propose les prénoms.
 ⚠️ `npm run capture` toujours cassé (#87).
 
-**À trancher avec Alexandre :** le contenu par défaut contient des choses à eux (« LJUBLJANA », mots « à vous deux »
-du Pictionary…) qui deviennent le défaut de **tous** les salons. Question posée à Alexandre le 25 nov (session
-directe) : options A) copier ce contenu dans leur salon et rendre le défaut générique (recommandé), B) tout laisser,
-C) défaut générique seulement. Réponse : à reporter ici. Forme du schéma annoncée dans #84 (PR #94).
+**Décidé avec Alexandre (25 nov) : option A.** Leur contenu personnel (Ljubljana, train de nuit, décalage…) est
+copié tel quel dans `src/data/salons/alexandre-flavie.ts` (`CONTENU_ALEXANDRE_FLAVIE`, une entrée par jour, champs
+du schéma seulement, vérifié : rien n'est écarté par `lireContenu`). Le **défaut** de `src/data/games/` est devenu
+générique (mots « à deux » valables pour tout couple, plus d'allusions à la distance). Atelier : salon « A & F ».
+Reste à brancher ce contenu dans leur vrai salon et dans le salon démo : demandé au chef dans #84 (Backend/Interface).
+Forme du schéma annoncée dans #84 (PR #94).
 
 **Prochaine étape :** jour 10 (attrape-flocons, score à battre, PixiJS) — demander ses règles à Alexandre, et le
 faire directement « salon » (schéma si quelque chose se personnalise).

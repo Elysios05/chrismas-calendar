@@ -1,6 +1,9 @@
 /**
  * Jour 15 — Le pendu du bonhomme qui fond.
  *
+ * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
+ * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ *
  * ALEXANDRE : tout se remplace ici.
  *  - `mot`    : en majuscules ou non, peu importe. Les accents sont gérés : taper E révèle les É et È,
  *               donc « PAIN D'ÉPICES » se joue sans piège. Les espaces et apostrophes sont offerts.
@@ -47,13 +50,13 @@ export const PENDU_JOUR15: PenduContent = {
     { mot: "CASSE-NOISETTE", indice: "Un ballet, et un soldat en bois." },
     { mot: "MARRONS CHAUDS", indice: "Ça se vend au coin de la rue en décembre." },
 
-    // --- À vous deux (à remplacer par vos vrais mots) ---
-    { mot: "LJUBLJANA", indice: "Là où l'un de vous se réveille le matin.", perso: true },
-    { mot: "NOTRE PREMIER NOËL", indice: "Ce que vous fêtez cette année.", perso: true },
-    { mot: "APPEL DU SOIR", indice: "Tous les jours, et toujours trop court.", perso: true },
-    { mot: "VALISE", indice: "L'objet des retrouvailles… et des départs.", perso: true },
-    { mot: "RACLETTE", indice: "Le plat qui vous réconcilie avec l'hiver.", perso: true },
-    { mot: "DÉCALAGE", indice: "Une heure de trop entre vous deux.", perso: true },
+    // --- À deux (génériques : chaque couple met les siens dans l'éditeur du salon) ---
+    { mot: "PREMIER RENCARD", indice: "Là où tout a commencé.", perso: true },
+    { mot: "COUP DE FOUDRE", indice: "Ça tombe dessus sans prévenir.", perso: true },
+    { mot: "PETIT DÉJEUNER", indice: "Encore meilleur quand c'est l'autre qui le prépare.", perso: true },
+    { mot: "VALISE", indice: "Elle part toujours trop pleine.", perso: true },
+    { mot: "RACLETTE", indice: "Le plat qui réconcilie avec l'hiver.", perso: true },
+    { mot: "FOU RIRE", indice: "Impossible de s'arrêter, surtout quand il ne faut pas.", perso: true },
   ],
 };
 

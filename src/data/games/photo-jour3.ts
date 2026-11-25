@@ -1,6 +1,9 @@
 /**
  * Jour 3 — Défi photo croisé : la vue de ta fenêtre.
  *
+ * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
+ * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ *
  * ALEXANDRE : tout se remplace ici.
  *  - `consigne`   : ce que Pingou demande de photographier
  *  - `idees`      : exemples de légende proposés en gris dans le champ (un au hasard)
@@ -41,7 +44,7 @@ export const PHOTO_JOUR3: PhotoContent = {
     { id: "boisson", texte: "Qu'est-ce que j'ai dans la main (à part le téléphone) ?", options: ["Un café", "Un thé", "Un chocolat chaud", "Rien du tout"] },
     { id: "prefere", texte: "Ce que je préfère dans cette vue ?", options: ["La lumière", "Le calme", "Le ciel", "Rien : tu n'y es pas"] },
   ],
-  exemple: { legende: "Les toits sous la neige, et toi trop loin 💙", question: "boisson", reponse: 2 },
+  exemple: { legende: "Les toits sous la neige, il ne manque que toi 💙", question: "boisson", reponse: 2 },
 };
 
 /** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */
