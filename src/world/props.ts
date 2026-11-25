@@ -760,7 +760,10 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
         (t: Graphics) => t.roundRect(-7, -7, 14, 5, 2).fill(c(0xd9354b)).roundRect(-4, -10, 7, 4, 1.5).fill(c(0x7fb3e0)).circle(-4, -1.5, 2).fill(c(0x2b2f45)).circle(4, -1.5, 2).fill(c(0x2b2f45)),
       ];
       for (let i = 0; i < 5; i++) { const t = new Graphics(); toys[i % 4](t); extra.addChild(t); items.push(t); }
-      anim.push({ kind: "belt", items, a: P(x0 + 0.35, y0 + d + 0.11, bz), b: P(x0 + w - 0.35, y0 + d + 0.11, bz), phase: rnd(71) });
+      const bouche = P(x0 + 0.35, y0 + d + 0.11, bz);
+      // posés à la bouche du tapis avant leur première image (sinon ils attendaient à l'origine du monde)
+      for (const it of items) it.position.set(bouche.x, bouche.y);
+      anim.push({ kind: "belt", items, a: bouche, b: P(x0 + w - 0.35, y0 + d + 0.11, bz), phase: rnd(71) });
       break;
     }
     case "santaHouse": {
