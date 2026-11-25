@@ -6,9 +6,9 @@ import { drawProp, type AnimPart } from "./props";
 import { ZONES } from "./zones";
 import { weatherAt } from "./weather";
 import { Aurora } from "./aurora";
-import { Person, Penguin, type Who } from "./actors";
+import { PLAYERS, Person, Penguin, type Who } from "./actors";
 import { makeGround, poke, spawnLife, updateCritter, type Critter, type LifeEnv } from "./life";
-import type { SoundApi } from "../core/contracts";
+import type { CouleursJoueur, JoueurSalon, SoundApi } from "../core/contracts";
 
 export type NodeState = "locked" | "available" | "opened";
 export type SceneCallbacks = {
@@ -109,6 +109,8 @@ export class Scene {
   scrollY = 0;
   camX = 0;
   people: Record<Who, Person> = {} as Record<Who, Person>;
+  /** Couleurs des personnages : celles du salon, sinon les valeurs par défaut */
+  apparence: Record<Who, CouleursJoueur> = { alexandre: PLAYERS.alexandre, flavie: PLAYERS.flavie };
   pos: Record<Who, number> = { alexandre: 0, flavie: 0 };
   penguin!: Penguin;
   penguinPos = 0;
@@ -218,6 +220,8 @@ export class Scene {
         playOpen: (day: number) => this.playOpen(day),
         /** bascule jour/nuit : reconstruction en cours ? et durée de la dernière (calcul pur et totale) */
         reconstruction: () => ({ enCours: !!this.pending, ...this.derniereReconstruction }),
+        joueurs: (j: Record<Who, JoueurSalon> | null) => this.setJoueurs(j),
+        personnageEcran: (who: Who) => { const p = this.people[who]; const g = p.getGlobalPosition(); return { x: g.x, y: g.y, couleurs: p.couleurs }; },
         /** habitants visibles à l'écran : espèce, position du milieu du corps, réaction en cours */
         life: () => this.life.filter((cr) => cr.visible).map((cr) => {
           const b = cr.getBounds();
@@ -250,6 +254,21 @@ export class Scene {
 
   /** Les cris des animaux et les rires des lutins quand on les touche (branché par App.tsx, issue #11) */
   setSound(sound: SoundApi) { this.sound = sound; }
+
+  /**
+   * Couleurs des personnages selon le salon (#84). Branché par App.tsx :
+   * `backend.salons?.onSalonChange((s) => scene.setJoueurs(s?.config.joueurs ?? null))`.
+   * null = valeurs par défaut (`PLAYERS`). Redessine les deux personnages sur place, sans reconstruire la scène ;
+   * une reconstruction en cours (jour/nuit) reprend aussi ces couleurs, car elle les lit à la création.
+   */
+  setJoueurs(joueurs: Record<Who, JoueurSalon> | null) {
+    for (const who of ["alexandre", "flavie"] as Who[]) {
+      const c = joueurs?.[who]?.couleurs ?? PLAYERS[who];
+      this.apparence[who] = c;
+      if (this.people[who]) this.people[who].habiller(c);
+      if (this.pending?.b.people[who]) this.pending.b.people[who].habiller(c);
+    }
+  }
   /** Ne redessine que les cases dont l'état a changé : reconstruire toute la scène gelait l'image */
   setStates(states: Map<number, NodeState>) {
     const before = this.states;
@@ -621,7 +640,7 @@ export class Scene {
     });
     yield;
     for (const who of ["alexandre", "flavie"] as Who[]) {
-      const p = new Person(who, pal);
+      const p = new Person(who, pal, this.apparence[who]);
       b.people[who] = p;
       b.objects.addChild(p);
     }

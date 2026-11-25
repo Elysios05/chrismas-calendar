@@ -1,13 +1,26 @@
 // Personnages (Alexandre, Flavie) et la mascotte pingouin, dessinés en vectoriel
 import { Container, Graphics } from "pixi.js";
 import type { Palette } from "./iso";
+import type { CouleursJoueur } from "../core/contracts";
 
 export type Who = "alexandre" | "flavie";
 
-export const PLAYERS: Record<Who, { name: string; coat: number; hat: number; pompom: number; hair: number; longHair: boolean }> = {
+/** Valeurs par défaut (salon démo d'Alexandre et Flavie) ; un salon fournit les siennes via `Scene.setJoueurs` */
+export const PLAYERS: Record<Who, { name: string } & CouleursJoueur> = {
   alexandre: { name: "Alexandre", coat: 0x2f6fb5, hat: 0x1f3d6b, pompom: 0xffffff, hair: 0x4a2e1f, longHair: false },
   flavie: { name: "Flavie", coat: 0xd9354b, hat: 0xffffff, pompom: 0xd9354b, hair: 0x6b3a22, longHair: true },
 };
+
+/** Revers du bonnet : un ton plus sombre sur un bonnet clair, plus clair sur un bonnet foncé */
+function revers(hat: number): number {
+  // teintes d'origine des deux bonnets par défaut
+  if (hat === 0x1f3d6b) return 0x2a5288;
+  if (hat === 0xffffff) return 0xe3e6ee;
+  const r = hat >> 16, v = (hat >> 8) & 0xff, b = hat & 0xff;
+  const clair = 0.299 * r + 0.587 * v + 0.114 * b > 150;
+  const f = (x: number) => Math.round(clair ? x * 0.89 : x + (255 - x) * 0.13);
+  return (f(r) << 16) | (f(v) << 8) | f(b);
+}
 
 export class Person extends Container {
   body = new Container();
@@ -20,34 +33,45 @@ export class Person extends Container {
   ride: "sled" | "skates" | null = null;
 
   who: Who;
+  habit = new Graphics();
+  couleurs: CouleursJoueur;
+  private pal: Palette;
 
-  constructor(who: Who, pal: Palette) {
+  constructor(who: Who, pal: Palette, couleurs: CouleursJoueur = PLAYERS[who]) {
     super();
     this.who = who;
-    const p = PLAYERS[who], c = pal.c;
+    this.pal = pal;
+    this.couleurs = couleurs;
+    const c = pal.c;
     const shadow = new Graphics().ellipse(0, 0, 13, 5).fill({ color: 0x1b2347, alpha: 0.22 });
     this.legL.roundRect(-6, -14, 5, 14, 2).fill(c(0x2b2f45));
     this.legR.roundRect(1, -14, 5, 14, 2).fill(c(0x2b2f45));
-    const g = new Graphics();
+    this.habiller(couleurs);
+    // luge (descente des montagnes) et patins (lac gelé)
+    this.sled.roundRect(-16, -6, 32, 7, 3).fill(c(0xd9354b)).roundRect(-18, 0, 36, 3, 1.5).fill(c(0xf0b23a));
+    this.skates.roundRect(-8, -1, 8, 2, 1).fill(c(0xb9c0cf)).roundRect(1, -1, 8, 2, 1).fill(c(0xb9c0cf));
+    this.sled.visible = this.skates.visible = false;
+    this.body.addChild(this.legL, this.legR, this.habit, this.skates);
+    this.addChild(shadow, this.sled, this.body);
+  }
+
+  /** (Re)dessine cheveux, manteau, visage et bonnet avec les couleurs du salon, sans recréer le personnage */
+  habiller(p: CouleursJoueur) {
+    this.couleurs = p;
+    const c = this.pal.c, g = this.habit.clear();
     if (p.longHair) g.roundRect(-9, -40, 18, 22, 7).fill(c(p.hair));
     g.roundRect(-10, -34, 20, 22, 7).fill(c(p.coat));
     g.roundRect(-13, -31, 5, 14, 2.5).fill(c(p.coat)); // bras
     g.roundRect(8, -31, 5, 14, 2.5).fill(c(p.coat));
-    g.roundRect(-9, -36, 18, 6, 3).fill(c(who === "alexandre" ? 0xffc85a : 0xffffff)); // écharpe
+    g.roundRect(-9, -36, 18, 6, 3).fill(c(this.who === "alexandre" ? 0xffc85a : 0xffffff)); // écharpe
     g.circle(0, -43, 9).fill(c(0xf6cfae));
     g.circle(-3, -43, 1.3).fill(c(0x2b2f45));
     g.circle(3, -43, 1.3).fill(c(0x2b2f45));
     g.circle(-5, -40, 2).fill({ color: c(0xff9a9a), alpha: 0.7 });
     g.circle(5, -40, 2).fill({ color: c(0xff9a9a), alpha: 0.7 });
     g.moveTo(-9.5, -46).arc(0, -46, 9.5, Math.PI, 0).fill(c(p.hat)); // bonnet
-    g.rect(-10, -47, 20, 4).fill(c(p.hat === 0xffffff ? 0xe3e6ee : 0x2a5288)); // revers du bonnet
+    g.rect(-10, -47, 20, 4).fill(c(revers(p.hat))); // revers du bonnet
     g.circle(0, -57, 3.5).fill(c(p.pompom));
-    // luge (descente des montagnes) et patins (lac gelé)
-    this.sled.roundRect(-16, -6, 32, 7, 3).fill(c(0xd9354b)).roundRect(-18, 0, 36, 3, 1.5).fill(c(0xf0b23a));
-    this.skates.roundRect(-8, -1, 8, 2, 1).fill(c(0xb9c0cf)).roundRect(1, -1, 8, 2, 1).fill(c(0xb9c0cf));
-    this.sled.visible = this.skates.visible = false;
-    this.body.addChild(this.legL, this.legR, g, this.skates);
-    this.addChild(shadow, this.sled, this.body);
   }
 
   setRide(r: "sled" | "skates" | null) {
