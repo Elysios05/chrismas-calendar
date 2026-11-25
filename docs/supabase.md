@@ -1,11 +1,14 @@
 # Mettre en ligne la version privée (Supabase) — guide pas à pas
 
-Compte gratuit, ~20 minutes. Tant que ce n'est pas fait, le site tourne en **mode démo** (tout marche, mais
-les données restent dans le navigateur et chacun a les siennes).
+Compte gratuit, ~30 minutes, **à faire une seule fois par Alexandre**. Tant que ce n'est pas fait, le site
+tourne en **mode démo** (tout marche, mais les données restent dans le navigateur et chacun a les siennes).
 
-> Ce qu'on obtient : deux comptes (Alexandre, Flavie), la progression partagée, les cases préparées
-> **illisibles par l'autre avant le jour J** (vérifié par le serveur, pas par le site), les photos privées
-> et les jeux en direct.
+> Ce qu'on obtient : **un seul Supabase pour tous les calendriers** (« salons », voir `docs/salons.md`).
+> N'importe qui peut ensuite créer son calendrier depuis le site, sans rien installer : il choisit les
+> prénoms, les couleurs et le contenu, puis envoie un **lien d'invitation** à l'autre personne, qui choisit
+> son mot de passe et c'est tout. Chaque salon a sa progression, ses cases préparées **illisibles par l'autre
+> avant le jour J** (vérifié par le serveur), ses photos privées, ses jeux en direct et ses rappels.
+> Ton calendrier avec Flavie n'est qu'un salon parmi d'autres : tu le crées toi-même depuis le site (étape 11).
 
 ---
 
@@ -22,51 +25,51 @@ les données restent dans le navigateur et chacun a les siennes).
 
 1. Menu de gauche → **SQL Editor** → **New query**.
 2. Ouvre le fichier [`supabase/migrations/0001_init.sql`](../supabase/migrations/0001_init.sql) du dépôt, copie **tout**, colle-le.
-3. **Run**. Tu dois voir « Success. No rows returned ». (On peut le relancer sans risque.)
+3. **Run**. Tu dois voir « Success. No rows returned ».
+4. **Même chose, dans l'ordre**, avec les trois fichiers suivants (une nouvelle requête pour chacun) :
+   [`0002_rappels.sql`](../supabase/migrations/0002_rappels.sql),
+   [`0003_relance.sql`](../supabase/migrations/0003_relance.sql),
+   [`0004_salons.sql`](../supabase/migrations/0004_salons.sql).
 
-Ça crée : les tables `profiles`, `progress`, `prepared_content`, `game_state`, `app_settings`,
-le bucket privé `photos` et toutes les règles d'accès.
+Tous les fichiers peuvent être relancés sans risque. Ça crée : les salons (`salons`, jetons d'invitation,
+journal des créations), les tables de données (`profiles`, `progress`, `prepared_content`, `game_state`,
+`push_subscriptions`…) toutes rangées **par salon**, le bucket privé `photos`, et les règles d'accès :
+chaque compte ne voit **que son salon**.
 
 ## 3. Régler la connexion
 
 Menu **Authentication** → **Sign In / Providers** (ou *Providers* → *Email*) :
-- **Allow new users to sign up** : **désactivé** (personne d'autre ne peut créer de compte).
+- **Allow new users to sign up** : **désactivé**. Les comptes ne sont créés **que** par la fonction `salons`
+  (étape 4), qui vérifie les limites ; personne ne peut créer de compte en direct.
 - **Confirm email** : **désactivé** (pas besoin de cliquer un lien).
 - Garde **Email** activé.
 
-## 4. Créer les deux comptes
+## 4. Déployer la fonction « salons » (création des calendriers et des comptes)
 
-Menu **Authentication** → **Users** → **Add user** → **Create new user**, deux fois :
+**Tu ne crées aucun compte à la main** : quand quelqu'un crée un calendrier sur le site, ou ouvre un lien
+d'invitation et choisit son mot de passe, c'est la fonction `salons` qui crée le compte (côté serveur).
 
-| Pour | E-mail | Mot de passe |
-|---|---|---|
-| Alexandre | ta vraie adresse | celui que tu veux |
-| Flavie | sa vraie adresse | celui que tu choisis pour elle (elle pourra le changer) |
-
-Coche **Auto Confirm User**.
-
-> **Les adresses ne sont écrites nulle part dans le dépôt** : le site les lit dans des variables
-> (`VITE_EMAIL_ALEXANDRE`, `VITE_EMAIL_FLAVIE`, étapes 6 et 7).
-> ⚠️ Mais elles **restent visibles dans le code JavaScript du site publié** (version privée) :
-> quelqu'un qui fouille le code de la page pourrait les lire. Il ne pourrait rien en faire sans
-> les mots de passe, mais c'est à savoir.
-
-Puis relie chaque compte à son personnage : **SQL Editor** → nouvelle requête → colle, **remplace les deux
-adresses** et **Run** :
-
-```sql
-insert into public.profiles (user_id, who)
-select id, 'alexandre' from auth.users where email = 'ADRESSE_D_ALEXANDRE'
-union all
-select id, 'flavie'    from auth.users where email = 'ADRESSE_DE_FLAVIE'
-on conflict (user_id) do update set who = excluded.who;
-
-select p.who, u.email from public.profiles p join auth.users u on u.id = p.user_id;  -- doit afficher 2 lignes
+Dans un terminal, à la racine du dépôt (la 1re commande ouvre le navigateur pour te connecter) :
+```bash
+npx supabase login
+npx supabase functions deploy salons --project-ref <ID-du-projet> --no-verify-jwt --use-api
 ```
+L'ID du projet est le morceau `abcdefgh` de `https://abcdefgh.supabase.co`.
+`--no-verify-jwt` est voulu : la fonction est appelée par des visiteurs pas encore connectés (création,
+invitation) ; c'est la base qui vérifie tout (jeton à usage unique, limites).
+Aucun secret à ajouter pour cette fonction.
+
+> **Adresses e-mail** : chaque compte peut donner une vraie adresse (facultatif), qui ne sert qu'à
+> « mot de passe oublié ». Sans adresse, le compte reçoit une adresse technique invisible
+> (`<salon>-<place>@salons.invalid`) : on se connecte avec le prénom et le mot de passe, rien d'autre.
+> Si Supabase refusait ces adresses techniques (erreur « Création du compte impossible… email »), la
+> fonction essaie toute seule une autre forme ; en dernier recours, ajoute le secret `SALON_EMAIL_DOMAIN`
+> (Edge Functions → Secrets) avec un nom de domaine à toi.
 
 ### Mot de passe oublié
 
-Le site peut envoyer un lien « choisir un nouveau mot de passe ». Pour que ce lien ramène sur le site :
+Pour les comptes qui ont donné une vraie adresse, le site peut envoyer un lien « choisir un nouveau mot de
+passe ». Pour que ce lien ramène sur le site :
 **Authentication** → **URL Configuration** :
 - *Site URL* : `https://<ton-compte>.github.io/chrismas-calendar/`
 - *Redirect URLs* : ajoute la même adresse, et `http://localhost:5173/**` pour tester en local.
@@ -74,12 +77,13 @@ Le site peut envoyer un lien « choisir un nouveau mot de passe ». Pour que ce 
 Sans configuration supplémentaire, l'envoi d'e-mails de Supabase est **très limité** (quelques e-mails
 par heure, et seulement vers les membres de ton organisation Supabase). On branche donc un service
 d'envoi gratuit : voir l'**étape 9 (Brevo)**. En attendant, en cas d'oubli, tu peux changer un mot de
-passe toi-même : **Authentication** → **Users** → clic sur le compte.
+passe toi-même : **Authentication** → **Users** → clic sur le compte (le compte d'une place se retrouve
+avec `select p.who, u.email from public.profiles p join auth.users u on u.id = p.user_id where p.salon_id = '<id du salon>';`).
 
 ## 5. Temps réel
 
-Menu **Realtime** → **Settings** : désactive **Allow public access** (les salles de jeu n'acceptent
-alors que vos deux comptes). Enregistre.
+Menu **Realtime** → **Settings** : désactive **Allow public access** (chaque salle de jeu n'accepte
+alors que les deux membres de son salon). Enregistre.
 
 ## 6. Récupérer les clés et tester en local
 
@@ -93,19 +97,18 @@ Menu **Project Settings** → **API** (ou **Data API** / **API Keys**) :
 ```
 VITE_SUPABASE_URL=https://abcdefgh.supabase.co
 VITE_SUPABASE_ANON_KEY=colle-la-clé-anon-ici
-VITE_EMAIL_ALEXANDRE=ton-adresse
-VITE_EMAIL_FLAVIE=son-adresse
 # Rappels (étape 10) :
 VITE_VAPID_PUBLIC_KEY=
 ```
 
-Puis `npm run dev` : le site passe automatiquement en mode Supabase (il demande le mot de passe).
-Supprime ou renomme `.env.local` pour revenir au mode démo.
+Puis `npm run dev` : le site passe automatiquement en mode Supabase (page d'accueil « Créer notre
+calendrier », ou écran de connexion du dernier salon ouvert). Supprime ou renomme `.env.local` pour revenir
+au mode démo. (`VITE_EMAIL_ALEXANDRE` / `VITE_EMAIL_FLAVIE` ne servent plus : les adresses sont dans chaque salon.)
 
-> Si le site répond « Mot de passe incorrect » alors que le mot de passe est bon : (1) l'adresse de
-> `.env.local` ne correspond pas à celle du compte créé à l'étape 4 ; (2) l'étape « relier chaque compte à son
-> personnage » (requête SQL de l'étape 4) n'a pas été faite ; (3) la `Project URL` ou la clé est fausse.
-> (Le site affiche ce même message pour toute erreur de connexion, en attendant de le préciser.)
+> Si la création d'un calendrier répond « Le serveur des calendriers ne répond pas » : la fonction `salons`
+> n'est pas déployée (étape 4), ou la `Project URL` / la clé est fausse. Si le site répond « Mot de passe
+> incorrect » alors que le mot de passe est bon : vérifie que tu es bien sur le lien de **ton** salon
+> (`?salon=…`) ; le site affiche encore ce même message pour toute erreur de connexion.
 
 ## 7. Brancher le site en ligne (GitHub Pages)
 
@@ -116,16 +119,16 @@ Sur GitHub, dépôt `chrismas-calendar` → **Settings** → **Secrets and varia
 |---|---|
 | `VITE_SUPABASE_URL` | la Project URL |
 | `VITE_SUPABASE_ANON_KEY` | la clé anon / publishable |
-| `VITE_EMAIL_ALEXANDRE` | ton adresse (celle du compte) |
-| `VITE_EMAIL_FLAVIE` | celle de Flavie |
 | `VITE_VAPID_PUBLIC_KEY` | clé publique des rappels (étape 10) |
+
+(Les anciens secrets `VITE_EMAIL_ALEXANDRE` / `VITE_EMAIL_FLAVIE` ne servent plus ; tu peux les supprimer.)
 
 Vérifie aussi, **une seule fois** : **Settings** → **Pages** → *Build and deployment* → **Source** : **GitHub Actions**
 (sinon le déploiement se termine sans rien publier).
 
 Puis **Actions** → **Déploiement GitHub Pages** → **Run workflow** (ou pousse sur `main`).
 Résultat :
-- `https://<ton-compte>.github.io/chrismas-calendar/` → **version privée** (connexion obligatoire) ;
+- `https://<ton-compte>.github.io/chrismas-calendar/` → **le site** : accueil « Créer notre calendrier », puis chaque salon avec ses comptes ;
 - `https://<ton-compte>.github.io/chrismas-calendar/demo/` → **version démo** publique, sans backend.
 
 > La clé anon est faite pour être publique : la sécurité vient des règles côté serveur (étape 2).
@@ -133,21 +136,26 @@ Résultat :
 ## 8. Tester avant le 1er décembre
 
 Les cases s'ouvrent selon la date **du serveur** : **à 7 h du matin, heure de Paris**
-(avant 7 h, c'est encore la case de la veille). Pour simuler un jour :
-**Table Editor** → `app_settings` → colonne `day_override` → mets par ex. `12` → **Save**.
-**Remets-la à `NULL` avant le 1er décembre !**
+(avant 7 h, c'est encore la case de la veille).
 
-**Avant la mise en ligne, repars de zéro** (SQL Editor). C'est important : une case que l'autre a « ouverte »
-pendant tes tests est **figée** (plus modifiable), et un rappel déjà noté au journal ne repartirait pas.
+**Simuler un jour pour UN salon** (les autres ne sont pas touchés) : **Table Editor** → `salons` → la ligne de
+ton salon (colonne `id` = le morceau après `?salon=` dans ton lien de connexion) → colonne `day_override` →
+par ex. `12` → **Save**. Remets `NULL` après. (La colonne `day_override` de `app_settings` existe aussi, mais
+elle change le jour de **tous** les salons : ne l'utilise plus une fois que d'autres couples sont inscrits.)
+
+Pour retrouver un salon par les prénoms :
 ```sql
-update public.app_settings set day_override = null;
-delete from public.progress;            -- d'abord : sinon les cases préparées ouvertes sont figées
-delete from public.prepared_content;
-delete from public.game_state;
-delete from public.reminder_log;
+select id, config->'joueurs'->'alexandre'->>'prenom' as createur, config->'joueurs'->'flavie'->>'prenom' as invite,
+       day_override, created_at
+from public.salons order by created_at desc;
 ```
-Les photos de test se suppriment dans **Storage** → `photos` (ouvre le seau, sélectionne les dossiers, **Delete**).
-Garde tes abonnements aux rappels (`push_subscriptions`) : ils servent le 3 décembre.
+
+**Teste dans un salon de test, puis supprime-le** (étape 11). Une case ouverte pendant les tests est figée et
+un rappel noté au journal ne repartirait pas : le plus simple est de jeter tout le salon de test.
+```sql
+select public.supprimer_salon('<id du salon de test>');   -- salon, données, comptes et appareils
+```
+Les photos de test se suppriment dans **Storage** → `photos` → dossier `<id du salon>` → **Delete**.
 
 ## Réglages modifiables (table `app_settings`)
 
@@ -158,6 +166,9 @@ Garde tes abonnements aux rappels (`push_subscriptions`) : ils servent le 3 déc
 | `day_override` | `NULL` | force « aujourd'hui » pour tester |
 | `reminder_hour` / `reminder_minute` | `20` / `0` | heure du rappel de la veille (étape 10) |
 | `followup_time` | `22:30` | heure de la relance si la case est toujours vide (`NULL` = pas de relance) |
+| `salon_photo_max` | `150` | nombre maximal de photos par salon |
+| `salon_creations_par_heure` | `5` | calendriers qu'un même appareil (adresse IP) peut créer par heure |
+| `salon_creations_par_jour` | `50` | calendriers créés par jour sur tout le site (protège l'offre gratuite) |
 
 Si tu changes `open_hour`, change aussi `OPEN_HOUR` dans `src/backend/config.ts` (utilisé par la démo).
 
@@ -169,7 +180,13 @@ Si tu changes `open_hour`, change aussi `OPEN_HOUR` dans `src/backend/config.ts`
 - **Case préparée figée** : tu peux modifier la case que tu prépares pour l'autre jusqu'au moment où
   il ou elle l'ouvre ; ensuite le serveur refuse toute modification (texte, et aussi remplacement ou
   suppression des photos de cette case).
-- Photos : le site les réduit (2000 px max, JPEG) avant l'envoi ; le serveur refuse au-delà de 10 Mo.
+- Photos : le site les réduit (2000 px max, JPEG) avant l'envoi ; le serveur refuse au-delà de 10 Mo et au-delà
+  de `salon_photo_max` photos par salon. Rangement : `photos/<id du salon>/<place>/…`.
+- **Ménage** : un salon créé mais jamais rejoint (pas d'invité·e, aucune case ouverte, aucune photo) depuis
+  plus de 14 jours peut être supprimé avec ses comptes : `select public.purge_salons_vides();` (renvoie le nombre
+  de salons supprimés). À lancer à la main de temps en temps.
+- **Surveiller l'offre gratuite** : **Project Settings** → **Usage** (base 500 Mo, stockage 1 Go, 50 000 comptes).
+  Nombre de salons : `select count(*) from public.salons;`.
 - Vérifier les règles de sécurité sans Supabase (développeurs) : `bash supabase/tests/run_sql_tests.sh`.
 
 ---
@@ -276,12 +293,12 @@ Paris**, si ta case pour l'autre est encore vide, ton téléphone reçoit :
 **Relance à 22 h 30** si la case est **toujours** vide :
 > 🐧 Toc toc… Pingou insiste (gentiment) — *La case 16 est toujours vide, et Flavie l'ouvre demain à 7 h ! Il te reste ce soir : deux lignes et une photo, et je file me coucher 💤💌*
 
-Un toucher sur la notification ouvre le site sur la case. Pièces en jeu : le site (abonnement de
+(Le prénom est celui de l'autre personne **du salon**.) Un toucher sur la notification ouvre le site sur la case, dans le bon salon. Pièces en jeu : le site (abonnement de
 l'appareil), une **Edge Function** Supabase `rappel-veille` (envoi) et une **tâche planifiée** (`pg_cron`).
 
 ### 10.1 Créer les tables
-**SQL Editor** → colle **tout** [`supabase/migrations/0002_rappels.sql`](../supabase/migrations/0002_rappels.sql) → **Run**,
-puis pareil avec [`supabase/migrations/0003_relance.sql`](../supabase/migrations/0003_relance.sql) (la relance de 22 h 30).
+Déjà fait à l'étape 2 (`0002_rappels.sql` et `0003_relance.sql`). Les rappels marchent pour **tous les salons**,
+avec les prénoms de chaque salon dans le texte.
 
 ### 10.2 Générer les clés VAPID (une fois)
 Dans un terminal, à la racine du dépôt :
@@ -330,7 +347,7 @@ Tu avais déjà lancé ce script avant la relance ? Relance-le simplement : il e
 
 ### 10.7 Tester
 1. Sur ton téléphone, active les rappels sur le site (voir ci-dessous).
-2. Vérifie l'abonnement : **Table Editor** → `push_subscriptions` → une ligne avec `who = alexandre`.
+2. Vérifie l'abonnement : **Table Editor** → `push_subscriptions` → une ligne avec `who = alexandre` et le `salon_id` de ton salon.
 3. **SQL Editor** → simulation à blanc (personne ne reçoit rien, la réponse dit qui serait prévenu) :
    ```sql
    select net.http_post(
@@ -370,40 +387,70 @@ Tu avais déjà lancé ce script avant la relance ? Relance-le simplement : il e
 
 ---
 
-## 11. Checklist de test à deux, sur de vrais téléphones (avant le 30 novembre)
+## 11. Checklist de test, seul avec deux appareils (avant le 30 novembre)
+
+**Flavie ne fait rien** : tu joues les deux rôles avec **deux appareils** (ton téléphone = place 1, le
+créateur ; un 2e téléphone, une tablette ou l'ordinateur en **fenêtre privée** = place 2, l'invité·e), dans un
+**salon de test** que tu supprimes à la fin. Le vrai calendrier avec Flavie se crée tout à la fin (partie H).
 
 À faire dans l'ordre. Coche au fur et à mesure ; au premier ✗, note ce que tu vois (message exact, capture)
 et dis-le à Claude.
 
-**A. Connexion**
-- [ ] Sur ton téléphone : le site en ligne affiche « Qui es-tu ? » avec un mot de passe (si la carte s'ouvre sans rien demander, c'est le mode démo : les secrets GitHub de l'étape 7 manquent).
-- [ ] Tu entres comme **Alexandre** → la carte s'affiche. Flavie fait de même sur le sien.
-- [ ] Tu ne peux pas te connecter en tant que Flavie avec ton mot de passe (et inversement).
-- [ ] Ferme et rouvre le site : tu es toujours connecté·e (case « Rester connecté·e » cochée).
+**A. Création du salon** — appareil 1
+- [ ] Le site en ligne affiche l'accueil « Créer notre calendrier » (si la carte s'ouvre sans rien demander,
+      c'est le mode démo : les secrets GitHub de l'étape 7 manquent).
+- [ ] Crée un calendrier avec des prénoms de test (ex. « Testeur » et « Testeuse »), des couleurs, un mot de
+      passe, **sans** adresse e-mail. → La carte s'affiche, avec le prénom « Testeur » (pas « Alexandre »).
+- [ ] La page « lien à envoyer » donne **deux liens** : le lien de connexion (`…?salon=…`, à garder) et le
+      lien d'invitation (`…?invitation=…`). Copie l'`id` du salon (après `?salon=`) dans tes notes.
+- [ ] **Table Editor** → `salons` : une ligne avec tes prénoms ; `profiles` : une ligne `alexandre` avec ce `salon_id`.
 
-**B. Case préparée (le cœur du secret)** — avec `day_override` à `12` (étape 8)
-- [ ] Alexandre prépare la case 12 pour Flavie : un texte et une photo, puis enregistre.
-- [ ] Alexandre la relit : texte et photo sont là.
-- [ ] Flavie ouvre la case 12 : elle voit le texte **et** la photo.
-- [ ] Alexandre essaie de modifier la case 12 → refus (« Cette case a déjà été ouverte… »).
-- [ ] Remets `day_override` à `4` : Alexandre prépare la case 20 pour Flavie ; Flavie ne peut pas l'ouvrir (cadenas, jour pas arrivé).
-- [ ] Dans **Storage** → `photos` : le seau est marqué **Private** et les photos y sont rangées par dossier `alexandre/` et `flavie/`.
+**B. Lien d'invitation → première connexion** — appareil 2
+- [ ] Envoie-toi le lien d'invitation (message, e-mail…) et ouvre-le sur l'appareil 2 : l'accueil salue
+      « Testeuse » et demande de **choisir un mot de passe**.
+- [ ] Mot de passe trop court (moins de 6 caractères) → refusé avec un message clair.
+- [ ] Choisis un mot de passe → la carte s'affiche, côté « Testeuse ». `profiles` a maintenant 2 lignes pour ce salon.
+- [ ] Rouvre **le même lien d'invitation** (appareil 2, ou une autre fenêtre privée) → « déjà servi » et renvoi
+      vers la connexion : le lien ne sert qu'une fois.
+- [ ] Sur l'appareil 1, le réglage « nouveau lien d'invitation » n'est plus proposé (ou refusé : la place est prise).
 
-**C. Jeux et progression**
-- [ ] Quand Alexandre ouvre une case, Flavie voit sa progression avancer (barre « À égalité avec… »).
-- [ ] Un jeu en direct : vous êtes tous les deux dans la même salle (présence), le départ est synchronisé.
+**C. Connexion par le lien du salon**
+- [ ] Appareil 2 : ferme et rouvre le site → toujours connecté·e, dans le bon salon.
+- [ ] Ouvre le **lien de connexion** dans une nouvelle fenêtre privée : écran de connexion avec les deux prénoms ;
+      mauvais mot de passe → « Mot de passe incorrect » ; mot de passe de Testeur sur la place Testeuse → refusé ;
+      bon mot de passe → la carte.
+- [ ] Modifie un prénom dans les réglages du salon (appareil 1) → il change aussi sur l'appareil 2 (au plus tard
+      en rechargeant).
 
-**D. Rappels (notification de 20 h)**
-- [ ] Chacun active les rappels sur son téléphone (voir « Pour Alexandre et Flavie » à l'étape 10) : **Table Editor** → `push_subscriptions` montre **une ligne par téléphone**, avec le bon `who`.
-- [ ] Simulation à blanc (10.7, point 3) : la réponse liste `alexandre` et/ou `flavie` pour la case 16.
-- [ ] Envoi réel (10.7, point 4) : la notification arrive en quelques secondes ; un toucher ouvre le site **sur la case 16**.
-- [ ] Même chose avec `"kind": "relance"` : le texte « Toc toc… » arrive.
-- [ ] Remplis la case 16 de ce côté, relance la simulation à blanc : cette personne n'est **plus** dans la liste.
+**D. Case préparée (le cœur du secret)** — `day_override` du salon de test à `12` (étape 8)
+- [ ] Appareil 1 prépare la case 12 pour l'autre : un texte et une photo, puis enregistre, et la relit.
+- [ ] Appareil 2 ouvre la case 12 : texte **et** photo.
+- [ ] Appareil 1 essaie de modifier la case 12 → refus (« Cette case a déjà été ouverte… »).
+- [ ] `day_override` à `4` : appareil 1 prépare la case 20 ; appareil 2 ne peut pas l'ouvrir (cadenas).
+- [ ] **Storage** → `photos` : seau **Private**, photos rangées dans `<id du salon>/alexandre/`.
+
+**E. Jeux et progression**
+- [ ] Quand l'appareil 1 ouvre une case, l'appareil 2 voit sa progression avancer.
+- [ ] Un jeu en direct, les deux appareils côte à côte : même salle (présence), départ synchronisé.
+
+**F. Rappels (notification de 20 h)**
+- [ ] Active les rappels sur les deux appareils (voir « Pour Alexandre et Flavie », étape 10) :
+      `push_subscriptions` montre une ligne par appareil, avec le bon `who` et le `salon_id` du salon de test.
+- [ ] Simulation à blanc (10.7, point 3) : la réponse liste ton salon de test pour la case 16.
+- [ ] Envoi réel (10.7, point 4) : la notification arrive, avec le prénom **de test** de l'autre ; un toucher
+      ouvre le site **sur la case 16**. Même chose avec `"kind": "relance"`.
+- [ ] Remplis la case 16 d'un côté, relance la simulation à blanc : cette place n'est **plus** dans la liste.
 - [ ] Planification : `select * from cron.job;` montre 2 lignes (`rappel-veille`, `relance-veille`) actives.
-- [ ] iPhone : le test est fait **depuis l'icône** sur l'écran d'accueil (pas depuis Safari).
+- [ ] iPhone : test fait **depuis l'icône** sur l'écran d'accueil (pas depuis Safari).
 
-**E. Remise à zéro (obligatoire)**
-- [ ] Exécute la remise à zéro de l'étape 8 (y compris `day_override = null`).
-- [ ] `select day_override from public.app_settings;` renvoie `NULL`.
-- [ ] `select count(*) from public.progress;` renvoie `0`.
-- [ ] Photos de test supprimées dans **Storage**.
+**G. Deux salons ne se voient pas** (facultatif, 5 minutes)
+- [ ] Appareil 2, fenêtre privée neuve : crée un 2e salon de test. Il ne voit ni les cases, ni les photos, ni la
+      progression du premier ; le lien de connexion du premier y demande un mot de passe.
+
+**H. Ménage, puis le vrai calendrier**
+- [ ] Supprime les salons de test (étape 8) : `select public.supprimer_salon('<id>');` pour chacun, puis leurs
+      dossiers dans **Storage** → `photos`. Sur tes appareils, déconnecte-toi.
+- [ ] `select count(*) from public.salons;` → `0` ; `select day_override from public.app_settings;` → `NULL`.
+- [ ] Le 30 au soir : crée **votre** calendrier (prénoms Alexandre et Flavie, couleurs, contenu des jeux), garde
+      le lien de connexion, et envoie le lien d'invitation à Flavie. Pour elle : ouvrir le lien, choisir son mot
+      de passe, accepter les notifications (sur iPhone : ajouter d'abord le site à l'écran d'accueil).
