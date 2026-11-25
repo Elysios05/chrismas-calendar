@@ -17,13 +17,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GameContext, GameModule, Who } from "../../core/contracts";
-import { PHOTO_JOUR3, type PhotoContent } from "../../data/games/photo-jour3";
+import { PHOTO_JOUR3, SCHEMA_PHOTO_JOUR3, reparerPhoto } from "../../data/games/photo-jour3";
+import { prenomsDe, lireContenu } from "../shared/contenu";
 import { Cadre, PanneauRegles, Puce } from "../shared/ui";
 import { monterReact } from "../shared/monter";
 import { dessinerVueExemple } from "./exemple";
 import "./photo.css";
 
-const PRENOMS: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 const LETTRES = ["A", "B", "C", "D"];
 const LEGENDE_MAX = 90;
 /** Toutes les combien de secondes on regarde si l'autre a posté, sur l'écran d'attente */
@@ -58,7 +58,8 @@ function Polaroid({ url, legende, auteur, penche, vide }: {
 /* ---------- jeu ---------- */
 
 function DefiPhoto({ ctx, titreJeu }: { ctx: GameContext; titreJeu: string }) {
-  const contenu = (ctx.content as PhotoContent | null) ?? PHOTO_JOUR3;
+  const contenu = useMemo(() => lireContenu(ctx.content, PHOTO_JOUR3, SCHEMA_PHOTO_JOUR3, reparerPhoto), [ctx.content]);
+  const PRENOMS = prenomsDe(ctx);
   const autre = PRENOMS[ctx.partner];
   const titre = `Jour ${ctx.day} · ${titreJeu}`;
   const questionPar = useCallback(

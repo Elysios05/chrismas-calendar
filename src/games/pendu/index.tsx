@@ -10,15 +10,15 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { GameContext, GameModule, Who } from "../../core/contracts";
-import { PENDU_JOUR15, PENDU_VERDICTS, type MotPendu, type PenduContent } from "../../data/games/pendu-jour15";
+import type { GameContext, GameModule } from "../../core/contracts";
+import { PENDU_JOUR15, SCHEMA_PENDU_JOUR15, reparerPendu, PENDU_VERDICTS, type MotPendu, type PenduContent } from "../../data/games/pendu-jour15";
+import { prenomsDe, lireContenu } from "../shared/contenu";
 import { Cadre, PanneauFin, PanneauRegles, Points, Puce } from "../shared/ui";
 import { monterReact } from "../shared/monter";
 import { creerAlea } from "../shared/alea";
 import { enregistrerMeilleur, lireMeilleur } from "../shared/scores";
 import { Bonhomme } from "./Bonhomme";
 
-const PRENOMS: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 const CLAVIER = ["AZERTYUIOP", "QSDFGHJKLM", "WXCVBN"];
 
 /** Lettre « nue » : É → E, ç → C. C'est ce qu'on compare. */
@@ -54,7 +54,8 @@ function tirerMots(contenu: PenduContent): MotPendu[] {
 }
 
 function Pendu({ ctx }: { ctx: GameContext }) {
-  const contenu = (ctx.content as PenduContent | null) ?? PENDU_JOUR15;
+  const contenu = useMemo(() => lireContenu(ctx.content, PENDU_JOUR15, SCHEMA_PENDU_JOUR15, reparerPendu), [ctx.content]);
+  const PRENOMS = prenomsDe(ctx);
   const prenomAutre = PRENOMS[ctx.partner];
 
   const [etape, setEtape] = useState<Etape>("regles");
