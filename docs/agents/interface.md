@@ -58,9 +58,8 @@ réglages du salon, éditeur de contenu générique. ~~Ancien texte :~~
 - `Settings` : la feuille reste montée dessous ; tant que « Notre calendrier » est ouvert, Échap n'est pas pris par
   la feuille (`salonOuvertRef`). `EcranPingou` : bouton ‹ possible sans barre de progression (`libelleRetour`).
 - Maquette : `maquettes.html?vue=reglages-salon` (crée un salon Sam & Camille, Camille pas encore arrivée).
-- **À faire valider par Alexandre** : les 7 nouvelles répliques `PINGOU_SALON.reglages / changerPrenom /
-  changerManteau / reglagesEnregistres / lienGarde / nouveauLien` (question posée deux fois, coupée par des
-  redémarrages de session : la reposer).
+- Répliques `PINGOU_SALON.reglages / changerPrenom / changerManteau / reglagesEnregistres / lienGarde / nouveauLien` :
+  **validées telles quelles par Alexandre (25 nov)**.
 - Captures : `npm run capture` ne sait pas ouvrir `maquettes.html` → petit Playwright jetable dans le brouillon.
 
 **Prochaine tâche** : éditeur de contenu générique (schémas des Jeux dans #84 / PR #94 : `schemasDesJeux`,
