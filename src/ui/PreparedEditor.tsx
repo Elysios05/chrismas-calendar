@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { BackendApi, PreparedResult, Who } from "../core/contracts";
+import { PRENOMS_PAR_DEFAUT, usePrenoms } from "./useSalon";
 import { MascotDialog } from "./Mascot";
 import { PreparedCase } from "./PreparedCase";
 import { PINGOU_CASE, type PingouLine } from "./pingou/lines";
 
-const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
 /** Décidé avec Alexandre : trois photos, pas plus — au-delà les polaroïds ne tiennent plus sur un téléphone. */
 export const MAX_PHOTOS = 3;
@@ -28,7 +28,8 @@ export function PreparedEditor({
   onClose?: () => void;
 }) {
   const partner: Who = me === "alexandre" ? "flavie" : "alexandre";
-  const prenom = PRENOM[partner];
+  const prenoms = usePrenoms(backend);
+  const prenom = prenoms[partner];
   const [etat, setEtat] = useState<Etat>("chargement");
   const [message, setMessage] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
@@ -56,7 +57,7 @@ export function PreparedEditor({
         if (r.status === "ready") {
           setMessage(r.content.message);
           setPhotos(r.content.photos);
-          setLines(PINGOU_CASE.editeurRepris());
+          setLines(PINGOU_CASE.editeurRepris(prenom));
         } else {
           setLines(PINGOU_CASE.editeurVide(day, prenom));
         }
@@ -145,6 +146,7 @@ export function PreparedEditor({
             <PreparedCase
               resultat={apercu(day, me, partner, message, photos)}
               de={me}
+              prenoms={prenoms}
               onPingou={() => { /* Pingou ne commente pas un aperçu */ }}
             />
           </div>
@@ -200,7 +202,7 @@ export function PreparedEditor({
 
           <div className="edit-actions">
             <button className="btn ghost" type="button" disabled={vide} onClick={() => setEtat("apercu")}>
-              Voir ce qu'elle verra
+              Voir ce que {prenom} verra
             </button>
             <button className="btn" type="button" disabled={vide || envoiEnCours} onClick={envoyer}>
               {envoiEnCours ? "On envoie…" : "Mettre sous enveloppe"}
@@ -229,10 +231,13 @@ function apercu(day: number, from: Who, to: Who, message: string, photos: string
 export function RappelVeille({
   jour,
   partenaire,
+  prenoms = PRENOMS_PAR_DEFAUT,
   onOuvrir,
 }: {
   jour: number;
   partenaire: Who;
+  /** Prénoms du salon (`usePrenoms`) ; repli : `PRENOMS_PAR_DEFAUT`. */
+  prenoms?: Record<Who, string>;
   onOuvrir: () => void;
 }) {
   return (
@@ -240,7 +245,7 @@ export function RappelVeille({
       <span className="rappel-point" aria-hidden="true" />
       <p className="rappel-texte">
         Demain c'est la case {jour}, et elle est encore vide.
-        <span> {PRENOM[partenaire]} l'ouvrira à 7 h.</span>
+        <span> {prenoms[partenaire]} l'ouvrira à 7 h.</span>
       </p>
       <button className="btn rappel-btn" type="button" onClick={onOuvrir}>Écrire</button>
     </aside>

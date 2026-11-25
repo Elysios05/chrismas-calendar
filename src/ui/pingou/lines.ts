@@ -29,7 +29,7 @@ export const pick = <T,>(xs: readonly T[]): T => xs[Math.floor(Math.random() * x
 export const PINGOU_LOGIN = {
   /** Écran de connexion, avant de choisir un profil */
   accueil: (): PingouLine[] => [
-    { text: "Bonsoir ! Portier officiel du calendrier, c'est moi. Tu es lequel des deux ?", face: "content" },
+    { text: "Bonsoir ! Portier officiel du calendrier, c'est moi. C'est qui, ce soir ?", face: "content" },
   ],
   /** Profil choisi, champ mot de passe affiché */
   demandeMotDePasse: (prenom: string): PingouLine[] => [
@@ -149,7 +149,7 @@ export const PINGOU_CASE = {
     { text: `Rien dans la boîte… ${autre} a dû être pris de court. Repasse plus tard ?`, face: "triste" },
   ],
   prepareeApres: (): PingouLine[] => [
-    { text: "Je vous laisse tous les deux. Je serai dehors, dans la neige.", face: "content" },
+    { text: "Je vous laisse en tête-à-tête. Je serai dehors, dans la neige.", face: "content" },
   ],
   /** Rappel la veille, côté celui qui prépare */
   rappelVeille: (jour: number, autre: string): PingouLine[] => [
@@ -161,8 +161,8 @@ export const PINGOU_CASE = {
     { text: `La case ${jour}, c'est toi qui l'écris. ${autre} l'ouvrira sans que je puisse rien y changer.`, face: "content" },
   ],
   /** Brouillon déjà enregistré, on revient le modifier */
-  editeurRepris: (): PingouLine[] => [
-    { text: "Tu peux encore tout changer. Jusqu'à ce qu'elle l'ouvre, c'est à toi.", face: "clin" },
+  editeurRepris: (autre: string): PingouLine[] => [
+    { text: `Tu peux encore tout changer. Jusqu'à ce que ${autre} l'ouvre, c'est à toi.`, face: "clin" },
   ],
   /** La case est figée : l'autre l'a déjà lue */
   editeurFige: (autre: string): PingouLine[] => [
@@ -173,7 +173,7 @@ export const PINGOU_CASE = {
   ],
   jour24: (autre: string): PingouLine[] => [
     { text: "Dernière case. Le traîneau est chargé, les rennes s'impatientent.", face: "content" },
-    { text: `Vous avez fait tout ce chemin chacun de votre côté, et vous êtes arrivés ensemble.`, face: "content" },
+    { text: `Vous avez fait tout ce chemin à distance, et vous voilà au bout, ensemble.`, face: "content" },
     { text: `Joyeux Noël, toi et ${autre} 🌟`, face: "content" },
   ],
 } as const;

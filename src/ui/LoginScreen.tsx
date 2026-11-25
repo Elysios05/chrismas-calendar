@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { BackendApi, Who } from "../core/contracts";
+import { usePrenoms } from "./useSalon";
 import { MascotDialog, PenguinPortrait } from "./Mascot";
 import { PINGOU_LOGIN, type PingouLine } from "./pingou/lines";
 
-const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 const COULEUR: Record<Who, string> = { alexandre: "#2f6fd0", flavie: "#d9354b" };
 
 /** Ce qui a fait échouer la connexion : on ne dit « mot de passe » que si c'est vraiment lui (ticket #75). */
@@ -32,6 +32,7 @@ export function classerEchec(e: unknown, enLigne = typeof navigator === "undefin
  * Ne connaît que `BackendApi` — en mode démo le backend accepte n'importe quel mot de passe.
  */
 export function LoginScreen({ backend, onSignedIn }: { backend: BackendApi; onSignedIn?: (who: Who) => void }) {
+  const PRENOM = usePrenoms(backend);
   const [who, setWho] = useState<Who | null>(null);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -100,7 +101,7 @@ export function LoginScreen({ backend, onSignedIn }: { backend: BackendApi; onSi
       <main className="login-card">
         <div className="login-portrait"><PenguinPortrait size={116} expression={erreur ? "surpris" : "content"} /></div>
         <p className="login-kicker">Calendrier de l'Avent</p>
-        <h1 className="login-title">Alexandre &amp; Flavie</h1>
+        <h1 className="login-title">{PRENOM.alexandre} &amp; {PRENOM.flavie}</h1>
 
         <p className="login-question" id="qui">Qui es-tu ?</p>
         <div className="login-who" role="group" aria-labelledby="qui">
@@ -152,7 +153,7 @@ export function LoginScreen({ backend, onSignedIn }: { backend: BackendApi; onSi
 
           <label className="login-rester">
             <input type="checkbox" checked={rester} onChange={(e) => setRester(e.target.checked)} />
-            Rester connecté·e sur cet appareil
+            Se souvenir de moi sur cet appareil
           </label>
 
           <button className="btn login-btn" type="submit" disabled={busy || !password}>

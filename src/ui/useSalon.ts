@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import type { BackendApi, Salon, Who } from "../core/contracts";
+import { PLAYERS } from "../world/actors";
+
+/** Prénoms de repli (sans salon, ou avant son chargement) : `PLAYERS` ne sert plus qu'à ça (docs/salons.md). */
+export const PRENOMS_PAR_DEFAUT: Record<Who, string> = { alexandre: PLAYERS.alexandre.name, flavie: PLAYERS.flavie.name };
 
 /**
  * Salon courant (prénoms, couleurs, contenu des jeux), tenu à jour via `onSalonChange`.
@@ -27,4 +31,9 @@ export function prenomsDuSalon(salon: Salon | null): Record<Who, string> | undef
 /** Contenu personnalisé d'un jour, ou `undefined` → le jeu prend son contenu par défaut. */
 export function contenuDuJour(salon: Salon | null, day: number): unknown {
   return salon?.config.contenu[String(day)] ?? undefined;
+}
+
+/** Prénoms du salon courant, avec repli sur `PRENOMS_PAR_DEFAUT` : pour les écrans qui ont le backend. */
+export function usePrenoms(backend: BackendApi): Record<Who, string> {
+  return prenomsDuSalon(useSalon(backend)) ?? PRENOMS_PAR_DEFAUT;
 }
