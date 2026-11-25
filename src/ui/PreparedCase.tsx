@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import type { PreparedResult, Who } from "../core/contracts";
+import { PRENOMS_PAR_DEFAUT } from "./useSalon";
 import { MascotDialog } from "./Mascot";
 import { PINGOU_CASE, type PingouLine } from "./pingou/lines";
 import { useDialog } from "./useDialog";
 
-const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
 /** Photo en grand : fenêtre modale à part entière (focus piégé, Échap, retour du focus). */
 function Loupe({ src, onClose }: { src: string; onClose: () => void }) {
@@ -35,18 +35,21 @@ type Etape = "enveloppe" | "lettre";
 export function PreparedCase({
   resultat,
   de,
+  prenoms = PRENOMS_PAR_DEFAUT,
   onPingou,
 }: {
   resultat: PreparedResult;
   /** Celui ou celle qui a préparé la case */
   de: Who;
+  /** Prénoms du salon (`usePrenoms`) ; repli : `PRENOMS_PAR_DEFAUT`. */
+  prenoms?: Record<Who, string>;
   /** Pour que la fenêtre parente fasse parler Pingou (sinon la bulle est affichée ici) */
   onPingou?: (lines: PingouLine[]) => void;
 }) {
   const [etape, setEtape] = useState<Etape>("enveloppe");
   const [agrandie, setAgrandie] = useState<string | null>(null);
   const [lines, setLines] = useState<PingouLine[]>([]);
-  const prenom = PRENOM[de];
+  const prenom = prenoms[de];
 
   const dire = (l: PingouLine[]) => (onPingou ? onPingou(l) : setLines(l));
 
