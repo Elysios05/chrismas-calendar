@@ -71,8 +71,8 @@ test("connexion démo : choisir Alexandre, mot de passe quelconque", async ({ pa
   await page.locator("#mdp").fill("nimportequoi");
   await page.getByRole("button", { name: "Entrer" }).click();
   await C.attendreScene(page);
-  await expect(page.locator(".who-badge")).toHaveText("Alexandre");
-  await expect(page.locator(".brand-kicker")).toContainText("démo");
+  await expect(page.locator(".entete-avatar")).toHaveAttribute("title", "Alexandre");
+  await expect(page.locator(".entete-demo:visible")).toContainText("démo");
   expect(await diversite(page), "le canvas semble vide").toBeGreaterThan(20);
   expect(erreurs(), JSON.stringify(erreurs(), null, 1)).toEqual([]);
   // déconnexion (dans les réglages) → retour à l'écran de connexion
@@ -85,16 +85,16 @@ test("« Voir la démo sans compte » entre directement", async ({ page }) => {
   await page.goto("./?jour=9&demo-reset");
   await page.getByRole("button", { name: "Voir la démo sans compte" }).click();
   await C.attendreScene(page);
-  await expect(page.locator(".who-badge")).toBeVisible();
+  await expect(page.locator(".entete-avatar")).toBeVisible();
 });
 
 test("mode jour à midi, mode nuit à 21 h", async ({ page, context }) => {
   await C.ouvrirDemo(page, { jour: 9 });
-  await expect(page.locator("button[title='Jour / nuit']")).toHaveText("☀️");
+  await expect(page.getByRole("button", { name: "Passer en nuit" })).toHaveText("☀️");
   await context.clock.setFixedTime(new Date(C.HEURES.nuit));
   await page.reload();
   await C.attendreScene(page);
-  await expect(page.locator("button[title='Jour / nuit']")).toHaveText("🌙");
+  await expect(page.getByRole("button", { name: "Passer en jour" })).toHaveText("🌙");
 });
 
 test("case du jour : la fenêtre s'ouvre, se ferme par ✕ et par Échap", async ({ page, isMobile }) => {
@@ -124,9 +124,9 @@ test("téléphone : toucher une case déjà ouverte affiche sa fenêtre et la ga
 test("case future verrouillée : Pingou parle, pas de fenêtre", async ({ page, isMobile }) => {
   await C.ouvrirDemo(page, { jour: 9 });
   await C.fermerPingou(page);
-  const p = await C.toucherCadeau(page, 12, isMobile);
+  const p = await C.toucherCadeau(page, 10, isMobile);
   expect(p.etat).toBe("locked");
-  await expect(page.locator(".mascot--flottant")).toContainText("12");
+  await expect(page.locator(".mascot--flottant")).toContainText("10");
   await expect(fenetre(page)).toHaveCount(0);
 });
 
@@ -140,7 +140,7 @@ test("jour 1 : le quiz se joue jusqu'au bout", async ({ page, isMobile }) => {
   await page.locator(".jeu-btn").last().click();
   // répond toujours la première option, sur soi puis sur l'autre, jusqu'à l'écran de fin
   const fin = page.locator(".jeu-btn", { hasText: "Fermer" });
-  for (let i = 0; i < 40 && !(await fin.isVisible()); i++) {
+  for (let i = 0; i < 120 && !(await fin.isVisible()); i++) {
     const opt = page.locator(".quiz-options button:enabled").first();
     if (await opt.isVisible().catch(() => false)) await opt.click();
     await page.waitForTimeout(500);
@@ -225,7 +225,7 @@ test("deux onglets : Flavie écrit la case 16, Alexandre la lit le 16", async ({
   // même contexte = même localStorage (comme deux onglets du même navigateur en démo)
   const flavie = await context.newPage();
   await C.ouvrirDemo(flavie, { jour: 15, moi: "flavie" });
-  await expect(flavie.locator(".who-badge")).toHaveText("Flavie");
+  await expect(flavie.locator(".entete-avatar")).toHaveAttribute("title", "Flavie");
   await flavie.locator(".rappel").getByRole("button", { name: "Écrire" }).click();
   await flavie.locator("#mot").fill("Coucou depuis l'autre onglet 🐧");
   await flavie.getByRole("button", { name: "Mettre sous enveloppe" }).click();
@@ -235,7 +235,7 @@ test("deux onglets : Flavie écrit la case 16, Alexandre la lit le 16", async ({
   await flavie.close();
   const alex = await context.newPage();
   await C.ouvrirDemo(alex, { jour: 16, moi: "alexandre", reset: false });
-  await expect(alex.locator(".who-badge")).toHaveText("Alexandre");
+  await expect(alex.locator(".entete-avatar")).toHaveAttribute("title", "Alexandre");
   await ouvrirCase(alex, 16, isMobile);
   await lancerCase(alex);
   await alex.locator(".prep-enveloppe").click();

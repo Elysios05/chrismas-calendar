@@ -29,3 +29,8 @@
 - Constat : la fermeture de la bulle de Pingou ne marche pas avec le rendu coupé (elle doit se faire rendu actif, ~12 s) ; l'ouverture d'une case est en revanche bien plus rapide rendu coupé.
 - Durées : capture simple ~27 s, avec `--case` ~50 s par appareil.
 
+
+### 25 novembre 2026 (branche `qualite/a11y-e2e-reprise`)
+- Reprise après interruption. `origin/main` fusionnée (salons #85, jeux 5-6 #83, en-tête #82, télésiège #80) sans conflit. `npm run capture` réparé (suit `.entete`) ; serveur de capture propre à chaque copie de travail (port).
+- e2e : 48 réussis, 0 échec, 18 ignorés. Parcours jeux : jours 2, 3, 7, 11, 15, 17. État des lieux : `docs/qa/etat-des-lieux-2026-11-25.md`.
+- Prochaine étape : parcours des jours 5 et 6 (direct à deux pages) et du test deux onglets (#56) ; axe-core (#34) couvert.
