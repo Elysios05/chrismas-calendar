@@ -52,7 +52,7 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
   « C'est parti »** (dans une ref) : le jeu monté ne change pas de contenu en cours de partie si la config bouge ;
 - textes de `DayWindow` sans prénom en dur et sans accord : « En son absence, tu joues ton tour et la réponse viendra
   plus tard. » ; « Prêt ? » → « C'est quand tu veux ! Cette case se rejoue autant de fois que tu le souhaites. »
-  (choix technique imposé par la règle du point 7 ; formulation à faire valider par Alexandre, signalé dans la PR).
+  (règle du point 7) : **formulations validées par Alexandre le 25 nov**.
   Repli sans salon (faux backend d'atelier) : « ton binôme ».
 
 **Captures** : `npm run capture` toujours cassé sur `main` (`.hud`), et modifier `tests/qa/commun.mjs` en local est
