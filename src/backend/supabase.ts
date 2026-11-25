@@ -4,12 +4,14 @@
  * Chargé en import dynamique (voir index.ts) pour ne pas alourdir le mode démo.
  */
 import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
-import type { BackendApi, DayNumber, PreparedContent, PreparedResult, Progress, RealtimeRoom, ReminderStatus, Who } from "../core/contracts";
+import type {
+  BackendApi, DayNumber, PreparedContent, PreparedResult, Progress, RealtimeRoom, ReminderStatus, Salon, SalonApi, Who,
+} from "../core/contracts";
 import { browserStatus, currentSubscription, subscribe, subscriptionKeys } from "./push";
 import type { PasswordRecovery } from "./index";
 import {
   FROZEN_MESSAGE, PHOTO_MAX_DIMENSION, emailOf, PREPARED_DAYS, READ_URL_TTL_SECONDS, UPLOAD_URL_TTL_SECONDS,
-  checkPhotoSize, compressImage, isWho, partnerOf,
+  SALON_DEMO_CONFIG, checkPhotoSize, compressImage, isWho, lienSalonUrl, partnerOf, salonError,
 } from "./config";
 
 const BUCKET = "photos";
@@ -289,6 +291,29 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
     await this.saveSubscription(res);
     return "active";
   }
+
+  /*
+   * ----- salons : PROVISOIRE (lot 1) -----
+   * Tant que le schéma multi-salons n'est pas en place (lot 2), le Supabase ne contient qu'un salon :
+   * celui d'Alexandre et Flavie, avec la configuration par défaut. Création et invitations : INDISPONIBLE.
+   */
+  private principal(): Salon {
+    return { id: "principal", config: structuredClone(SALON_DEMO_CONFIG), inviteArrive: true, demo: false, createdAt: "2026-11-17T00:00:00.000Z" };
+  }
+  readonly salons: SalonApi = {
+    getSalon: async () => this.principal(),
+    onSalonChange: () => () => { /* rien ne change tant qu'il n'y a qu'un salon */ },
+    creerSalon: async () => { throw salonError("INDISPONIBLE"); },
+    modifierSalon: async () => { throw salonError("INDISPONIBLE"); },
+    lienConnexion: async () => lienSalonUrl("principal"),
+    lienInvitation: async () => { throw salonError("INDISPONIBLE"); },
+    lireInvitation: async () => ({ statut: "invalide" }),
+    accepterInvitation: async () => { throw salonError("INDISPONIBLE"); },
+    ouvrirSalon: async (id) => {
+      if (id !== "principal") throw salonError("SALON_INCONNU");
+      return this.principal();
+    },
+  };
 }
 
 /* ---------- salle temps réel : Realtime broadcast + presence (canal privé) ---------- */
