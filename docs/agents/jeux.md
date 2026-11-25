@@ -12,6 +12,14 @@
 - **Synchronisé** : biscuits + minuteur partagé (14), film lancé ensemble (23).
 
 ## À faire (par priorité) — mis à jour par le chef le 24 nov
+**🆕 Contenu d'Alexandre & Flavie séparé du contenu générique (décision d'Alexandre, 25 nov — PRIORITÉ 1)** :
+- Copier **tout** le contenu actuel de `src/data/games/` (questions, mots, rébus, LJUBLJANA, « à vous deux »…) dans
+  `src/data/salons/alexandre-flavie.ts` : un objet `CONTENU_ALEXANDRE_FLAVIE` indexé par jour (`{ "1": …, "7": … }`),
+  au format exact de `salon.config.contenu` (chaque entrée valide pour le `SCHEMA_…` du jour). **Rien ne doit être perdu.**
+- Puis rendre le contenu par défaut de chaque jeu **générique** (n'importe quel couple, aucun nom de lieu ou souvenir à eux).
+- Le chef s'occupe de mettre `CONTENU_ALEXANDRE_FLAVIE` dans leur vrai salon (Supabase) et dans le salon de démo.
+- Chaque nouveau jeu : contenu générique par défaut + leur contenu perso dans ce même fichier.
+
 Méthode : prends le **premier point non fait** de cette liste, une branche et une PR par point, `npm run build`,
 `npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
 **avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
