@@ -5,6 +5,7 @@
  *         editeur · editeur-vide · rappel · course · reglages · final · pingou
  *         hud-a · hud-b · hud-c (pistes de l'en-tête, #51 ; &ouvert=1, &nuit=1)
  *         entete (le vrai <Hud />, piste B ; &nuit=1, &egalite=1, &j24=1)
+ *         salon-a · salon-b · salon-c (pistes des salons, #84 ; &ecran=accueil|assistant|lien|invitation)
  */
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -20,6 +21,7 @@ import type { Expression } from "../pingou/lines";
 import { DemoBackend } from "../../backend";
 import { HudMaquette } from "./hudMaquettes";
 import { Hud } from "../Hud";
+import { SalonMaquette, type Ecran } from "./salonMaquettes";
 import "../../index.css";
 
 // le vrai mode démo, celui qu'utilise l'application publique : plus de faux backend d'atelier.
@@ -72,6 +74,10 @@ function Maquettes() {
     return <HudMaquette piste={vue.slice(4) as "a" | "b" | "c"} />;
   }
 
+  if (vue.startsWith("salon-")) {
+    const ecran = (new URLSearchParams(location.search).get("ecran") ?? "accueil") as Ecran;
+    return <SalonMaquette piste={vue.slice(6)} ecran={ecran} />;
+  }
   if (vue === "entete") {
     const q = new URLSearchParams(location.search);
     const nuit = q.has("nuit");
