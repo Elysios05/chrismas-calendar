@@ -7,9 +7,11 @@ insert into auth.users values
   ('00000000-0000-0000-0000-00000000000a', 'alexandre@example.com'),
   ('00000000-0000-0000-0000-00000000000f', 'flavie@example.com'),
   ('00000000-0000-0000-0000-0000000000ee', 'intrus@example.com');
-insert into public.profiles values
-  ('00000000-0000-0000-0000-00000000000a', 'alexandre'),
-  ('00000000-0000-0000-0000-00000000000f', 'flavie');
+-- (0004 : chaque profil appartient à un salon ; ici le salon principal, photos aux anciens chemins <place>/…)
+select public.ensure_legacy_salon();
+insert into public.profiles (user_id, who, salon_id) values
+  ('00000000-0000-0000-0000-00000000000a', 'alexandre', public.legacy_salon_id()),
+  ('00000000-0000-0000-0000-00000000000f', 'flavie', public.legacy_salon_id());
 
 create schema t;
 create function t.ok(cond boolean, msg text) returns text language plpgsql as $$
@@ -93,7 +95,7 @@ set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000f', false);
 do $$ begin
   insert into public.prepared_content (day, from_who, to_who, message) values (8, 'flavie', 'alexandre', 'trop tard')
-    on conflict (day, from_who) do update set message = excluded.message;
+    on conflict (salon_id, day, from_who) do update set message = excluded.message;
   raise exception 'ÉCHEC : case 8 modifiée après ouverture';
 exception when raise_exception then
   if sqlerrm not like 'CASE_FIGEE%' then raise; end if;
@@ -116,7 +118,7 @@ select t.ok((select count(*) from storage.objects where name = 'flavie/tmp.jpg')
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000f', false);
 insert into public.prepared_content (day, from_who, to_who, message) values (12, 'flavie', 'alexandre', 'case 12 v3')
-  on conflict (day, from_who) do update set message = excluded.message;
+  on conflict (salon_id, day, from_who) do update set message = excluded.message;
 select t.ok((select message from public.prepared_content where day = 12) = 'case 12 v3', 'case non ouverte toujours modifiable');
 reset role;
 
@@ -135,9 +137,9 @@ select t.ok((select count(*) from public.prepared_content) = 0, 'intrus : aucune
 select t.ok((select count(*) from public.progress) = 0, 'intrus : aucune progression');
 select t.ok((select count(*) from public.game_state) = 0, 'intrus : aucun état de jeu');
 select t.ok((select count(*) from storage.objects) = 0, 'intrus : aucune photo');
-select set_config('realtime.topic', 'room:jour-5', false);
+select set_config('realtime.topic', 'room:00000000-0000-0000-0000-000000000001:jour-5', false);
 reset role;
-insert into realtime.messages (topic, payload) values ('room:jour-5', '{}');
+insert into realtime.messages (topic, payload) values ('room:00000000-0000-0000-0000-000000000001:jour-5', '{}');
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000ee', false);
 select t.ok((select count(*) from realtime.messages) = 0, 'intrus : salle temps réel fermée');

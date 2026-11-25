@@ -48,7 +48,7 @@ select t.ok((select count(*) from public.reminder_targets(12)) = 2, 'case 12 : t
 select t.ok((select array_agg(distinct who order by who) from public.reminder_targets(16)) = array['alexandre', 'flavie'],
             'case 16 : un message vide compte comme une case vide');
 select t.ok((select count(*) from public.reminder_targets(5)) = 0, 'jour 5 : pas une case préparée');
-insert into public.reminder_log (day, who) values (16, 'alexandre');
+insert into public.reminder_log (salon_id, day, who) values (public.legacy_salon_id(), 16, 'alexandre');
 select t.ok((select array_agg(distinct who) from public.reminder_targets(16)) = array['flavie'], 'pas de second rappel le même soir');
 select t.ok((select count(distinct who) from public.reminder_targets(16, true)) = 2, 'force : on renvoie quand même');
 select t.ok((select count(*) from public.reminder_targets()) = 0, 'hors décembre / hors heure : personne');
@@ -73,7 +73,7 @@ set role service_role;
 select t.ok((select array_agg(distinct who order by who) from public.reminder_targets(16, false, 'relance')) = array['alexandre', 'flavie'],
             'relance : journal distinct du premier rappel');
 select t.ok((select bool_and(kind = 'relance') from public.reminder_targets(16, false, 'relance')), 'les lignes portent kind = relance');
-insert into public.reminder_log (day, who, kind) values (16, 'flavie', 'relance');
+insert into public.reminder_log (salon_id, day, who, kind) values (public.legacy_salon_id(), 16, 'flavie', 'relance');
 select t.ok((select array_agg(distinct who) from public.reminder_targets(16, false, 'relance')) = array['alexandre'], 'pas de seconde relance');
 select t.ok((select array_agg(distinct who) from public.reminder_targets(16, false, 'rappel')) = array['flavie'], 'le rappel de Flavie reste dû');
 reset role;
