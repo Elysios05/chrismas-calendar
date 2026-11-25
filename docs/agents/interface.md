@@ -55,7 +55,7 @@ réglages du salon, éditeur de contenu générique. ~~Ancien texte :~~
   nuanciers, champ mot de passe), `CreerSalon.tsx` (accueil → ton prénom → ton manteau (+ « plus de choix » :
   bonnet, pompon, cheveux, longueur) → son prénom → son manteau → contenu « plus tard » → mot de passe →
   lien à copier / partager), `Invitation.tsx` (`?invitation=` : valide / déjà utilisée / invalide), `salons.css`.
-  Répliques dans `pingou/lines.ts` → `PINGOU_SALON` (textes neutres, à faire valider par Alexandre sur la PR).
+  Répliques dans `pingou/lines.ts` → `PINGOU_SALON` : **validées telles quelles par Alexandre (25 nov)**.
 - Maquettes vivantes : `maquettes.html?vue=creer` et `?vue=invitation` (crée un salon Sam & Camille dans la démo).
 - **Branchement dans `App.tsx` = chef** (demandé dans #84) : `CreerSalon` quand `getSalon()` renvoie null,
   `Invitation` quand l'adresse contient `invitation`.
@@ -192,6 +192,8 @@ ouverte n'est pour l'Interface.
 - Connexion (#75) : répliques « réseau gelé » et « la porte coince de notre côté » validées (24 nov).
 - Règles d'écriture des répliques : une phrase courte par bulle, 150 caractères au plus, tutoiement,
   un emoji au maximum et jamais au milieu d'une phrase. Tout est dans `pingou/lines.ts`.
+
+- Salons : **piste B « Pingou »** (une question par écran) et ses répliques `PINGOU_SALON` validées (25 nov).
 
 ### ⚠️ Pièges découverts (ils coûtent cher à retrouver)
 - **La bulle de Pingou ne doit jamais changer de taille.** Elle s'écrivait lettre par lettre ;
