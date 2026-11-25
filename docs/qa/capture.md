@@ -33,3 +33,9 @@ Sortie : chemins des images, puis les erreurs console (hors avertissements). Cod
 - Le rendu PixiJS est coupé pendant les attentes (sinon ~1 image/s) puis l'image est figée pour la photo ;
   la caméra est amenée à sa position finale sans attendre son lissage.
 - Pour des séries (plusieurs jours, jour/nuit, planches contact) : `npm run qa:captures`.
+
+## Serveur et port 4180
+La commande sert le `dist/` de la copie de travail où elle tourne. Le serveur répond avec l'en-tête `x-cc-dist` (chemin du `dist/` servi) :
+si le port 4180 est déjà occupé par le serveur d'une autre copie (ou par autre chose), la capture ne le réutilise plus
+(elle photographiait alors la mauvaise version) : elle prend un port libre et l'annonce (`› le port 4180 sert un autre dossier…`).
+Le serveur de Playwright (`npm run qa:e2e`) garde `reuseExistingServer` : avant une série e2e, vérifier qu'aucune autre copie n'occupe le port 4180 (ou définir `QA_PORT`).

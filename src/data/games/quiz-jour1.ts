@@ -1,6 +1,9 @@
 /**
  * Jour 1 — Quiz « Est-ce que tu me connais ? »
  *
+ * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
+ * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ *
  * ALEXANDRE : c'est ici que tu remplaces tout. Rien d'autre à toucher.
  *  - `surMoi`    : la question telle qu'on te la pose à toi (« … toi ? »)
  *  - `surAutre`  : la même question posée sur l'autre, {autre} est remplacé par son prénom
@@ -9,6 +12,7 @@
  *                  Elle sert en mode démo et tant que l'autre n'a pas encore rempli ses réponses.
  */
 
+import type { SchemaContenu } from "../../games/shared/contenu";
 import type { Who } from "../../core/contracts";
 
 export type QuizQuestion = {
@@ -118,5 +122,40 @@ export const QUIZ_VERDICTS: { min: number; ligne: string }[] = [
   { min: 8, ligne: "Très fort ! Il reste juste un ou deux petits secrets… c'est mieux comme ça 😌" },
   { min: 6, ligne: "Bien joué ! Vous vous connaissez bien, mais il y a de la marge pour les 23 jours qui viennent 😄" },
   { min: 4, ligne: "Pas mal… mais là, il va falloir s'appeler un peu plus souvent 📞" },
-  { min: 0, ligne: "Aïe. Bon. On va dire que c'est la distance, hein ? 🐧" },
+  { min: 0, ligne: "Aïe. Bon. On va dire que c'est la faute de Noël, hein ? 🐧" },
 ];
+
+/** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */
+export const SCHEMA_QUIZ_JOUR1: SchemaContenu = {
+  jour: 1,
+  titre: "Jour 1 — Est-ce que tu me connais ?",
+  intro: "Chacun répond sur soi, puis devine les réponses de l'autre. Écris chaque question deux fois : posée à soi, puis posée sur l'autre ({autre} devient son prénom).",
+  champs: [
+    { type: "nombre", cle: "nombre", label: "Nombre de questions posées", aide: "Les premières de la liste.", min: 3, max: 20 },
+    {
+      type: "liste", cle: "questions", label: "Questions", libelleElement: "Question", min: 3, max: 30,
+      modele: { id: "", emoji: "❓", exemple: { alexandre: 0, flavie: 1 } },
+      champs: [
+        { type: "texte", cle: "emoji", label: "Emoji", max: 8, exemple: "🎬" },
+        { type: "texte", cle: "surMoi", label: "Posée à soi", max: 120, exemple: "Le film de Noël que tu remets chaque année, c'est…" },
+        { type: "texte", cle: "surAutre", label: "Posée sur l'autre", aide: "{autre} est remplacé par le prénom.", max: 120, exemple: "Le film de Noël que {autre} remet chaque année, c'est…" },
+        { type: "textes", cle: "options", label: "Réponses possibles", aide: "4, c'est l'idéal pour la mise en page.", min: 2, max: 4, maxLongueur: 50, exemple: "Le Grinch" },
+      ],
+    },
+  ],
+};
+
+/** Contenu du salon (ou défaut) prêt à jouer */
+export function reparerQuiz(c: QuizContent): QuizContent {
+  return {
+    ...c,
+    // les réponses d'exemple (mode démo) restent dans les options, même si on en a retiré
+    questions: c.questions.map((q) => ({
+      ...q,
+      exemple: {
+        alexandre: Math.min(q.exemple?.alexandre ?? 0, q.options.length - 1),
+        flavie: Math.min(q.exemple?.flavie ?? 1, q.options.length - 1),
+      },
+    })),
+  };
+}

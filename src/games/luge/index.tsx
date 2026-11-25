@@ -5,19 +5,20 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { GameContext, GameModule, Who } from "../../core/contracts";
+import type { GameContext, GameModule } from "../../core/contracts";
 import { LUGE_JOUR2, LUGE_LIGNES, type LugeContent } from "../../data/games/luge-jour2";
+import { prenomsDe } from "../shared/contenu";
 import { Cadre, Flash, PanneauFin, PanneauRegles, Progres, Puce, Vies } from "../shared/ui";
 import { monterReact } from "../shared/monter";
 import { enregistrerMeilleur, lireMeilleur } from "../shared/scores";
 import { demarrerLuge, type EtatHud, type FinPartie } from "./moteur";
 
-const PRENOMS: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
 type Etape = "regles" | "partie" | "fin";
 
 function Luge({ ctx }: { ctx: GameContext }) {
-  const contenu = (ctx.content as LugeContent | null) ?? LUGE_JOUR2;
+  const contenu = (ctx.content as LugeContent | null) ?? LUGE_JOUR2; // rien à personnaliser dans le salon
+  const PRENOMS = prenomsDe(ctx);
   const prenomAutre = PRENOMS[ctx.partner];
 
   const [etape, setEtape] = useState<Etape>("regles");

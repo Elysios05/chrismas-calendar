@@ -11,6 +11,8 @@ import { DemoBackend } from "../../backend";
 import type { GameResult, SoundApi, Who } from "../../core/contracts";
 import { joursAvecJeu } from "../registry";
 import { FenetreJeu } from "../lanceur";
+import { CONTENU_ABIME, CONTENU_PERSO, PRENOMS_TEST } from "./contenu-test";
+import { CONTENU_ALEXANDRE_FLAVIE } from "../../data/salons/alexandre-flavie";
 import "../../index.css";
 import "./atelier.css";
 
@@ -25,8 +27,15 @@ function viderDemo() {
 }
 
 function Atelier() {
-  const [jour, setJour] = useState(1);
+  const [jour, setJour] = useState(() => Number(new URLSearchParams(location.search).get("jour")) || 1);
   const [qui, setQui] = useState<Who>("alexandre");
+  /** Salon simulé : contenu par défaut (générique), celui d'Alexandre et Flavie, personnalisé (prénoms Camille et Sam) ou abîmé */
+  const [salon, setSalon] = useState<"defaut" | "af" | "perso" | "abime">(() => {
+    const s = new URLSearchParams(location.search).get("salon");
+    return s === "af" || s === "perso" || s === "abime" ? s : "defaut";
+  });
+  const prenoms = salon === "perso" ? PRENOMS_TEST : { alexandre: "Alexandre", flavie: "Flavie" };
+  const contenu = salon === "af" ? CONTENU_ALEXANDRE_FLAVIE[String(jour)] : salon === "perso" ? CONTENU_PERSO[jour] : salon === "abime" ? CONTENU_ABIME[jour] : undefined;
   const [pingou, setPingou] = useState<string[]>([]);
   const [resultat, setResultat] = useState<GameResult | null>(null);
   const [cle, setCle] = useState(0);
@@ -58,7 +67,11 @@ function Atelier() {
         ))}
         <span>Joueur</span>
         {(["alexandre", "flavie"] as Who[]).map((w) => (
-          <button key={w} className={w === qui ? "on" : ""} onClick={() => relancer(() => setQui(w))}>{w === "alexandre" ? "Alexandre" : "Flavie"}</button>
+          <button key={w} className={w === qui ? "on" : ""} onClick={() => relancer(() => setQui(w))}>{prenoms[w]}</button>
+        ))}
+        <span>Salon</span>
+        {(["defaut", "af", "perso", "abime"] as const).map((x) => (
+          <button key={x} className={x === salon ? "on" : ""} onClick={() => relancer(() => setSalon(x))}>{x === "defaut" ? "défaut" : x === "af" ? "A & F" : x === "perso" ? "perso" : "abîmé"}</button>
         ))}
         <button onClick={() => relancer(() => setCle((c) => c + 1))}>Relancer</button>
         <button onClick={() => relancer(() => { viderDemo(); setCle((c) => c + 1); })}>Effacer les scores</button>
@@ -68,12 +81,14 @@ function Atelier() {
         <div className="atelier-jeu">
           {ouvert && (
             <FenetreJeu
-              key={`${jour}-${qui}-${cle}`}
+              key={`${jour}-${qui}-${cle}-${salon}`}
               jour={jour}
               moi={qui}
               backend={backend}
               sound={sonMuet}
               say={setPingou}
+              contenu={contenu}
+              prenoms={prenoms}
               onTermine={setResultat}
               onFermer={() => setOuvert(false)}
             />

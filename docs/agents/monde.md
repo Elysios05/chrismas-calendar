@@ -17,7 +17,7 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 
 1. ~~**#11** et **#42**~~ : faits le 24 nov (télésiège, lutin au chariot, emballeurs) — PR #80, issues commentées.
 2. ~~**#23**~~ : fait le 25 nov (bascule jour/nuit reconstruite en arrière-plan) — PR à fusionner.
-3. **#14** : ne charger que le monde où l'on se trouve.
+3. ~~**#14**~~ : fait le 25 nov (monde dessiné par lots autour de l'écran) — PR à fusionner.
 4. **#12** : courte présentation à l'arrivée dans un nouveau monde.
 5. **#10** : neige au gyroscope, lumière des maisons, halo sur le joueur.
 6. **#61** : instantané du décor autour d'une case (pour le PDF des souvenirs).
@@ -356,3 +356,44 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     atteinte »), et le bouton s'appelle « Passer en nuit/jour » (plus « Jour / nuit »). Mes captures de
     vérification sont donc faites avec mon script de mesure.
   - Prochaine étape : **Salons** dès l'annonce du contrat `SalonApi` dans #84, sinon **#14**.
+
+- 25 nov — Salons (#84, en tête du brief), branche `claude/intelligent-ride-qdbkzh` (PR #91 fusionnée entre-temps :
+  `main` refusionné dans la branche), **PR #93** :
+  - **Rien d'autre à faire dans `src/world/`** : aucun prénom n'y est affiché (ni panneau, ni Pingou — les bulles
+    sont à l'Interface). `PLAYERS.name` n'est lu que par `App.tsx` (lignes 157 et 232), à remplacer par
+    `salon.config.joueurs[who].prenom` côté chef / Interface.
+  - **Couleurs** : `scene.setJoueurs(joueurs | null)` (null = `PLAYERS`). Les deux personnages sont redessinés
+    sur place (`Person.habiller`), sans reconstruire la scène ; une reconstruction en cours les reprend aussi,
+    et les suivantes lisent `scene.apparence`. Type `CouleursJoueur` du contrat utilisé tel quel.
+  - Revers du bonnet : avant, bleu foncé en dur pour tout bonnet non blanc → maintenant un ton plus clair (bonnet
+    foncé) ou plus sombre (bonnet clair) ; les deux bonnets par défaut gardent exactement leur teinte.
+    L'écharpe reste liée à la place (dorée / blanche).
+  - **À brancher par le chef dans `App.tsx`** (demandé dans #84) :
+    `backend.salons?.getSalon().then((s) => scene.setJoueurs(s?.config.joueurs ?? null))` puis
+    `backend.salons?.onSalonChange((s) => scene.setJoueurs(s?.config.joueurs ?? null))` (désabonnement au démontage).
+  - Crochets de test : `__calendrier.joueurs(j)` et `__calendrier.personnageEcran(who)` → `{ x, y, couleurs }`.
+  - Vérifié (script perso, `npm run capture` toujours cassé, #90) : jour 3 mobile, couleurs changées en direct,
+    puis bascule nuit : les couleurs du salon sont gardées.
+  - Prochaine étape : **#14** (ne charger que le monde où l'on se trouve), sauf retour du chef.
+
+- 25 nov — #14 (ne charger que le monde où l'on se trouve), branche `claude/intelligent-ride-qdbkzh` (PR #93 fusionnée,
+  `main` refusionné dans la branche) :
+  - **Constat** : la carte entière ne fait que ~3,6 écrans de haut sur téléphone (échelle 0,7) ; le rendu ne
+    dessinait déjà que les tranches à l'écran, mais **tout était construit** au démarrage et à chaque bascule jour/nuit.
+  - **Solution** (décision technique) : le monde est découpé une fois en **218 lots** (`decouperLots` : bandes de sol
+    de 10 diagonales, tronçons de route, tranches de décor d'une unité de profondeur) dont on connaît la place sans
+    les dessiner (sol exact, décors estimés large par `HAUTEUR_DECOR`, puis mesurés au premier dessin). `diffuser()`
+    à chaque image : ce qui entre à l'écran est dessiné tout de suite, un **demi-écran d'avance** est préparé en
+    arrière-plan (pompe `MessageChannel`, prioritaire sur la reconstruction), au-delà d'**un écran** on détruit.
+    Rien n'est dessiné derrière le banc de nuages. La bascule jour/nuit ne redessine que les lots chargés.
+    Les animations (roue, fumée, tapis…) vivent avec leur lot. Habitants et cadeaux : inchangés (déjà légers et
+    figés hors écran).
+  - **Mesure** (`perf.mjs` copié et corrigé dans mon brouillon, téléphone simulé, SwiftShader) : tas JS
+    243 → 158 Mo (CPU ×4) et 190 → 162 Mo (CPU ×1) ; scène prête 8,6 → 6,0 s ; JS par image 63 → 30 ms (CPU ×4) ;
+    plus longue tâche pendant le défilement 2,2 → 0,9 s (mais plus de petites tâches longues : lots dessinés
+    à l'entrée d'écran quand l'appareil est trop lent pour les préparer).
+  - Corrigé en route : les jouets du tapis roulant attendaient à l'origine du monde avant leur première image.
+  - Crochet de test : `__calendrier.lots()` → `{ total, dessines, enAttente }`. En dev, la console signale un
+    décor plus haut que l'estimation (« [monde] lot … plus grand que prévu »).
+  - `npm run capture` remarche sur `main` (#90 réglé).
+  - Prochaine étape : **#12** (présentation à l'arrivée dans un nouveau monde) — question de goût, options à montrer.

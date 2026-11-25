@@ -1,6 +1,9 @@
 /**
  * Jour 17 — Mots croisés de votre histoire.
  *
+ * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
+ * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ *
  * ALEXANDRE : la grille n'est PAS dessinée à la main. Le code la construit à partir de cette liste,
  * en cherchant les croisements. Tu peux donc remplacer les mots sans rien casser.
  *  - `mot`        : un seul mot, sans espace ni tiret. Les accents sont ignorés dans la grille
@@ -12,6 +15,7 @@
  * et des mots de 4 à 9 lettres se croisent beaucoup mieux que des mots très longs ou très courts.
  */
 
+import type { SchemaContenu } from "../../games/shared/contenu";
 export type MotCroise = { mot: string; definition: string; perso?: boolean };
 
 export type MotsCroisesContent = {
@@ -41,14 +45,14 @@ export const MOTSCROISES_JOUR17: MotsCroisesContent = {
     { mot: "ETOILE", definition: "Tout en haut du sapin" },
     { mot: "NEIGE", definition: "Ce qu'on espère le 25 au matin" },
 
-    // --- À vous deux (à remplacer par vos vrais mots) ---
-    { mot: "LJUBLJANA", definition: "La ville où l'un se réveille", perso: true },
-    { mot: "TRAIN", definition: "Ce qu'on prend pour se retrouver", perso: true },
-    { mot: "JUILLET", definition: "Le mois de votre rencontre", perso: true },
-    { mot: "RACLETTE", definition: "Le plat des retrouvailles", perso: true },
-    { mot: "MINUIT", definition: "L'heure de l'appel qui s'éternise", perso: true },
-    { mot: "VALISE", definition: "Toujours à moitié défaite", perso: true },
-    { mot: "DECALAGE", definition: "L'heure de trop entre vous", perso: true },
+    // --- À deux (génériques : chaque couple met les siens dans l'éditeur du salon) ---
+    { mot: "CALIN", definition: "Le remède à presque tout", perso: true },
+    { mot: "BISOU", definition: "Petit, mais il en dit long", perso: true },
+    { mot: "VOYAGE", definition: "On le prépare à deux", perso: true },
+    { mot: "RACLETTE", definition: "Le plat des soirées d'hiver", perso: true },
+    { mot: "PIQUENIQUE", definition: "Une nappe dans l'herbe", perso: true },
+    { mot: "VALISE", definition: "Toujours trop pleine", perso: true },
+    { mot: "SOUVENIR", definition: "On le garde précieusement", perso: true },
   ],
 };
 
@@ -60,3 +64,20 @@ export const MOTSCROISES_VERDICTS: { min: number; ligne: string }[] = [
   { min: 1, ligne: "Un début de grille… la prochaine fois, prends un chocolat chaud avec." },
   { min: 0, ligne: "Grille vide. Même moi j'aurais trouvé « SAPIN » 🐧" },
 ];
+
+/** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */
+export const SCHEMA_MOTSCROISES_JOUR17: SchemaContenu = {
+  jour: 17,
+  titre: "Jour 17 — Mots croisés de votre histoire",
+  intro: "La grille se construit toute seule à partir de la liste : 8 mots sont retenus, en alternant Noël et « à vous deux ». Donne au moins 12 mots ; ceux de 4 à 9 lettres se croisent le mieux.",
+  champs: [
+    {
+      type: "liste", cle: "mots", label: "Mots", libelleElement: "Mot", min: 8, max: 40, modele: {},
+      champs: [
+        { type: "texte", cle: "mot", label: "Mot", aide: "Un seul mot, sans espace ni tiret.", max: 12, motif: "^\\p{L}{2,12}$", motifAide: "Un seul mot de 2 à 12 lettres.", exemple: "CANNELLE" },
+        { type: "texte", cle: "definition", label: "Définition", max: 60, exemple: "L'épice qui sent décembre" },
+        { type: "case", cle: "perso", label: "Mot à vous deux" },
+      ],
+    },
+  ],
+};

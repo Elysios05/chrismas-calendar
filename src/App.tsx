@@ -9,6 +9,9 @@ import { ZONES } from "./world/zones";
 import { PLAYERS } from "./world/actors";
 import { MascotDialog } from "./ui/Mascot";
 import { LoginScreen } from "./ui/LoginScreen";
+import { CreerSalon } from "./ui/salons/CreerSalon";
+import { Invitation } from "./ui/salons/Invitation";
+import { PRENOMS_PAR_DEFAUT, prenomsDuSalon, useSalon } from "./ui/useSalon";
 import { DayWindow } from "./ui/DayWindow";
 import { PreparedEditor, RappelVeille } from "./ui/PreparedEditor";
 import { Hud } from "./ui/Hud";
@@ -38,16 +41,30 @@ const PREPARED_DAYS = [4, 8, 12, 16, 20, 24];
 export default function App() {
   const [backend, setBackend] = useState<BackendApi | null>(null);
   const [me, setMe] = useState<Who | null | undefined>(undefined); // undefined = on ne sait pas encore
+  // salons (#84) : undefined = pas encore chargé ; null = aucun salon → assistant de création
+  const [salonCharge, setSalonCharge] = useState<boolean | null | undefined>(undefined);
+  const [invitation, setInvitation] = useState(() => new URLSearchParams(location.search).has("invitation"));
 
   useEffect(() => {
     let off = () => {};
     (async () => {
       const b = await createBackend();
+      const s = b.salons ? await b.salons.getSalon().catch(() => null) : true;
+      setSalonCharge(s ? true : null);
       setBackend(b);
       setMe(await b.me().catch(() => null));
       off = b.onAuthChange((w) => setMe(w));
     })();
     return () => off();
+  }, []);
+
+  /** Après une invitation ou une création : on retire `?invitation=` de l'adresse et on relit l'état. */
+  const entrer = useCallback(async (b: BackendApi) => {
+    const url = new URL(location.href); url.searchParams.delete("invitation");
+    history.replaceState(null, "", url);
+    setInvitation(false);
+    setSalonCharge(true);
+    setMe(await b.me().catch(() => null));
   }, []);
 
   // le son ne peut démarrer qu'après un geste de l'utilisateur
@@ -57,12 +74,16 @@ export default function App() {
     return () => removeEventListener("pointerdown", go);
   }, []);
 
-  if (!backend || me === undefined) return <div className="boot">❄️</div>;
+  if (!backend || me === undefined || salonCharge === undefined) return <div className="boot">❄️</div>;
+  if (invitation) return <Invitation backend={backend} onEntree={() => void entrer(backend)} onConnexion={() => { const url = new URL(location.href); url.searchParams.delete("invitation"); history.replaceState(null, "", url); setInvitation(false); setSalonCharge(true); }} />;
+  if (!me && salonCharge === null) return <CreerSalon backend={backend} onOuvrir={() => void entrer(backend)} />;
   if (!me) return <LoginScreen backend={backend} onSignedIn={setMe} />;
   return <Calendar backend={backend} me={me} />;
 }
 
 function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
+  const salon = useSalon(backend);
+  const prenoms = prenomsDuSalon(salon) ?? PRENOMS_PAR_DEFAUT;
   const host = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<Scene | null>(null);
   const [ready, setReady] = useState(false);
@@ -148,13 +169,16 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
     setHeight(s.worldHeight);
   }, [ready, states, progress, me]);
 
+  // salons (#84) : personnages aux couleurs du salon, mis à jour en direct (aussi après la bascule jour/nuit)
+  useEffect(() => { if (ready) sceneRef.current?.setJoueurs(salon?.config.joueurs ?? null); }, [ready, salon]);
+
   // accueil : on descend jusqu'à la case du jour
   useEffect(() => {
     const s = sceneRef.current; if (!ready || !s || !today) return;
     setTimeout(() => scrollTo({ top: Math.max(0, s.scrollForDay(Math.min(24, today))), behavior: "smooth" }), 600);
     const waiting = Array.from({ length: today }, (_, i) => i + 1).filter((d) => !progress[me].opened.includes(d));
     setLines([
-      `Coucou ${PLAYERS[me].name} ! C'est moi, Pingou 🐧`,
+      `Coucou ${prenoms[me]} ! C'est moi, Pingou 🐧`,
       ...(waiting.length > 1 ? PINGOU_ROUTE.caseEnRetard(waiting[0]) : []),
       `Aujourd'hui c'est la case ${Math.min(24, today)}. Touche le cadeau qui brille ✨`,
     ]);
@@ -229,7 +253,7 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
     if (wasOpened || !next[me].opened.includes(day)) return;
     if (day === 24) { setFinale(true); return; }
     const diff = Math.max(0, ...next[me].opened) - Math.max(0, ...next[partner].opened);
-    const name = PLAYERS[partner].name;
+    const name = prenoms[partner];
     setLines([...PINGOU_ROUTE.ouverture(day), ...(diff > 0 ? PINGOU_ROUTE.avance(diff, name) : diff < 0 ? PINGOU_ROUTE.retard(-diff, name) : PINGOU_ROUTE.egalite(name))]);
   };
 
@@ -244,7 +268,8 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
       <Hud
         me={me} progress={progress}
         zoneName={ZONES[zone]?.name ?? ""} zoneKey={zone}
-        couleur={"#" + PLAYERS[me].coat.toString(16).padStart(6, "0")}
+        couleur={"#" + (salon?.config.joueurs[me].couleurs.coat ?? PLAYERS[me].coat).toString(16).padStart(6, "0")}
+        prenoms={prenoms}
         demo={backend.mode === "demo"} night={night}
         nextToWrite={nextToWrite} souvenirs={today >= 24}
         onEdit={(d) => { sound.play("tap"); setEditing(d); }}
@@ -254,7 +279,7 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
       />
 
       {reminder && !open && !editing && (
-        <div className="rappel-host"><RappelVeille jour={reminder} partenaire={partner} onOuvrir={() => setEditing(reminder)} /></div>
+        <div className="rappel-host"><RappelVeille jour={reminder} partenaire={partner} prenoms={prenoms} onOuvrir={() => setEditing(reminder)} /></div>
       )}
 
       {!open && !editing && !finale && <MascotDialog lines={lines} onDone={() => setLines([])} />}
@@ -269,7 +294,7 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
 
       {settings && <Settings me={me} backend={backend} sound={sound} onClose={() => setSettings(false)} />}
 
-      {finale && <FinalScreen me={me} progress={progress} sound={sound} onRevoir={() => setFinale(false)} onFermer={() => setFinale(false)} />}
+      {finale && <FinalScreen me={me} progress={progress} prenoms={prenoms} sound={sound} onRevoir={() => setFinale(false)} onFermer={() => setFinale(false)} />}
 
       {open && (
         <DayWindow

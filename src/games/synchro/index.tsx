@@ -10,12 +10,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GameContext, GameModule, Who } from "../../core/contracts";
-import { SYNCHRO_JOUR11, SYNCHRO_VERDICTS, type QuestionSynchro, type SynchroContent } from "../../data/games/synchro-jour11";
+import { SYNCHRO_JOUR11, SCHEMA_SYNCHRO_JOUR11, reparerSynchro, SYNCHRO_VERDICTS, type QuestionSynchro } from "../../data/games/synchro-jour11";
+import { prenomsDe, lireContenu } from "../shared/contenu";
 import { Cadre, PanneauFin, PanneauRegles, Points, Puce } from "../shared/ui";
 import { monterReact } from "../shared/monter";
 import { ouvrirPartie, type Coup, type Partie } from "../shared/partie";
 
-const PRENOMS: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 const LETTRES = ["A", "B", "C", "D"];
 
 type Reponse = { q: string; choix: number };
@@ -28,13 +28,14 @@ function verdict(pourcent: number) {
 }
 
 /** Les options d'une question « qui » sont les mêmes des deux côtés : des prénoms, jamais « toi » */
-function optionsDe(q: QuestionSynchro): string[] {
-  if (q.type === "qui") return [PRENOMS.alexandre, PRENOMS.flavie, "Les deux", "Ni l'un ni l'autre"];
+function optionsDe(q: QuestionSynchro, PRENOMS: Record<Who, string>): string[] {
+  if (q.type === "qui") return [PRENOMS.alexandre, PRENOMS.flavie, "Les deux", "Aucun des deux"];
   return q.options ?? [];
 }
 
 function Synchro({ ctx }: { ctx: GameContext }) {
-  const contenu = (ctx.content as SynchroContent | null) ?? SYNCHRO_JOUR11;
+  const contenu = useMemo(() => lireContenu(ctx.content, SYNCHRO_JOUR11, SCHEMA_SYNCHRO_JOUR11, reparerSynchro), [ctx.content]);
+  const PRENOMS = prenomsDe(ctx);
   const questions = useMemo(() => contenu.questions.slice(0, Math.max(1, contenu.nombre)), [contenu]);
   const total = questions.length;
   const prenomAutre = PRENOMS[ctx.partner];
@@ -147,7 +148,7 @@ function Synchro({ ctx }: { ctx: GameContext }) {
   }
 
   const barrePresence = (
-    <Puce pale>{ensemble ? `🟢 ${prenomAutre} est là` : `⚪️ ${prenomAutre} n'est pas connecté`}</Puce>
+    <Puce pale>{ensemble ? `🟢 ${prenomAutre} est là` : `⚪️ ${prenomAutre} n'est pas là`}</Puce>
   );
 
   if (etape === "regles") {
@@ -162,7 +163,7 @@ function Synchro({ ctx }: { ctx: GameContext }) {
             "Même réponse = +1 point de synchro. Ce n'est pas un quiz, personne n'a « raison ».",
             "Pas de chrono : chacun son rythme.",
             ensemble
-              ? `${prenomAutre} est connecté : vous jouez en direct.`
+              ? `${prenomAutre} est là : vous jouez en direct.`
               : `${prenomAutre} n'est pas là : tu peux jouer ton tour, la réponse viendra plus tard.`,
           ]}
           onJouer={commencer}
@@ -218,7 +219,7 @@ function Synchro({ ctx }: { ctx: GameContext }) {
 
   /* ---------- une question ---------- */
   const q = questions[index];
-  const options = optionsDe(q);
+  const options = optionsDe(q, PRENOMS);
   const mien = reponses.miennes.get(q.id);
   const sien = reponses.siennes.get(q.id);
   const revele = mien !== undefined && sien !== undefined;
