@@ -356,3 +356,22 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     atteinte »), et le bouton s'appelle « Passer en nuit/jour » (plus « Jour / nuit »). Mes captures de
     vérification sont donc faites avec mon script de mesure.
   - Prochaine étape : **Salons** dès l'annonce du contrat `SalonApi` dans #84, sinon **#14**.
+
+- 25 nov — Salons (#84, en tête du brief), même branche `claude/intelligent-ride-qdbkzh` (PR #91 pas encore fusionnée,
+  les commits s'y ajoutent) :
+  - **Rien d'autre à faire dans `src/world/`** : aucun prénom n'y est affiché (ni panneau, ni Pingou — les bulles
+    sont à l'Interface). `PLAYERS.name` n'est lu que par `App.tsx` (lignes 157 et 232), à remplacer par
+    `salon.config.joueurs[who].prenom` côté chef / Interface.
+  - **Couleurs** : `scene.setJoueurs(joueurs | null)` (null = `PLAYERS`). Les deux personnages sont redessinés
+    sur place (`Person.habiller`), sans reconstruire la scène ; une reconstruction en cours les reprend aussi,
+    et les suivantes lisent `scene.apparence`. Type `CouleursJoueur` du contrat utilisé tel quel.
+  - Revers du bonnet : avant, bleu foncé en dur pour tout bonnet non blanc → maintenant un ton plus clair (bonnet
+    foncé) ou plus sombre (bonnet clair) ; les deux bonnets par défaut gardent exactement leur teinte.
+    L'écharpe reste liée à la place (dorée / blanche).
+  - **À brancher par le chef dans `App.tsx`** (demandé dans #84) :
+    `backend.salons?.getSalon().then((s) => scene.setJoueurs(s?.config.joueurs ?? null))` puis
+    `backend.salons?.onSalonChange((s) => scene.setJoueurs(s?.config.joueurs ?? null))` (désabonnement au démontage).
+  - Crochets de test : `__calendrier.joueurs(j)` et `__calendrier.personnageEcran(who)` → `{ x, y, couleurs }`.
+  - Vérifié (script perso, `npm run capture` toujours cassé, #90) : jour 3 mobile, couleurs changées en direct,
+    puis bascule nuit : les couleurs du salon sont gardées.
+  - Prochaine étape : **#14** (ne charger que le monde où l'on se trouve), sauf retour du chef.
