@@ -357,8 +357,8 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     vérification sont donc faites avec mon script de mesure.
   - Prochaine étape : **Salons** dès l'annonce du contrat `SalonApi` dans #84, sinon **#14**.
 
-- 25 nov — Salons (#84, en tête du brief), même branche `claude/intelligent-ride-qdbkzh` (PR #91 pas encore fusionnée,
-  les commits s'y ajoutent) :
+- 25 nov — Salons (#84, en tête du brief), branche `claude/intelligent-ride-qdbkzh` (PR #91 fusionnée entre-temps :
+  `main` refusionné dans la branche), **PR #93** :
   - **Rien d'autre à faire dans `src/world/`** : aucun prénom n'y est affiché (ni panneau, ni Pingou — les bulles
     sont à l'Interface). `PLAYERS.name` n'est lu que par `App.tsx` (lignes 157 et 232), à remplacer par
     `salon.config.joueurs[who].prenom` côté chef / Interface.
