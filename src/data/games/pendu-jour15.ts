@@ -11,6 +11,7 @@
  * Évite les mots de plus de 18 lettres : la grille devient illisible sur un téléphone.
  */
 
+import type { SchemaContenu } from "../../games/shared/contenu";
 export type MotPendu = { mot: string; indice: string; perso?: boolean };
 
 export type PenduContent = {
@@ -63,3 +64,25 @@ export const PENDU_VERDICTS: { min: number; ligne: string }[] = [
   { min: 1, ligne: "Un mot sauvé. Le bonhomme, lui, a connu des jours meilleurs…" },
   { min: 0, ligne: "Une flaque. Il ne reste qu'une flaque. Bravo 🫠" },
 ];
+
+/** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */
+export const SCHEMA_PENDU_JOUR15: SchemaContenu = {
+  jour: 15,
+  titre: "Jour 15 — Le pendu du bonhomme qui fond",
+  intro: "Des mots à trouver lettre par lettre, avec un indice de Pingou après 3 erreurs. Coche « à vous deux » pour vos mots à vous.",
+  champs: [
+    { type: "nombre", cle: "motsParPartie", label: "Mots par partie", min: 1, max: 6 },
+    {
+      type: "liste", cle: "mots", label: "Mots", libelleElement: "Mot", min: 3, max: 30, modele: {},
+      champs: [
+        { type: "texte", cle: "mot", label: "Mot", aide: "Lettres, espaces et apostrophes ; 18 lettres au plus.", max: 22, motif: "^[\\p{L}' -]+$", motifAide: "Seulement des lettres, des espaces et des apostrophes.", exemple: "PAIN D'ÉPICES" },
+        { type: "texte", cle: "indice", label: "Indice", max: 100, exemple: "Ça sent la cannelle et le miel." },
+        { type: "case", cle: "perso", label: "Mot à vous deux" },
+      ],
+    },
+  ],
+};
+
+export function reparerPendu(c: PenduContent): PenduContent {
+  return { ...c, motsParPartie: Math.min(c.motsParPartie, c.mots.length) };
+}

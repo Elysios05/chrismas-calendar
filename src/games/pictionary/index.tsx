@@ -14,7 +14,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { GameContext, GameModule, Who } from "../../core/contracts";
-import { PICTIONARY_JOUR5, type PictionaryContent } from "../../data/games/pictionary-jour5";
+import { PICTIONARY_JOUR5, SCHEMA_PICTIONARY_JOUR5, type PictionaryContent } from "../../data/games/pictionary-jour5";
+import { prenomsDe, lireContenu, de } from "../shared/contenu";
 import { Cadre, PanneauRegles, Puce } from "../shared/ui";
 import { monterReact } from "../shared/monter";
 import { ouvrirPartie, type Partie } from "../shared/partie";
@@ -27,9 +28,6 @@ import {
 } from "./regles";
 import "./pictionary.css";
 
-const PRENOMS: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
-/** « de Flavie », « d'Alexandre » */
-const de = (prenom: string) => (/^[AEIOUYÉ]/i.test(prenom) ? `d'${prenom}` : `de ${prenom}`);
 const THEMES: Record<Theme, string> = { noel: "Mot de Noël", nous: "À vous deux" };
 const TITRE = "Jour 5 · Pictionary";
 
@@ -99,7 +97,8 @@ function Choix({ mots, secondes, pour, onChoisir }: {
 /* ------------------------------------------------------------------ */
 
 function Pictionary({ ctx }: { ctx: GameContext }) {
-  const contenu = (ctx.content as PictionaryContent | null) ?? PICTIONARY_JOUR5;
+  const contenu = useMemo(() => lireContenu(ctx.content, PICTIONARY_JOUR5, SCHEMA_PICTIONARY_JOUR5), [ctx.content]);
+  const PRENOMS = prenomsDe(ctx);
   const n = Math.max(1, contenu.dessinsParJoueur);
   const total = Math.max(10, contenu.secondes);
   const autre = PRENOMS[ctx.partner];
@@ -336,7 +335,7 @@ function Pictionary({ ctx }: { ctx: GameContext }) {
     if (mode === "attente" && ensemble) {
       setMode("salon");
       ctx.sound.play("notify");
-      ctx.say([`${autre} est là ! Dites-vous « prêt » et on commence 🎨`]);
+      ctx.say([`${autre} est là ! Cliquez sur « On y va ! » et on commence 🎨`]);
     } else if (mode === "salon" && !ensemble) {
       setMode("attente");
       setAttente(0);
@@ -351,7 +350,7 @@ function Pictionary({ ctx }: { ctx: GameContext }) {
       setMode("seul");
       setRevele(null);
       live?.setReady(false);
-      ctx.say([`${autre} est parti… Je garde tout : continuez chacun votre tour 💌`]);
+      ctx.say([`${autre} a quitté la partie… Je garde tout : continuez chacun votre tour 💌`]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ensemble, mode]);
@@ -369,7 +368,7 @@ function Pictionary({ ctx }: { ctx: GameContext }) {
       setChoixSeul(null);
       setRevele(null);
       ctx.sound.play("whoosh");
-      ctx.say([`C'est parti ! ${PRENOMS[PREMIER]} dessine la première 🎨`]);
+      ctx.say([`C'est parti ! ${PRENOMS[PREMIER]} ouvre le bal 🎨`]);
     }
   }, [mode, pret, ctx]);
 
@@ -461,11 +460,11 @@ function Pictionary({ ctx }: { ctx: GameContext }) {
           titre="Pictionary de Noël"
           regles={[
             `${2 * n} manches de ${total} s : vous dessinez chacun ${n} fois, à tour de rôle.`,
-            "Celui qui dessine choisit entre un mot de Noël et un mot « à vous deux ».",
+            "Quand c'est ton tour de dessiner, tu choisis entre un mot de Noël et un mot « à vous deux ».",
             "L'autre tape ses propositions. Accents et majuscules sont pardonnés.",
-            "Plus le dessin est trouvé vite, plus vous gagnez de points tous les deux.",
+            "Plus le dessin est trouvé vite, plus vous gagnez de points, l'un comme l'autre.",
             ensemble
-              ? `${autre} est connecté : vous jouez en direct.`
+              ? `${autre} est là : vous jouez en direct.`
               : `${autre} n'est pas là : tes dessins seront rejoués devant ${autre}, qui devinera plus tard.`,
           ]}
           onJouer={commencer}
@@ -506,8 +505,8 @@ function Pictionary({ ctx }: { ctx: GameContext }) {
             <h2>{autre} est là !</h2>
             <p>
               {pret.me
-                ? (pret.partner ? "C'est parti…" : `Tu es prêt·e. On attend ${autre}…`)
-                : (pret.partner ? `${autre} est prêt·e et t'attend !` : "Dès que vous êtes prêts tous les deux, on commence.")}
+                ? (pret.partner ? "C'est parti…" : `C'est noté. On attend ${autre}…`)
+                : (pret.partner ? `${autre} n'attend plus que toi !` : "Dès que chacun a cliqué, on commence.")}
             </p>
             <div className="pic-pret">
               <span className={pret.me ? "ok" : ""}>{PRENOMS[ctx.me]} {pret.me ? "✅" : "…"}</span>
@@ -515,7 +514,7 @@ function Pictionary({ ctx }: { ctx: GameContext }) {
             </div>
             <div className="jeu-actions">
               <button className="jeu-btn clair" onClick={() => { setMode("seul"); live?.setReady(false); }}>Jouer chacun son tour</button>
-              {!pret.me && <button className="jeu-btn" onClick={() => { ctx.sound.play("tap"); live?.setReady(true); }}>Je suis prêt·e !</button>}
+              {!pret.me && <button className="jeu-btn" onClick={() => { ctx.sound.play("tap"); live?.setReady(true); }}>On y va !</button>}
             </div>
           </div>
         </div>
@@ -684,6 +683,7 @@ function Pictionary({ ctx }: { ctx: GameContext }) {
 function Galerie({ ctx, contenuN, bilan, total }: {
   ctx: GameContext; contenuN: number; bilan: ReturnType<typeof lireJournal>; total: number;
 }) {
+  const PRENOMS = prenomsDe(ctx);
   const autre = PRENOMS[ctx.partner];
   const cases = useMemo(() => {
     const l: { de: Who; k: number; mot?: string; image?: string; etat: string }[] = [];

@@ -13,6 +13,7 @@
  * Évite les réponses de plus de quatre mots : on les tape au doigt sur un téléphone.
  */
 
+import type { SchemaContenu } from "../../games/shared/contenu";
 export type Rebus = {
   id: string;
   emojis: string;
@@ -51,9 +52,27 @@ export const REBUS_JOUR7: RebusContent = {
 
 /** Mots de Pingou selon le nombre de rébus trouvés sur 8 */
 export const REBUS_VERDICTS: { min: number; ligne: string }[] = [
-  { min: 8, ligne: "Les huit ! Vous parlez emoji couramment tous les deux 🧩" },
+  { min: 8, ligne: "Les huit ! Chez vous, on parle emoji couramment 🧩" },
   { min: 6, ligne: "Joli score ! Il en reste deux pour te vexer tranquillement." },
   { min: 4, ligne: "La moitié : honorable. Les autres, c'était un peu tordu, je l'avoue." },
   { min: 1, ligne: "C'est un début… Pingou te laisse une revanche quand tu veux." },
   { min: 0, ligne: "Zéro. Même moi je suis gêné. On recommence ? 🐧" },
 ];
+
+/** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */
+export const SCHEMA_REBUS_JOUR7: SchemaContenu = {
+  jour: 7,
+  titre: "Jour 7 — Rébus en emojis",
+  intro: "Une suite d'emojis, une réponse à taper. Mets-y vos souvenirs et vos private jokes ; la correction pardonne accents, majuscules et articles.",
+  champs: [
+    {
+      type: "liste", cle: "enigmes", label: "Rébus", libelleElement: "Rébus", min: 3, max: 20, modele: { id: "" },
+      champs: [
+        { type: "texte", cle: "emojis", label: "Emojis", aide: "2 à 4, c'est le plus lisible.", max: 24, exemple: "🍫🪵" },
+        { type: "texte", cle: "reponse", label: "Réponse", aide: "Quatre mots au plus : on la tape au doigt.", max: 40, exemple: "la bûche de Noël" },
+        { type: "textes", cle: "variantes", label: "Autres réponses acceptées", min: 0, max: 6, maxLongueur: 40, exemple: "bûche" },
+        { type: "texte", cle: "indice", label: "Indice de Pingou", max: 100, facultatif: true, exemple: "Ça se mange, et ça ne brûle pas." },
+      ],
+    },
+  ],
+};
