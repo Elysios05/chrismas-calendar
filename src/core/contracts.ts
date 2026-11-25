@@ -85,6 +85,143 @@ export interface BackendApi {
   reminderStatus?(): Promise<ReminderStatus>;
   /** Demande l'autorisation et abonne l'appareil. À appeler DANS un geste de l'utilisateur (clic). */
   enableReminders?(): Promise<ReminderStatus>;
+
+  /**
+   * Salons (voir docs/salons.md et SalonApi plus bas). Fourni par DemoBackend et SupabaseBackend ;
+   * facultatif seulement pour les faux backends d'atelier. Usage : `const salon = await backend.salons?.getSalon()`.
+   * Toutes les autres méthodes (progression, cases préparées, jeux, temps réel, rappels) portent
+   * automatiquement sur le SALON COURANT : rien ne change pour les équipes qui les appellent déjà.
+   */
+  readonly salons?: SalonApi;
+}
+
+/* ------------------------------------------------------------------ */
+/* Salons : un calendrier par couple (docs/salons.md)                  */
+/* ------------------------------------------------------------------ */
+/*
+ * Rappel : `Who` désigne une PLACE dans le salon, pas une personne.
+ *   "alexandre" = place 1, le créateur du salon ; "flavie" = place 2, la personne invitée.
+ * Aucun texte affiché ne doit utiliser ces clés : le prénom est dans `salon.config.joueurs[who].prenom`.
+ *
+ * Parcours type :
+ *   1. Créateur : `creerSalon({ config, motDePasse })` → il est connecté (place "alexandre") et reçoit
+ *      `lienConnexion` (à garder) et `lienInvitation` (à envoyer à l'autre).
+ *   2. Invité·e : ouvre le lien d'invitation → `lireInvitation()` (prénoms pour l'accueil) →
+ *      `accepterInvitation(jeton, motDePasse)` → connecté·e (place "flavie"). Le jeton ne sert qu'une fois.
+ *   3. Ensuite, chacun revient par le lien de connexion (ou simplement le site : le dernier salon est retenu)
+ *      → si la session est encore ouverte, `me()` répond directement ; sinon `signIn(who, motDePasse)`
+ *      comme avant, dans le salon courant.
+ *
+ * Erreurs : les méthodes lèvent une `Error` dont le `message` est en français, prêt à afficher, et dont
+ * la propriété `code` (type SalonErreurCode) permet de réagir finement.
+ */
+
+/** Identifiant d'un salon (texte opaque, à ne pas interpréter). */
+export type SalonId = string;
+
+/**
+ * Couleurs d'un personnage, en 0xRRGGBB. Mêmes champs que `PLAYERS` (src/world/actors.ts) :
+ * coat = manteau, hat = bonnet, pompom = pompon, hair = cheveux, longHair = cheveux longs.
+ */
+export type CouleursJoueur = { coat: number; hat: number; pompom: number; hair: number; longHair: boolean };
+
+/** Une place du salon telle qu'elle s'affiche. */
+export type JoueurSalon = { prenom: string; couleurs: CouleursJoueur };
+
+/**
+ * Contenu personnalisé des jeux. Clé = numéro du jour EN TEXTE ("1".."24") ; valeur = contenu du jeu de ce jour,
+ * de la même forme que son contenu par défaut dans src/data/games/ (chaque jeu publie son schéma, équipe Jeux).
+ * Jour absent = contenu par défaut. Doit rester sérialisable en JSON (pas de fonctions, pas de Date).
+ */
+export type ContenuSalon = { [jour: string]: unknown };
+
+/** Configuration d'un salon : lisible par ses deux membres, modifiable par eux. */
+export type SalonConfig = {
+  joueurs: Record<Who, JoueurSalon>;
+  contenu: ContenuSalon;
+};
+
+export type Salon = {
+  id: SalonId;
+  config: SalonConfig;
+  /** Vrai dès que la personne invitée a choisi son mot de passe (la place "flavie" est prise). */
+  inviteArrive: boolean;
+  /** Salon fictif du mode démo (celui qu'on voit en ouvrant /demo/). */
+  demo: boolean;
+  createdAt: string;
+};
+
+/** Résultat de `creerSalon` : le créateur est déjà connecté. */
+export type SalonCree = {
+  salon: Salon;
+  /** Lien à garder par le créateur pour revenir dans SON salon (sur un autre appareil, par ex.). */
+  lienConnexion: string;
+  /** Lien à envoyer à l'autre personne (usage unique). */
+  lienInvitation: string;
+};
+
+/** Ce que dit un lien d'invitation, avant de l'accepter (pour l'écran d'accueil de l'invité·e). */
+export type InvitationInfo =
+  /** Jeton valable : on peut accueillir l'invité·e par son prénom et lui faire choisir un mot de passe. */
+  | { statut: "valide"; jeton: string; salonId: SalonId; joueurs: Record<Who, JoueurSalon> }
+  /** Déjà utilisé (la personne a déjà son mot de passe : l'envoyer vers la connexion de ce salon). */
+  | { statut: "utilisee"; salonId: SalonId; joueurs: Record<Who, JoueurSalon> }
+  /** Jeton inconnu, remplacé par un plus récent, ou absent de l'adresse. */
+  | { statut: "invalide" };
+
+export type SalonErreurCode =
+  | "INVITATION_INVALIDE"   // jeton inconnu ou remplacé
+  | "INVITATION_UTILISEE"   // jeton déjà consommé
+  | "LIMITE_CREATION"       // trop de salons créés depuis cet appareil / récemment
+  | "NON_AUTORISE"          // pas membre du salon, ou pas le créateur (lien d'invitation)
+  | "SALON_INCONNU"         // le salon du lien n'existe pas (ou plus)
+  | "MOT_DE_PASSE_FAIBLE"   // moins de 6 caractères
+  | "CONFIG_INVALIDE"       // prénom vide, contenu trop gros…
+  | "INDISPONIBLE";         // fonction pas encore active sur ce backend
+
+export interface SalonApi {
+  /**
+   * Salon courant, ou null s'il n'y en a pas (ex. : première visite sur le site principal → écran d'accueil
+   * « Créer notre calendrier »). Le salon courant est, dans l'ordre : celui du lien ouvert (`?salon=…`),
+   * sinon le dernier ouvert sur cet appareil. En démo, le salon fictif par défaut.
+   * Lisible sans être connecté (prénoms et couleurs pour l'écran de connexion) ; `config.contenu` n'est
+   * rempli que pour un membre connecté (sinon `{}`).
+   */
+  getSalon(): Promise<Salon | null>;
+  /** Prévient quand le salon courant change (autre salon ouvert, config modifiée). */
+  onSalonChange(cb: (salon: Salon | null) => void): () => void;
+
+  /**
+   * Crée un salon : le créateur prend la place "alexandre", est connecté, et le salon devient le salon courant.
+   * `email` facultatif, seulement pour « mot de passe oublié ». `rester` comme pour signIn (défaut : oui).
+   * Peut échouer avec LIMITE_CREATION, MOT_DE_PASSE_FAIBLE, CONFIG_INVALIDE.
+   */
+  creerSalon(input: { config: SalonConfig; motDePasse: string; email?: string; rester?: boolean }): Promise<SalonCree>;
+  /** Remplace la configuration du salon courant (membre connecté). Le contenu remplace tout l'objet `contenu`. */
+  modifierSalon(config: SalonConfig): Promise<Salon>;
+
+  /** Lien de connexion du salon courant (à garder, à ouvrir sur un autre appareil). */
+  lienConnexion(): Promise<string>;
+  /**
+   * Lien d'invitation du salon courant (créateur connecté seulement, tant que l'invité·e n'est pas arrivé·e).
+   * Renvoie le lien en cours ; `nouveau: true` en fabrique un autre et rend l'ancien invalide (lien perdu, mal envoyé).
+   */
+  lienInvitation(options?: { nouveau?: boolean }): Promise<string>;
+
+  /** Lit un jeton d'invitation ; sans argument, celui de l'adresse de la page (`?invitation=…`). Ne le consomme pas. */
+  lireInvitation(jeton?: string): Promise<InvitationInfo>;
+  /**
+   * Première connexion de l'invité·e : consomme le jeton, crée son accès avec ce mot de passe, la connecte
+   * (place "flavie") et ouvre le salon. Échecs : INVITATION_INVALIDE, INVITATION_UTILISEE, MOT_DE_PASSE_FAIBLE.
+   */
+  accepterInvitation(jeton: string, motDePasse: string, options?: { email?: string; rester?: boolean }): Promise<void>;
+
+  /**
+   * Fait d'un salon le salon courant (connexion par lien, ou choix dans une liste). Ensuite, `me()` renvoie la
+   * place de l'utilisateur DANS ce salon, ou null s'il n'y est pas connecté (→ écran de connexion de ce salon).
+   * `onAuthChange` et `onSalonChange` sont appelés si quelque chose change. Échec : SALON_INCONNU.
+   */
+  ouvrirSalon(id: SalonId): Promise<Salon>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -137,8 +274,17 @@ export type GameContext = {
   sound: SoundApi;
   /** Fait parler Pingou (bulle de dialogue) */
   say: (lines: string[]) => void;
-  /** Contenu du jeu (questions, mots…) venant de src/data */
+  /**
+   * Contenu du jeu (questions, mots…) : `salon.config.contenu[String(day)]` s'il existe,
+   * sinon `undefined` (ou null) → le jeu prend son contenu par défaut de src/data/games/.
+   */
   content: unknown;
+  /**
+   * Prénoms affichés des deux places (depuis la config du salon). Ne jamais écrire « Alexandre » ou « Flavie »
+   * en dur : `ctx.prenoms?.[ctx.partner]`, avec un repli choisi par le jeu. Facultatif le temps que tous les
+   * appelants (DayWindow, ateliers) le passent.
+   */
+  prenoms?: Record<Who, string>;
   /** À appeler quand le jeu est terminé */
   complete: (result: GameResult) => void;
 };

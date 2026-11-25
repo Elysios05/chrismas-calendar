@@ -12,9 +12,15 @@
  *
  * Conséquence agréable : le mode « tour par tour » n'est pas un deuxième jeu à écrire.
  * C'est le même journal, lu plus tard.
+ *
+ * Transport : `joinLive` du Backend (issue #56). Il apporte la présence fiable (« hello »),
+ * le « Prêt ? » des deux côtés, le départ synchronisé et l'horloge commune, exposés via
+ * `partie.live` pour les jeux qui en ont besoin (Pictionary, duel…). Le journal reste
+ * par-dessus : l'état « dernier écrit gagne » de `LiveGame` ne garde pas la mémoire des coups.
  */
 
-import type { GameContext, RealtimeRoom, Who } from "../../core/contracts";
+import type { GameContext, Who } from "../../core/contracts";
+import { joinLive, type LiveGame } from "../../backend";
 
 export type Coup<T> = {
   /** Identifiant stable, choisi par le jeu (ex. « reponse:3 ») : deux fois le même = un seul coup */
@@ -40,6 +46,8 @@ export type Partie<T> = {
   surCoup(cb: (coup: Coup<T>, direct: boolean) => void): () => void;
   /** Relit le dépôt et fusionne (retour d'absence, message perdu) */
   rafraichir(): Promise<void>;
+  /** Salle `joinLive` (prêt, départ synchronisé, horloge commune, flux rapide) ; null hors ligne */
+  live: LiveGame<unknown> | null;
   quitter(): void;
 };
 
@@ -47,7 +55,15 @@ const EVENEMENT = "coup";
 /** Tant que l'autre n'est pas là, on relit le dépôt de temps en temps : il a pu jouer son tour */
 const RELECTURE_MS = 20_000;
 
-export async function ouvrirPartie<T>(ctx: GameContext, cle = "journal"): Promise<Partie<T>> {
+export type OptionsPartie = {
+  /** Clé du journal dans l'état de la case */
+  cle?: string;
+  /** Durée du compte à rebours `joinLive` (ms) */
+  compteARebours?: number;
+};
+
+export async function ouvrirPartie<T>(ctx: GameContext, options: OptionsPartie | string = {}): Promise<Partie<T>> {
+  const { cle = "journal", compteARebours } = typeof options === "string" ? { cle: options } : options;
   const coups: Coup<T>[] = [];
   const vus = new Set<string>();
   const ecouteursCoup = new Set<(c: Coup<T>, direct: boolean) => void>();
@@ -84,17 +100,12 @@ export async function ouvrirPartie<T>(ctx: GameContext, cle = "journal"): Promis
 
   await rafraichir();
 
-  /* ---------- salle temps réel ---------- */
-  let salle: RealtimeRoom | null = null;
+  /* ---------- salle temps réel (joinLive) ---------- */
+  let live: LiveGame<unknown> | null = null;
   try {
-    salle = ctx.backend.joinRoom(`jour-${ctx.day}`);
-    salle.on(EVENEMENT, (payload) => {
-      const c = payload as Coup<T>;
-      // un trou dans le journal (message perdu) : on relit le dépôt plutôt que de deviner
-      if (!absorber(c, true)) return;
-    });
-    salle.presence((enLigne) => {
-      const ensemble = enLigne.includes(ctx.partner);
+    live = await joinLive<unknown>(ctx.backend, ctx.day, { initialState: null, countdownMs: compteARebours });
+    live.on(EVENEMENT, (payload) => { absorber(payload as Coup<T>, true); });
+    live.onPartner((ensemble) => {
       if (ensemble === aDeux) return;
       aDeux = ensemble;
       ecouteursPresence.forEach((cb) => cb(ensemble));
@@ -102,7 +113,7 @@ export async function ouvrirPartie<T>(ctx: GameContext, cle = "journal"): Promis
       if (ensemble) void rafraichir();
     });
   } catch {
-    salle = null; // pas de temps réel : on reste en tour par tour, le journal suffit
+    live = null; // pas de temps réel : on reste en tour par tour, le journal suffit
   }
 
   const minuteur = setInterval(() => { if (!ferme && !aDeux) void rafraichir(); }, RELECTURE_MS);
@@ -120,7 +131,7 @@ export async function ouvrirPartie<T>(ctx: GameContext, cle = "journal"): Promis
       if (vus.has(id)) return;
       const coup: Coup<T> = { id, de: ctx.me, le: Date.now(), t };
       absorber(coup, true);
-      try { salle?.send(EVENEMENT, coup); } catch { /* le dépôt prend le relais */ }
+      try { live?.emit(EVENEMENT, coup); } catch { /* le dépôt prend le relais */ }
       // dépôt : on relit juste avant pour ne pas écraser un coup de l'autre
       try {
         const distants = await lireDepot();
@@ -134,6 +145,7 @@ export async function ouvrirPartie<T>(ctx: GameContext, cle = "journal"): Promis
     // chaque coup absorbé prévient déjà `surCoup` ; seuls ceux lus à l'ouverture, avant que
     // le jeu n'écoute, n'ont prévenu personne — d'où le rafraîchissement du jeu à la connexion.
     rafraichir: async () => { await rafraichir(); },
+    live,
 
     quitter() {
       ferme = true;
@@ -141,7 +153,7 @@ export async function ouvrirPartie<T>(ctx: GameContext, cle = "journal"): Promis
       document.removeEventListener("visibilitychange", auRetour);
       ecouteursCoup.clear();
       ecouteursPresence.clear();
-      try { salle?.leave(); } catch { /* déjà partie */ }
+      try { live?.leave(); } catch { /* déjà partie */ }
     },
   };
 }
