@@ -151,3 +151,30 @@ passe par la connexion démo : il ne peut pas valider le mode Supabase (vérifi�
 **Reste non testable sans vrai projet** : Edge Function sous Deno (`npm:web-push`), pg_cron/pg_net/Vault, Realtime privé, notifications sur
 iOS. Le déploiement de la fonction sans `supabase/config.toml` (`functions deploy` seul) n'a pas pu être vérifié.
 **Ticket Interface** : `LoginScreen.tsx` affiche « Mot de passe incorrect » pour toute erreur (réseau, profil non relié).
+
+### 25 novembre 2026 — Salons, lot 1 : contrat + démo (branche `backend/salons-contrat`, #84)
+Spécification : `docs/salons.md` (décision d'Alexandre du 25 nov, à livrer avant le 30). Le chef m'a confié `src/core/contracts.ts` pour ce lot.
+- **Contrat** : `BackendApi.salons?: SalonApi` (facultatif seulement pour les faux backends d'atelier) ; types `SalonConfig`
+  (`joueurs[who] = { prenom, couleurs: { coat, hat, pompom, hair, longHair } }`, `contenu["1".."24"]`), `Salon`, `SalonCree`,
+  `InvitationInfo`, `SalonErreurCode`. Méthodes : `getSalon`, `onSalonChange`, `creerSalon`, `modifierSalon`, `lienConnexion`,
+  `lienInvitation({ nouveau })`, `lireInvitation(jeton?)`, `accepterInvitation(jeton, mdp)`, `ouvrirSalon(id)`.
+  Toutes les méthodes existantes portent sur le **salon courant** (inchangées). `GameContext.prenoms?` ajouté ; `content` = contenu du salon ou `undefined`.
+  `Who` = place (alexandre = créateur, flavie = invité·e).
+- **Liens** : `<site>?salon=<id>` (connexion) et `<site>?invitation=<jeton>` (usage unique ; `nouveau: true` invalide l'ancien).
+  Le backend lit `?salon=` tout seul ; l'Interface lit `?invitation=` via `lireInvitation()` et nettoie l'adresse après.
+- **config.ts** : `SALON_DEMO_CONFIG` (= PLAYERS), `DEMO_SALON_ID`, `checkSalonConfig` (prénom 1–30 car., couleurs 0..0xffffff,
+  jours 1–24, 200 Ko max), `checkMotDePasse` (6 car.), `SalonError`/`salonError` (message français + `code`), `SALON_CREATIONS_PAR_HEURE = 5`.
+- **DemoBackend** : salon « demo » inchangé (mêmes clés localStorage, exemples, mots de passe ignorés). Salons créés : registre
+  `cc-demo:salons`, données `cc-demo:s:<id>:data`, sessions par salon, salon courant par onglet puis navigateur, mots de passe
+  vérifiés (en clair, simulation locale), pas d'exemples, salles temps réel séparées, limite 5 créations/h. `?demo-reset` efface tout.
+- **SupabaseBackend** : `salons` PROVISOIRE (un seul salon « principal » avec `SALON_DEMO_CONFIG` ; création/invitation → `INDISPONIBLE`) jusqu'au lot 2.
+- **Souvenirs** : prénoms lus dans la config du salon (plus de noms en dur).
+- Tests : `demo_backend_test.py` 97 vérifications (40 nouvelles sur les salons). Captures démo inchangées.
+- `npm run capture` : sélecteur `.hud` périmé dans `tests/qa/commun.mjs` (Qualité) → corrigé en local seulement (`.stage-host`),
+  et `QA_PORT=4187` pour ne pas réutiliser le serveur d'une autre copie.
+- Question posée sur #59 : l'invité·e doit-il/elle obligatoirement choisir un mot de passe ?
+
+**Lot 2 (à faire)** : schéma multi-salons Supabase (salons, membres/places, invitations à jeton, config JSON), tables scopées
+par salon + RLS par appartenance, quotas photos, limite de création, rappels/temps réel/cases figées par salon, tests SQL,
+`SupabaseBackend` complet, `rappel-veille/message.ts` avec les prénoms du salon (encore en dur), `docs/supabase.md` (§ 11 seul avec deux appareils).
+Idée technique : comptes Auth à e-mail synthétique par place (`<salon>-<place>@…`), e-mail réel facultatif pour « mot de passe oublié ».
