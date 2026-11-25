@@ -1,8 +1,8 @@
 // Scène PixiJS : terrain continu isométrique, caméra liée au défilement, ambiance, personnages
 import { Application, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import { P, ZH, mix, poly, makePalette, type Palette, type Pt } from "./iso";
-import { buildTerrain, heightAt, key, type Terrain, type DayNode } from "./terrain";
-import { drawProp, type AnimPart } from "./props";
+import { buildTerrain, heightAt, key, type Cell, type DayNode, type PlacedProp, type Terrain } from "./terrain";
+import { drawProp, type AnimPart, type PropKind } from "./props";
 import { ZONES } from "./zones";
 import { weatherAt } from "./weather";
 import { Aurora } from "./aurora";
@@ -61,6 +61,32 @@ const BATIMENTS_LARGES = new Set(["wheel", "workshop", "santaHouse", "postOffice
  *  aussi vite sur un téléphone qui rame que sur un ordinateur (environ la moitié du temps chacun). */
 const TRANCHE_MS = 8;
 
+/** Issue #14 : on prépare d'avance ce qui est à moins d'un demi-écran, on détruit ce qui est à plus d'un écran */
+const ECRANS_AVANCE = 0.5;
+const ECRANS_GARDES = 1;
+/** Hauteur maximale d'un décor au-dessus de son pied (px) : sert à placer une tranche jamais dessinée.
+ *  Large exprès : une tranche chargée un peu tôt ne coûte rien, une tranche qui apparaît en retard se voit.
+ *  En développement, la console signale un décor plus haut que prévu. */
+const HAUTEUR_DECOR: Partial<Record<PropKind, number>> = { mountain: 520, ridge: 400, wheel: 260, workshop: 220, bigTree: 260, caveMouth: 260 };
+
+/** Un morceau du monde (bande de sol, tronçon de route ou tranche de décors) que l'on sait placer sans
+ *  le dessiner. `min` / `max` : étendue verticale dans le monde, estimée puis mesurée au premier dessin. */
+type Lot = {
+  couche: "sol" | "objets";
+  /** profondeur (x + y) du début du lot : sert au banc de nuages qui ferme la carte */
+  k: number;
+  zIndex: number;
+  min: number;
+  max: number;
+  mesure?: boolean;
+  cellules?: Cell[];
+  route?: [number, number];
+  decors?: PlacedProp[];
+};
+type Charge = { c: Container; anims: AnimPart[] };
+/** Là où l'on range un lot dessiné : la scène affichée, ou une scène en construction */
+type Cible = { pal: Palette; flying: boolean; ground: Container; objects: Container; charges: Map<number, Charge> };
+
 /** Une scène complète dessinée avec une palette, prête à prendre la place de l'actuelle (issue #23) */
 type Built = {
   pal: Palette;
@@ -73,9 +99,8 @@ type Built = {
   finCarte: Container;
   panneauFin: Container;
   gifts: Map<number, Container>;
-  groundBands: { c: Container; min: number; max: number; k: number }[];
-  slabs: { c: Container; min: number; max: number; k: number }[];
-  anims: AnimPart[];
+  /** lots dessinés dans cette scène, par numéro de lot */
+  charges: Map<number, Charge>;
   people: Record<Who, Person>;
   penguin: Penguin | null;
   life: Critter[];
@@ -133,12 +158,15 @@ export class Scene {
   focus: { x: number; y: number; zoom: number } | null = null;
   confetti: { g: Graphics; vx: number; vy: number; rot: number; life: number }[] = [];
   confettiLayer = new Container();
-  anims: AnimPart[] = [];
   time = 0;
   boundaries: number[] = [];
   nodeY: number[] = [];
-  slabs: { c: Container; min: number; max: number; k: number }[] = [];
-  groundBands: { c: Container; min: number; max: number; k: number }[] = [];
+  /** Le monde découpé en lots (issue #14) ; seuls ceux autour de l'écran sont dessinés (`charges`) */
+  lots: Lot[] = this.decouperLots();
+  charges = new Map<number, Charge>();
+  /** Lots à préparer en arrière-plan, du plus proche au plus lointain, et celui en cours */
+  aPrecharger: number[] = [];
+  prechargement: { i: number; c: Container; gen: Generator<void, void> } | null = null;
   weatherNow = "";
   /** Animaux et personnages qui vivent dans le décor */
   life: Critter[] = [];
@@ -220,6 +248,8 @@ export class Scene {
         playOpen: (day: number) => this.playOpen(day),
         /** bascule jour/nuit : reconstruction en cours ? et durée de la dernière (calcul pur et totale) */
         reconstruction: () => ({ enCours: !!this.pending, ...this.derniereReconstruction }),
+        /** issue #14 : combien de lots du monde sont dessinés en ce moment, sur combien */
+        lots: () => ({ total: this.lots.length, dessines: this.charges.size, enAttente: this.aPrecharger.length + (this.prechargement ? 1 : 0) }),
         joueurs: (j: Record<Who, JoueurSalon> | null) => this.setJoueurs(j),
         personnageEcran: (who: Who) => { const p = this.people[who]; const g = p.getGlobalPosition(); return { x: g.x, y: g.y, couleurs: p.couleurs }; },
         /** habitants visibles à l'écran : espèce, position du milieu du corps, réaction en cours */
@@ -345,13 +375,16 @@ export class Scene {
   pomper() {
     this.pompeEnAttente = false;
     const t0 = performance.now();
-    if (this.pending) {
+    // ce qui va entrer à l'écran passe avant tout le reste : sinon il serait dessiné d'un coup, à l'image près
+    if (this.prechargement || this.aPrecharger.length) {
+      this.precharger(t0, Math.max(TRANCHE_MS, Math.min(50, this.app.ticker.deltaMS * 0.5)));
+    } else if (this.pending) {
       this.stepPending();
       this.enCours.calculMs += performance.now() - t0;
       this.enCours.tranches++;
     } else if (this.trash.length) this.emptyTrash();
     if (this.pending && this.focus) { setTimeout(() => this.relancer(), 250); return; }
-    if (this.pending || this.trash.length) this.relancer();
+    if (this.pending || this.trash.length || this.prechargement || this.aPrecharger.length) this.relancer();
   }
 
   emptyBuilt(pal: Palette): Built {
@@ -359,10 +392,12 @@ export class Scene {
     objects.sortableChildren = true;
     const finCarte = new Container();
     finCarte.sortableChildren = true;
+    const ground = new Container();
+    ground.sortableChildren = true; // la route passe au-dessus de toutes les bandes de sol
     return {
       pal, states: new Map(this.states), flying: this.wantsFlying(),
-      ground: new Container(), objects, labels: new Container(), finCarte, panneauFin: new Container(),
-      gifts: new Map(), groundBands: [], slabs: [], anims: [], people: {} as Record<Who, Person>, penguin: null, life: [],
+      ground, objects, labels: new Container(), finCarte, panneauFin: new Container(),
+      gifts: new Map(), charges: new Map(), people: {} as Record<Who, Person>, penguin: null, life: [],
     };
   }
 
@@ -423,7 +458,8 @@ export class Scene {
     this.ground = b.ground; this.objects = b.objects; this.labels = b.labels;
     this.finCarte = b.finCarte; this.panneauFin = b.panneauFin;
     this.gifts = b.gifts;
-    this.groundBands = b.groundBands; this.slabs = b.slabs; this.anims = b.anims; this.life = b.life;
+    this.arreterPrechargement(); // il dessinait avec l'ancienne palette
+    this.charges = b.charges; this.life = b.life;
     this.people = b.people; this.penguin = b.penguin!;
     // les personnages continuent ce qu'ils faisaient
     for (const who of ["alexandre", "flavie"] as Who[]) {
@@ -459,14 +495,134 @@ export class Scene {
 
   /** Dessine toute la scène dans `b`, en rendant la main régulièrement (chaque `yield`) */
   *buildSteps(b: Built): Generator<void, void> {
-    const { cells, path, props, nodes } = this.terrain;
     const pal = b.pal;
-    const c = pal.c;
-    // le terrain est lui aussi découpé en bandes de profondeur : au lieu d'un seul immense dessin
-    // toujours envoyé en entier, on ne dessine que les bandes qui touchent l'écran
-    let g = new Graphics();
-    const bands: Graphics[] = [g];
+    // ce qui ne dépend pas de l'endroit où l'on regarde : cadeaux, fin de carte, personnages, habitants
+    for (const n of this.terrain.nodes) b.objects.addChild(this.makeGift(n, b));
+    b.objects.addChild(b.finCarte, b.panneauFin);
+    yield;
+    yield* this.majFinDeCarteSteps(b);
+    yield;
+    for (const who of ["alexandre", "flavie"] as Who[]) {
+      const p = new Person(who, pal, this.apparence[who]);
+      b.people[who] = p;
+      b.objects.addChild(p);
+    }
+    b.penguin = new Penguin(pal);
+    b.objects.addChild(b.penguin);
+    yield;
+    // les habitants : recréés à chaque reconstruction (leur dessin suit la palette jour / nuit)
+    b.life = spawnLife(this.terrain, pal);
+    yield;
+    for (const cr of b.life) {
+      cr.on("pointertap", () => poke(cr, this.lifeEnv, this.lifeGround));
+      updateCritter(cr, 0, this.lifeGround, this.terrain);
+      b.objects.addChild(cr);
+    }
+    yield* this.prepareGpu(b);
+    // le monde lui-même (issue #14) : seulement les lots chargés dans la scène affichée. On revérifie
+    // jusqu'au bout, la caméra a pu bouger et en charger d'autres pendant le travail.
+    for (;;) {
+      const manque = [...this.charges.keys()].filter((i) => !b.charges.has(i));
+      if (!manque.length) break;
+      for (const i of manque) if (!b.charges.has(i)) yield* this.chargerLot(i, b, new Container());
+    }
+  }
+
+  /** Découpe le monde en lots que l'on sait placer sans les dessiner (issue #14). Calculé une seule fois :
+   *  ni la palette ni les cases ouvertes ne changent leur place. */
+  decouperLots(): Lot[] {
+    const { cells, path, props } = this.terrain;
+    const V = this.terrain.V;
+    const hv = (x: number, y: number) => V.get(key(x, y)) ?? 0;
+    const lots: Lot[] = [];
+    // sol : bandes de 10 diagonales ; leur étendue est exacte (coins des cases)
     const list = [...cells.values()].sort((a, b) => a.x + a.y - (b.x + b.y) || a.x - b.x);
+    let bande: Cell[] = [];
+    let bandK = list.length ? list[0].x + list[0].y : 0;
+    const fermerBande = () => {
+      if (!bande.length) return;
+      let min = Infinity, max = -Infinity;
+      for (const { x, y } of bande) for (const [cx, cy] of [[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]]) {
+        const py = P(cx, cy, hv(cx, cy)).y;
+        if (py < min) min = py;
+        if (py > max) max = py;
+      }
+      lots.push({ couche: "sol", k: bandK, zIndex: bandK, min: min - 4, max: max + 4, cellules: bande });
+      bande = [];
+    };
+    for (const cell of list) {
+      if (cell.x + cell.y >= bandK + 10) { fermerBande(); bandK = cell.x + cell.y; }
+      bande.push(cell);
+    }
+    fermerBande();
+    // route : même découpage, au-dessus de tout le sol
+    let i0 = 0;
+    const fermerRoute = (i1: number) => {
+      if (i1 <= i0) return;
+      let min = Infinity, max = -Infinity;
+      for (let i = i0; i < Math.min(i1 + 1, path.length); i++) {
+        const py = P(path[i].x + 0.5, path[i].y + 0.5, heightAt(this.terrain, path[i].x + 0.5, path[i].y + 0.5)).y;
+        if (py < min) min = py;
+        if (py > max) max = py;
+      }
+      const k = path[i0].x + path[i0].y;
+      lots.push({ couche: "sol", k, zIndex: 1e6 + k, min: min - 24, max: max + 24, route: [i0, i1] });
+      i0 = i1;
+    };
+    for (let i = 0; i < path.length; i++) {
+      if (path[i].x + path[i].y >= path[i0].x + path[i0].y + 10) fermerRoute(i);
+    }
+    fermerRoute(path.length);
+    // décors : une tranche par unité de profondeur ; leur hauteur est estimée large, puis mesurée au dessin
+    const tranches = new Map<number, PlacedProp[]>();
+    for (const p of props) {
+      const k = Math.floor(p.x + p.y + (p.kind === "mountain" ? -1.4 : BATIMENTS_LARGES.has(p.kind) ? -0.6 : 0.5));
+      let t = tranches.get(k);
+      if (!t) tranches.set(k, (t = []));
+      t.push(p);
+    }
+    for (const [k, decors] of tranches) {
+      let min = Infinity, max = -Infinity;
+      for (const p of decors) {
+        const py = P(p.x + 0.5, p.y + 0.5).y - p.z * ZH;
+        min = Math.min(min, py - (HAUTEUR_DECOR[p.kind] ?? 200));
+        max = Math.max(max, py + (p.kind === "mountain" || p.kind === "ridge" ? 200 : 140));
+      }
+      lots.push({ couche: "objets", k, zIndex: k + 0.5, min, max, decors });
+    }
+    return lots;
+  }
+
+  /** Dessine un lot dans `c`, en rendant la main régulièrement */
+  *dessinerLot(lot: Lot, pal: Palette, flying: boolean, c: Container, anims: AnimPart[]): Generator<void, void> {
+    if (lot.cellules) {
+      const g = new Graphics();
+      c.addChild(g);
+      let n = 0;
+      for (const cell of lot.cellules) {
+        if (++n % 150 === 0) yield;
+        this.dessinerCase(g, cell, pal);
+      }
+    } else if (lot.route) {
+      const g = new Graphics();
+      c.addChild(g);
+      yield* this.dessinerRoute(g, lot.route[0], lot.route[1], pal);
+    } else if (lot.decors) {
+      let n = 0;
+      for (const p of lot.decors) {
+        if (++n % 12 === 0) yield;
+        const o = drawProp(p.kind, p.x, p.y, pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop, alongX: p.alongX, flying: p.kind === "sleigh" && flying });
+        if (o.anim) anims.push(...o.anim);
+        o.y = -p.z * ZH;
+        c.addChild(o);
+      }
+    }
+  }
+
+  /** Une case de terrain : deux triangles éclairés selon leur pente */
+  dessinerCase(g: Graphics, cell: Cell, pal: Palette) {
+    const { cells } = this.terrain;
+    const c = pal.c;
     const V = this.terrain.V;
     const hv = (x: number, y: number) => V.get(key(x, y)) ?? 0;
     // lumière venant de l'arrière-gauche : les faces tournées vers la gauche sont claires
@@ -475,7 +631,7 @@ export class Scene {
     const SHADOW = 0x9aa2d2;      // ombre de la neige : lavande froide
     const ROCK_SHADOW = 0x5d668f; // ombre de la roche : violet, mais qui garde de la matière
     const ROCK_T = 0.5;           // au-delà de cette pente, c'est de la roche
-    const face = (pts: [number, number, number][], cell: typeof list[number]) => {
+    const face = (pts: [number, number, number][]) => {
       const [a, b, d] = pts;
       const ux = b[0] - a[0], uy = b[1] - a[1], uz = (b[2] - a[2]) * 1.1;
       const vx = d[0] - a[0], vy = d[1] - a[1], vz = (d[2] - a[2]) * 1.1;
@@ -512,23 +668,18 @@ export class Scene {
       poly(g, pts.map(([x, y, z]) => P(x, y, z)), c(col));
       g.poly(pts.flatMap(([x, y, z]) => { const q = P(x, y, z); return [q.x, q.y]; }), true).stroke({ width: 0.8, color: c(col) });
     };
-    let bandK = list.length ? list[0].x + list[0].y : 0;
-    const bandKs: number[] = [bandK];
-    let n0 = 0;
-    for (const cell of list) {
-      if (++n0 % 150 === 0) yield;
-      const { x, y } = cell;
-      if (x + y >= bandK + 10) { bandK = x + y; g = new Graphics(); bands.push(g); bandKs.push(bandK); }
-      const A: [number, number, number] = [x, y, hv(x, y)], B: [number, number, number] = [x + 1, y, hv(x + 1, y)];
-      const C: [number, number, number] = [x + 1, y + 1, hv(x + 1, y + 1)], D: [number, number, number] = [x, y + 1, hv(x, y + 1)];
-      face([A, B, C], cell);
-      face([A, C, D], cell);
-      if (cell.lake && (x + y) % 3 === 0) poly(g, [P(x + 0.2, y + 0.3, 0), P(x + 0.6, y + 0.1, 0), P(x + 0.65, y + 0.18, 0), P(x + 0.25, y + 0.38, 0)], c(0xeaf8fd));
-    }
-    for (const band of bands) b.ground.addChild(band);
-    yield;
-    // route posée sur le relief, dans son propre dessin (fine, et au-dessus de toutes les bandes)
-    g = new Graphics();
+    const { x, y } = cell;
+    const A: [number, number, number] = [x, y, hv(x, y)], B: [number, number, number] = [x + 1, y, hv(x + 1, y)];
+    const C: [number, number, number] = [x + 1, y + 1, hv(x + 1, y + 1)], D: [number, number, number] = [x, y + 1, hv(x, y + 1)];
+    face([A, B, C]);
+    face([A, C, D]);
+    if (cell.lake && (x + y) % 3 === 0) poly(g, [P(x + 0.2, y + 0.3, 0), P(x + 0.6, y + 0.1, 0), P(x + 0.65, y + 0.18, 0), P(x + 0.25, y + 0.38, 0)], c(0xeaf8fd));
+  }
+
+  /** Un tronçon de route posé sur le relief, des pas i0 à i1 (exclu) */
+  *dessinerRoute(g: Graphics, i0: number, i1: number, pal: Palette): Generator<void, void> {
+    const { cells, path } = this.terrain;
+    const c = pal.c;
     const T = this.terrain;
     const H = (x: number, y: number) => heightAt(T, x, y) + 0.01;
     const quad = (pts: [number, number][], col: number, alpha = 1) => poly(g, pts.map(([x, y]) => P(x, y, H(x, y))), c(col), alpha);
@@ -547,16 +698,9 @@ export class Scene {
         rect(a0, a1, b0, b1, COBBLE[Math.floor(hash(seed * 3 + i, j) * COBBLE.length)]);
       }
     };
-    // la route est découpée en tranches comme le terrain : sinon elle continuait toute seule
-    // au-delà du banc de nuages qui ferme la carte
-    const roads: Graphics[] = [g];
-    const roadKs: number[] = [path.length ? path[0].x + path[0].y : 0];
-    for (let i = 0; i < path.length; i++) {
+    for (let i = i0; i < i1; i++) {
       if (i % 30 === 29) yield;
       const a = path[i], b = path[i + 1];
-      if (a.x + a.y >= roadKs[roadKs.length - 1] + 10) {
-        g = new Graphics(); roads.push(g); roadKs.push(a.x + a.y);
-      }
       const onLake = cells.get(key(a.x, a.y))?.lake;
       const paved = !onLake && !!ZONES[a.zone].paved;
       const col = onLake ? 0x8fcde6 : ZONES[a.zone].roadColor ?? ROAD;
@@ -595,74 +739,115 @@ export class Scene {
         g.moveTo(p1.x, p1.y).lineTo(p2.x, p2.y).stroke({ width: 1.5, color: c(0xffffff), alpha: 0.8 });
       }
     }
-    for (const r of roads) b.ground.addChild(r);
-    yield;
-    b.groundBands = [
-      ...bands.map((band, i) => ({ c: band, k: bandKs[i] })),
-      ...roads.map((r, i) => ({ c: r, k: roadKs[i] })),
-    ].map(({ c: band, k }) => { const r = band.getLocalBounds(); return { c: band, min: r.minY, max: r.maxY, k }; });
-    yield;
+  }
 
-    // Les décors sont rangés par tranche de profondeur plutôt qu'un par un : la scène trie et transforme
-    // quelques dizaines de conteneurs au lieu de plusieurs centaines d'objets, et on peut masquer d'un coup
-    // tout ce qui est hors de l'écran.
-    const slabs = new Map<number, Container>();
-    const slabOf = (depth: number) => {
-      const k = Math.floor(depth);
-      let c = slabs.get(k);
-      if (!c) {
-        c = new Container();
-        c.zIndex = k + 0.5;
-        slabs.set(k, c);
-        b.objects.addChild(c);
+  /** Dessine le lot `i` dans `c` pour la scène `cible` (l'affichée ou une en construction), le triangule
+   *  d'avance, puis l'y range. `c` est fourni par l'appelant pour pouvoir le détruire si on abandonne. */
+  *chargerLot(i: number, cible: Cible, c: Container): Generator<void, void> {
+    const lot = this.lots[i];
+    c.zIndex = lot.zIndex;
+    const anims: AnimPart[] = [];
+    yield* this.dessinerLot(lot, cible.pal, cible.flying, c, anims);
+    if (c.children.length) {
+      const r = c.getLocalBounds();
+      if (import.meta.env.DEV && !lot.mesure && (r.minY < lot.min - 1 || r.maxY > lot.max + 1)) {
+        console.warn(`[monde] lot ${i} (${lot.couche}, k=${lot.k}) plus grand que prévu : ${Math.round(r.minY)}…${Math.round(r.maxY)} au lieu de ${Math.round(lot.min)}…${Math.round(lot.max)}`);
       }
-      return c;
-    };
-    let n1 = 0;
-    for (const p of props) {
-      if (++n1 % 12 === 0) yield;
-      const flying = p.kind === "sleigh" && b.flying;
-      const o = drawProp(p.kind, p.x, p.y, pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop, alongX: p.alongX, flying });
-      if (o.anim) b.anims.push(...o.anim);
-      o.y = -p.z * ZH;
-      const depth = p.x + p.y + (p.kind === "mountain" ? -1.4 : BATIMENTS_LARGES.has(p.kind) ? -0.6 : 0.5);
-      slabOf(depth).addChild(o);
+      lot.min = r.minY; lot.max = r.maxY; lot.mesure = true;
     }
-    yield;
-    for (const n of nodes) b.objects.addChild(this.makeGift(n, b));
-    b.objects.addChild(b.finCarte, b.panneauFin);
-    yield;
-    yield* this.majFinDeCarteSteps(b);
-    // hauteur occupée par chaque tranche, pour ne dessiner que celles qui entrent dans l'écran
-    b.slabs = [...slabs.entries()].map(([k, sc]) => {
-      const r = sc.getLocalBounds();
-      return { c: sc, min: r.minY, max: r.maxY, k };
-    });
-    yield;
-    for (const who of ["alexandre", "flavie"] as Who[]) {
-      const p = new Person(who, pal, this.apparence[who]);
-      b.people[who] = p;
-      b.objects.addChild(p);
+    const sys = this.triangulateur();
+    if (sys) {
+      const pile: Container[] = [c];
+      let n = 0;
+      while (pile.length) {
+        const o = pile.pop()!;
+        if (o instanceof Graphics) {
+          try { sys.updateGpuContext(o.context); } catch { break; }
+          if (++n % 8 === 0) yield;
+        }
+        for (const k of o.children) pile.push(k);
+      }
     }
-    b.penguin = new Penguin(pal);
-    b.objects.addChild(b.penguin);
-    yield;
-    // les habitants : recréés à chaque reconstruction (leur dessin suit la palette jour / nuit)
-    b.life = spawnLife(this.terrain, pal);
-    yield;
-    for (const cr of b.life) {
-      cr.on("pointertap", () => poke(cr, this.lifeEnv, this.lifeGround));
-      updateCritter(cr, 0, this.lifeGround, this.terrain);
-      b.objects.addChild(cr);
+    if (cible.charges.has(i)) { this.trash.push(c); this.relancer(); return; } // chargé entre-temps par un autre chemin
+    (lot.couche === "sol" ? cible.ground : cible.objects).addChild(c);
+    cible.charges.set(i, { c, anims });
+  }
+
+  /** Charge tout de suite un lot qui entre à l'écran (on termine son préchargement s'il était commencé) */
+  chargerMaintenant(i: number) {
+    const p = this.prechargement;
+    if (p?.i === i) {
+      this.prechargement = null;
+      for (const _ of p.gen) void _;
+      return;
     }
-    yield* this.prepareGpu(b);
+    for (const _ of this.chargerLot(i, this, new Container())) void _;
+  }
+
+  dechargerLot(i: number) {
+    const ch = this.charges.get(i);
+    if (!ch) return;
+    this.charges.delete(i);
+    ch.c.parent?.removeChild(ch.c);
+    this.trash.push(ch.c);
+    this.relancer();
+  }
+
+  /** Abandonne le préchargement en cours (la scène qu'il visait va changer) */
+  arreterPrechargement() {
+    const p = this.prechargement;
+    if (!p) return;
+    this.prechargement = null;
+    p.gen.return();
+    if (!p.c.parent) { this.trash.push(p.c); this.relancer(); }
+  }
+
+  /** Issue #14 : ne garde dessiné que ce qui entoure l'écran. Ce qui entre à l'écran est dessiné tout de
+   *  suite ; un demi-écran d'avance est préparé en arrière-plan ; au-delà d'un écran, on détruit. */
+  diffuser(topY: number, botY: number, limiteDecor: number) {
+    const h = botY - topY;
+    const attente: { i: number; d: number }[] = [];
+    for (let i = 0; i < this.lots.length; i++) {
+      const lot = this.lots[i];
+      const utile = lot.k <= (lot.couche === "sol" ? this.limiteDepth : limiteDecor);
+      const d = lot.max < topY ? topY - lot.max : lot.min > botY ? lot.min - botY : 0;
+      const ch = this.charges.get(i);
+      if (ch) {
+        if (!utile || d > h * ECRANS_GARDES) this.dechargerLot(i);
+        else ch.c.visible = d === 0;
+      } else if (utile && d === 0) this.chargerMaintenant(i);
+      else if (utile && d < h * ECRANS_AVANCE) attente.push({ i, d });
+    }
+    attente.sort((a, b) => a.d - b.d);
+    this.aPrecharger = attente.map((a) => a.i);
+    if (this.aPrecharger.length && !this.prechargement) this.relancer();
+  }
+
+  /** Prépare le prochain lot attendu, dans le temps donné */
+  precharger(t0: number, tranche: number) {
+    while (performance.now() - t0 < tranche) {
+      if (!this.prechargement) {
+        const i = this.aPrecharger.shift();
+        if (i === undefined) return;
+        if (this.charges.has(i)) continue;
+        const c = new Container();
+        this.prechargement = { i, c, gen: this.chargerLot(i, this, c) };
+      }
+      if (this.prechargement.gen.next().done) this.prechargement = null;
+    }
+  }
+
+  /** Accès à la triangulation de PixiJS 8 (API interne : on s'en passe si elle change) */
+  triangulateur() {
+    const sys = (this.app.renderer as unknown as { graphicsContext?: { updateGpuContext?: (c: unknown) => void } }).graphicsContext;
+    return typeof sys?.updateGpuContext === "function" ? sys as { updateGpuContext: (c: unknown) => void } : null;
   }
 
   /** Triangule d'avance tous les dessins de la nouvelle scène. Sans cela, PixiJS le fait au premier
    *  rendu qui suit l'échange, pour tout ce qui est à l'écran d'un coup : c'était le plus gros du gel. */
   *prepareGpu(b: Built): Generator<void, void> {
-    const sys = (this.app.renderer as unknown as { graphicsContext?: { updateGpuContext?: (c: unknown) => void } }).graphicsContext;
-    if (typeof sys?.updateGpuContext !== "function") return; // API interne de PixiJS : on s'en passe si elle change
+    const sys = this.triangulateur();
+    if (!sys) return;
     const pile: Container[] = [b.ground, b.objects, b.labels];
     let n = 0;
     while (pile.length) {
@@ -1048,10 +1233,9 @@ export class Scene {
     const botY = (innerHeight - this.world.y) / this.scale + 80;
     // les décors s'arrêtent un peu avant le banc de nuages : sinon un toit émerge de la brume
     const limiteDecor = this.limiteDepth === Infinity ? Infinity : this.limiteDepth - 4;
-    for (const s2 of this.slabs) s2.c.visible = s2.k <= limiteDecor && s2.max > topY && s2.min < botY;
-    // une tranche commence à `k` et court sur 10 : celle qui contient la limite reste visible,
-    // juste assez pour porter le banc de nuages, et rien derrière
-    for (const b of this.groundBands) b.c.visible = b.k <= this.limiteDepth && b.max > topY && b.min < botY;
+    // (issue #14) : seul ce qui entoure l'écran est dessiné. Une bande de sol commence à `k` et court
+    // sur 10 : celle qui contient la limite reste visible, juste assez pour porter le banc de nuages
+    this.diffuser(topY, botY, limiteDecor);
     // habitants : seuls ceux qui sont à l'écran vivent ; les autres attendent, figés
     const leftX = (-this.world.x) / this.scale - 60, rightX = (innerWidth - this.world.x) / this.scale + 60;
     for (const cr of this.life) {
@@ -1135,7 +1319,7 @@ export class Scene {
     if (wo > 0.01) this.whiteout.rect(0, 0, innerWidth, innerHeight).fill({ color: 0xffffff, alpha: wo });
 
     // décors vivants : la grande roue tourne (nacelles toujours droites), la fumée monte des cheminées
-    for (const a of this.anims) {
+    for (const ch of this.charges.values()) for (const a of ch.anims) {
       if (a.kind === "wheel") {
         a.hub.rotation += 0.0045 * dt;
         for (const car of a.cars) car.rotation = -a.hub.rotation;
