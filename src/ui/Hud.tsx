@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import type { Progress, Who } from "../core/contracts";
+import { PRENOMS_PAR_DEFAUT } from "./useSalon";
 import { RaceIndicator, course } from "./RaceIndicator";
 
-const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 /** Couleurs de texte de la course (assombries : le rouge vif ne tient pas le contraste en 14 px). */
 const COULEUR_TEXTE: Record<Who, string> = { alexandre: "#2a5fb4", flavie: "#a3192f" };
 
 export type HudProps = {
   me: Who;
   progress: Record<Who, Progress>;
+  /** Prénoms du salon (`usePrenoms`) ; repli : `PRENOMS_PAR_DEFAUT`. */
+  prenoms?: Record<Who, string>;
   /** Nom du monde affiché sous le titre ; `zoneKey` change quand on passe d'un monde à l'autre. */
   zoneName: string;
   zoneKey?: string | number;
@@ -36,6 +38,7 @@ export type HudProps = {
  */
 export function Hud(p: HudProps) {
   const autre: Who = p.me === "alexandre" ? "flavie" : "alexandre";
+  const PRENOM = p.prenoms ?? PRENOMS_PAR_DEFAUT;
   const [courseOuverte, setCourseOuverte] = useState(false);
   const courseRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +67,7 @@ export function Hud(p: HudProps) {
       <header className={`entete${p.nextToWrite != null && p.souvenirs ? " entete--pleine" : ""}`}>
         <div className="entete-ilot entete-titre">
           <span className="entete-nom">
-            Alexandre <span className="entete-et">&</span> Flavie
+            {PRENOM.alexandre} <span className="entete-et">&</span> {PRENOM.flavie}
             {p.demo && <span className="entete-demo entete-demo--large">démo</span>}
           </span>
           <span className="entete-monde" key={p.zoneKey}>
@@ -96,7 +99,7 @@ export function Hud(p: HudProps) {
               style={{ color: duel ? COULEUR_TEXTE[duel.tete] : undefined }} onClick={() => setCourseOuverte(!courseOuverte)}>
               <span aria-hidden="true">🏁</span> {pastille} <span className="entete-chevron" aria-hidden="true">{courseOuverte ? "▴" : "▾"}</span>
             </button>
-            {courseOuverte && <div className="entete-course-detail"><RaceIndicator me={p.me} progress={p.progress} /></div>}
+            {courseOuverte && <div className="entete-course-detail"><RaceIndicator me={p.me} progress={p.progress} prenoms={PRENOM} /></div>}
           </div>
         </div>
       </header>

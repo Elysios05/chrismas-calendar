@@ -6,10 +6,9 @@ import { MascotDialog } from "./Mascot";
 import { PreparedCase } from "./PreparedCase";
 import { PINGOU_CASE, type PingouLine } from "./pingou/lines";
 import { useDialog } from "./useDialog";
-import { contenuDuJour, prenomsDuSalon, useSalon } from "./useSalon";
+import { PRENOMS_PAR_DEFAUT, contenuDuJour, prenomsDuSalon, useSalon } from "./useSalon";
 
 /** Repli sans salon (faux backend d'atelier) : jamais de prénom en dur. */
-const SANS_PRENOM = "ton binôme";
 
 /** Son silencieux : utilisé tant que l'équipe Audio n'est pas branchée. */
 const MUET: SoundApi = silentSound;
@@ -50,7 +49,8 @@ export function DayWindow({
   const zone = useRef<HTMLDivElement>(null);
   // prénoms affichés : suivent le salon courant (config modifiée pendant que la fenêtre est ouverte)
   const salon = useSalon(backend);
-  const prenomPartenaire = salon?.config.joueurs[partner].prenom ?? SANS_PRENOM;
+  const prenoms = prenomsDuSalon(salon) ?? PRENOMS_PAR_DEFAUT;
+  const prenomPartenaire = prenoms[partner];
   // salon lu au moment de lancer le jeu : le jeu monté ne change plus de contenu en cours de partie
   const salonAuLancement = useRef<Salon | null>(null);
   // focus piégé, Échap, et retour du focus sur la case au moment de fermer
@@ -143,7 +143,7 @@ export function DayWindow({
           )}
 
           {etape === "jeu" && estPreparee && prepared && (
-            <PreparedCase resultat={prepared} de={partner} onPingou={setLines} />
+            <PreparedCase resultat={prepared} de={partner} prenoms={prenoms} onPingou={setLines} />
           )}
 
           {etape === "jeu" && !estPreparee && (

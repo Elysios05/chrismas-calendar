@@ -1,10 +1,10 @@
 import { useState } from "react";
 import type { BackendApi, SoundApi, Who } from "../core/contracts";
+import { usePrenoms } from "./useSalon";
 import { PenguinPortrait } from "./Mascot";
 import { useDialog } from "./useDialog";
 import { RemindersRow } from "./Reminders";
 
-const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
 export const CLE_SON = "interface:son";
 export const CLE_ANIMATIONS = "interface:animations";
@@ -67,6 +67,7 @@ export function Settings({
   onClose: () => void;
   onSignedOut?: () => void;
 }) {
+  const PRENOM = usePrenoms(backend);
   const [son, setSon] = useState(() => lire(CLE_SON, true));
   const [animations, setAnimations] = useState(() => lire(CLE_ANIMATIONS, true));
 
@@ -94,7 +95,7 @@ export function Settings({
         <header className="sheet-head">
           <span className="reg-portrait" aria-hidden="true"><PenguinPortrait size={46} expression="content" /></span>
           <div>
-            <p className="sheet-day">Connecté·e en tant que {PRENOM[me]}</p>
+            <p className="sheet-day">Profil : {PRENOM[me]}</p>
             <h2 className="sheet-title" id="reg-titre">Réglages</h2>
           </div>
           <button className="sheet-close" type="button" onClick={onClose} aria-label="Fermer les réglages">✕</button>

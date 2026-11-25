@@ -1,6 +1,6 @@
 import type { Progress, Who } from "../core/contracts";
+import { PRENOMS_PAR_DEFAUT } from "./useSalon";
 
-const PRENOM: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 const COULEUR: Record<Who, string> = { alexandre: "#2f6fd0", flavie: "#d9354b" };
 /** Mêmes couleurs, assombries pour le petit texte : le rouge vif ne tient pas le contraste à 11 px. */
 const COULEUR_TEXTE: Record<Who, string> = { alexandre: "#2a5fb4", flavie: "#a3192f" };
@@ -23,10 +23,13 @@ export function course(progress: Record<Who, Progress>): { tete: Who; ecart: num
 export function RaceIndicator({
   me,
   progress,
+  prenoms: PRENOM = PRENOMS_PAR_DEFAUT,
   compact = false,
 }: {
   me: Who;
   progress: Record<Who, Progress>;
+  /** Prénoms du salon (`usePrenoms`) ; repli : `PRENOMS_PAR_DEFAUT`. */
+  prenoms?: Record<Who, string>;
   /** Version réduite pour le bandeau du haut sur téléphone */
   compact?: boolean;
 }) {
