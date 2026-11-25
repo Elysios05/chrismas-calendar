@@ -29,7 +29,7 @@ export const pick = <T,>(xs: readonly T[]): T => xs[Math.floor(Math.random() * x
 export const PINGOU_LOGIN = {
   /** Écran de connexion, avant de choisir un profil */
   accueil: (): PingouLine[] => [
-    { text: "Bonsoir ! Portier officiel du calendrier, c'est moi. Tu es lequel des deux ?", face: "content" },
+    { text: "Bonsoir ! Portier officiel du calendrier, c'est moi. C'est qui, ce soir ?", face: "content" },
   ],
   /** Profil choisi, champ mot de passe affiché */
   demandeMotDePasse: (prenom: string): PingouLine[] => [
@@ -149,7 +149,7 @@ export const PINGOU_CASE = {
     { text: `Rien dans la boîte… ${autre} a dû être pris de court. Repasse plus tard ?`, face: "triste" },
   ],
   prepareeApres: (): PingouLine[] => [
-    { text: "Je vous laisse tous les deux. Je serai dehors, dans la neige.", face: "content" },
+    { text: "Je vous laisse en tête-à-tête. Je serai dehors, dans la neige.", face: "content" },
   ],
   /** Rappel la veille, côté celui qui prépare */
   rappelVeille: (jour: number, autre: string): PingouLine[] => [
@@ -161,8 +161,8 @@ export const PINGOU_CASE = {
     { text: `La case ${jour}, c'est toi qui l'écris. ${autre} l'ouvrira sans que je puisse rien y changer.`, face: "content" },
   ],
   /** Brouillon déjà enregistré, on revient le modifier */
-  editeurRepris: (): PingouLine[] => [
-    { text: "Tu peux encore tout changer. Jusqu'à ce qu'elle l'ouvre, c'est à toi.", face: "clin" },
+  editeurRepris: (autre: string): PingouLine[] => [
+    { text: `Tu peux encore tout changer. Jusqu'à ce que ${autre} l'ouvre, c'est à toi.`, face: "clin" },
   ],
   /** La case est figée : l'autre l'a déjà lue */
   editeurFige: (autre: string): PingouLine[] => [
@@ -173,7 +173,27 @@ export const PINGOU_CASE = {
   ],
   jour24: (autre: string): PingouLine[] => [
     { text: "Dernière case. Le traîneau est chargé, les rennes s'impatientent.", face: "content" },
-    { text: `Vous avez fait tout ce chemin chacun de votre côté, et vous êtes arrivés ensemble.`, face: "content" },
+    { text: `Vous avez fait tout ce chemin à distance, et vous voilà au bout, ensemble.`, face: "content" },
     { text: `Joyeux Noël, toi et ${autre} 🌟`, face: "content" },
   ],
+} as const;
+
+/** Salons (#84, piste B « Pingou » choisie par Alexandre le 25 nov) : une question par écran. */
+export const PINGOU_SALON = {
+  accueil: (): PingouLine => ({ text: "Salut ! Je fabrique des calendriers de l'Avent pour deux. On fait le vôtre ?", face: "content" }),
+  dejaUnCalendrier: (): PingouLine => ({ text: "Ouvre le lien de connexion que tu as gardé en créant le calendrier, et je te retrouve tout de suite.", face: "clin" }),
+  monPrenom: (): PingouLine => ({ text: "Super ! Pour commencer, comment tu t'appelles ?", face: "content" }),
+  monManteau: (prenom: string): PingouLine => ({ text: `Enchanté, ${prenom} ! Tu veux quel manteau pour traverser la neige ?`, face: "content" }),
+  sonPrenom: (): PingouLine => ({ text: "Et ce calendrier, c'est pour qui ?", face: "clin" }),
+  sonManteau: (prenom: string): PingouLine => ({ text: `Joli prénom. Et pour ${prenom}, quel manteau ?`, face: "content" }),
+  contenu: (prenom: string): PingouLine => ({ text: `Les jeux ont déjà leurs questions. Tu pourras les remplacer par les vôtres plus tard, sans que ${prenom} le sache.`, face: "clin" }),
+  motDePasse: (): PingouLine => ({ text: "Dernière chose : un mot de passe, pour que personne d'autre n'entre chez vous.", face: "neutre" }),
+  fabrication: (): PingouLine => ({ text: "Je découpe les cases, je plie les enveloppes… presque fini !", face: "content" }),
+  lien: (prenom: string): PingouLine => ({ text: `Voilà le lien pour ${prenom}. Je garde la porte entrouverte jusqu'à son arrivée 😉`, face: "clin" }),
+  copie: (): PingouLine => ({ text: "Copié ! Colle-le dans un message, et le tour est joué.", face: "content" }),
+  souci: (): PingouLine => ({ text: "Oups, ça coince. Le détail est juste en dessous.", face: "surpris" }),
+  /** Page d'invitation (?invitation=…) */
+  invitation: (invite: string, createur: string): PingouLine => ({ text: `Salut ${invite} ! ${createur} t'a préparé un calendrier de l'Avent. Choisis juste un mot de passe, et c'est parti.`, face: "content" }),
+  invitationUtilisee: (invite: string): PingouLine => ({ text: `Ce lien a déjà servi, ${invite}. Tu as ton mot de passe : entre par la porte habituelle.`, face: "clin" }),
+  invitationInvalide: (): PingouLine => ({ text: "Ce lien ne marche plus. Demande un nouveau lien à la personne qui te l'a envoyé.", face: "triste" }),
 } as const;

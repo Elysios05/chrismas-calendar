@@ -5,6 +5,8 @@
  *         editeur · editeur-vide · rappel · course · reglages · final · pingou
  *         hud-a · hud-b · hud-c (pistes de l'en-tête, #51 ; &ouvert=1, &nuit=1)
  *         entete (le vrai <Hud />, piste B ; &nuit=1, &egalite=1, &j24=1)
+ *         salon-a · salon-b · salon-c (pistes des salons, #84 ; &ecran=accueil|assistant|lien|invitation)
+ *         creer (le vrai assistant des salons, piste B) · invitation (crée un salon fictif Sam & Camille puis ouvre son lien)
  */
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -20,6 +22,10 @@ import type { Expression } from "../pingou/lines";
 import { DemoBackend } from "../../backend";
 import { HudMaquette } from "./hudMaquettes";
 import { Hud } from "../Hud";
+import { SalonMaquette, type Ecran } from "./salonMaquettes";
+import { CreerSalon } from "../salons/CreerSalon";
+import { Invitation } from "../salons/Invitation";
+import { PLAYERS } from "../../world/actors";
 import "../../index.css";
 
 // le vrai mode démo, celui qu'utilise l'application publique : plus de faux backend d'atelier.
@@ -61,6 +67,20 @@ const ECHECS: Record<string, string> = {
   compte: "Ce compte n'est pas relié à alexandre (table profiles).",
 };
 
+/** Crée un salon fictif dans le DemoBackend puis recharge la page avec son lien d'invitation. */
+async function inviterSamEtCamille() {
+  const c = (w: "alexandre" | "flavie") => {
+    const { coat, hat, pompom, hair, longHair } = PLAYERS[w];
+    return { coat, hat, pompom, hair, longHair };
+  };
+  const cree = await backend.salons!.creerSalon({
+    motDePasse: "flocon",
+    config: { joueurs: { alexandre: { prenom: "Sam", couleurs: c("alexandre") }, flavie: { prenom: "Camille", couleurs: c("flavie") } }, contenu: {} },
+  });
+  const jeton = new URL(cree.lienInvitation, location.href).searchParams.get("invitation");
+  location.replace(`${location.pathname}?vue=invitation&invitation=${jeton}`);
+}
+
 function Maquettes() {
   const vue = new URLSearchParams(location.search).get("vue") ?? "connexion";
   const [ouverte, setOuverte] = useState(true);
@@ -72,6 +92,18 @@ function Maquettes() {
     return <HudMaquette piste={vue.slice(4) as "a" | "b" | "c"} />;
   }
 
+  if (vue === "creer") {
+    return <CreerSalon backend={backend} onOuvrir={() => alert("→ le calendrier")} onDemo={() => alert("→ la démo")} />;
+  }
+  if (vue === "invitation") {
+    if (!new URLSearchParams(location.search).has("invitation")) void inviterSamEtCamille();
+    else return <Invitation backend={backend} onEntree={() => alert("→ le calendrier")} onConnexion={() => alert("→ la connexion")} />;
+    return null;
+  }
+  if (vue.startsWith("salon-")) {
+    const ecran = (new URLSearchParams(location.search).get("ecran") ?? "accueil") as Ecran;
+    return <SalonMaquette piste={vue.slice(6)} ecran={ecran} />;
+  }
   if (vue === "entete") {
     const q = new URLSearchParams(location.search);
     const nuit = q.has("nuit");
