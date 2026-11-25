@@ -21,7 +21,7 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 Faits : 1, 2, 3, **5, 6** (PR #83 en attente de fusion), 7, 11, 15, 17. Restent 10, **dans l'ordre d'ouverture des cases** :
 1. ~~Jour **3** (défi photo croisé)~~ — fait le 24 nov (PR #77, fusionnée)
 2. ~~Jours **5** et **6** (en direct)~~ — faits le 24 nov, branche `jeux/direct-jours-5-6` (PR #83)
-3. Jour **9** (dessin à deviner)
+3. ~~Jour **9** (dessin à deviner)~~ — fait le 25 nov, branche `jeux/dessin-jour9`
 4. Jour **10** (score à battre)
 5. Jour **13** (en direct)
 6. Jour **14** (activité synchronisée)
@@ -43,6 +43,28 @@ Avant de poser une question, relire les issues ouvertes (y compris celles des au
 du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
+
+### 25 novembre 2026 — jour 9, dessin à deviner (branche `jeux/dessin-jour9`)
+
+**Décidé avec Alexandre :** « souvenirs dessinés » (pas un 2e Pictionary) : **3 dessins chacun, sans chrono**.
+Pour chacun : un thème au choix (pas deux fois le même), on dessine SON souvenir, puis on écrit la réponse,
+des variantes acceptées et un petit mot révélé après. On devine ceux de l'autre **après avoir fini les siens** :
+le dessin se refait trait par trait, le thème sert d'indice, réponse tapée (correction tolérante).
+Galerie des 6 dessins à la fin. Contenu : `src/data/games/dessin-jour9.ts` (6 thèmes d'exemple).
+
+**Décisions techniques prises seul :** 3 essais (3/2/1 point), « Langue au chat », « C'était presque ça » = 1 point
+sur l'honneur (un souvenir n'a pas de réponse unique) ; correction plus large qu'au rébus (« une pizza margherita »
+trouve « la pizza ») ; rejeu sans les pauses > 0,4 s et au plus 20 s ; bouton « annuler le dernier trait ».
+Réutilise `pictionary/dessin.ts`, `Tableau.tsx` et les styles du Pictionary et du défi photo.
+Coups : `dessin:<qui>:<k>`, `devine:<qui>:<k>`. Démo : 3 dessins d'exemple tracés par le code
+(`dessin/exemple.ts`) tant que l'autre n'a rien dessiné ; les devinettes contre eux ne sont pas enregistrées.
+
+**Vérifié dans l'atelier** (390×844 et 1280×800) : Alexandre dessine 3 fois et devine les exemples, puis Flavie
+dessine, devine pour de vrai, et Alexandre retrouve « Flavie a trouvé » et les 3 vrais dessins à deviner. 0 erreur console.
+⚠️ `npm run capture` est cassé sur `main` (« Carte non atteinte », même sans mes changements) → issue #87 pour la Qualité.
+
+**Prochaine étape :** jour 10 (attrape-flocons dans la tempête, score à battre, PixiJS). Demander d'abord ses
+règles à Alexandre. Surveiller #84 (contrat `SalonApi`, PR #85) : quand il est fusionné, ce point passe avant.
 
 ### 24 novembre 2026 — jours 5 et 6, jeux en direct (branche `jeux/direct-jours-5-6`)
 
