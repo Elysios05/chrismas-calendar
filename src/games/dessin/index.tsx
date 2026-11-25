@@ -23,7 +23,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { GameContext, GameModule, Who } from "../../core/contracts";
-import { DESSIN_JOUR9, type DessinContent } from "../../data/games/dessin-jour9";
+import { DESSIN_JOUR9, SCHEMA_DESSIN_JOUR9, reparerDessin } from "../../data/games/dessin-jour9";
+import { prenomsDe, lireContenu } from "../shared/contenu";
 import { Cadre, PanneauRegles, Puce } from "../shared/ui";
 import { monterReact } from "../shared/monter";
 import { bonneReponse, nue } from "../rebus/reponse";
@@ -34,7 +35,6 @@ import "../pictionary/pictionary.css";
 import "../photo/photo.css";
 import "./dessin.css";
 
-const PRENOMS: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 const REPONSE_MAX = 40;
 const MOT_MAX = 90;
 const ATTENTE_RELECTURE_MS = 15000;
@@ -117,7 +117,8 @@ function Vignette({ elements, legende, sous, onClick }: {
 /* ---------- jeu ---------- */
 
 function DessinADeviner({ ctx, titreJeu }: { ctx: GameContext; titreJeu: string }) {
-  const contenu = (ctx.content as DessinContent | null) ?? DESSIN_JOUR9;
+  const contenu = useMemo(() => lireContenu(ctx.content, DESSIN_JOUR9, SCHEMA_DESSIN_JOUR9, reparerDessin), [ctx.content]);
+  const PRENOMS = prenomsDe(ctx);
   const N = contenu.nbDessins;
   const autre = PRENOMS[ctx.partner];
   const titre = `Jour ${ctx.day} · ${titreJeu}`;

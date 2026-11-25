@@ -4,20 +4,28 @@
  * Côté interface / chef de projet, l'usage est :
  *   const module = await chargerJeu(jour);
  *   if (module) { const nettoyer = module.mount(el, ctx); }
- * avec `ctx.content = contenuDuJour(jour)` (ou null : chaque jeu a son contenu par défaut).
+ * avec `ctx.content = salon.config.contenu[String(jour)]` (ou undefined : chaque jeu a son contenu par défaut)
+ * et `ctx.prenoms` = les prénoms du salon.
+ *
+ * Éditeur de contenu du salon (Interface) : `schemasDesJeux()` donne, jour par jour, les champs qu'un couple
+ * peut personnaliser (forme décrite dans shared/contenu.ts) et `contenuDuJour(jour)` le contenu par défaut
+ * qui sert de point de départ. L'éditeur n'enregistre que les champs du schéma.
  */
 
 import type { DayNumber, GameModule } from "../core/contracts";
-import { QUIZ_JOUR1 } from "../data/games/quiz-jour1";
+import type { SchemaContenu } from "./shared/contenu";
+
+export type { SchemaContenu, ChampContenu } from "./shared/contenu";
+import { QUIZ_JOUR1, SCHEMA_QUIZ_JOUR1 } from "../data/games/quiz-jour1";
 import { LUGE_JOUR2 } from "../data/games/luge-jour2";
-import { REBUS_JOUR7 } from "../data/games/rebus-jour7";
-import { PENDU_JOUR15 } from "../data/games/pendu-jour15";
-import { MOTSCROISES_JOUR17 } from "../data/games/motscroises-jour17";
-import { SYNCHRO_JOUR11 } from "../data/games/synchro-jour11";
-import { PHOTO_JOUR3 } from "../data/games/photo-jour3";
-import { PICTIONARY_JOUR5 } from "../data/games/pictionary-jour5";
+import { REBUS_JOUR7, SCHEMA_REBUS_JOUR7 } from "../data/games/rebus-jour7";
+import { PENDU_JOUR15, SCHEMA_PENDU_JOUR15 } from "../data/games/pendu-jour15";
+import { MOTSCROISES_JOUR17, SCHEMA_MOTSCROISES_JOUR17 } from "../data/games/motscroises-jour17";
+import { SYNCHRO_JOUR11, SCHEMA_SYNCHRO_JOUR11 } from "../data/games/synchro-jour11";
+import { PHOTO_JOUR3, SCHEMA_PHOTO_JOUR3 } from "../data/games/photo-jour3";
+import { PICTIONARY_JOUR5, SCHEMA_PICTIONARY_JOUR5 } from "../data/games/pictionary-jour5";
 import { FRIANDISES_JOUR6 } from "../data/games/friandises-jour6";
-import { DESSIN_JOUR9 } from "../data/games/dessin-jour9";
+import { DESSIN_JOUR9, SCHEMA_DESSIN_JOUR9 } from "../data/games/dessin-jour9";
 
 type Chargeur = () => Promise<GameModule>;
 
@@ -48,6 +56,24 @@ const CONTENU: Partial<Record<DayNumber, unknown>> = {
   15: PENDU_JOUR15,
   17: MOTSCROISES_JOUR17,
 };
+
+/** Ce qu'un couple peut personnaliser, par jour. Absent = rien à personnaliser (jeux d'adresse : 2, 6). */
+const SCHEMAS: Partial<Record<DayNumber, SchemaContenu>> = {
+  1: SCHEMA_QUIZ_JOUR1,
+  3: SCHEMA_PHOTO_JOUR3,
+  5: SCHEMA_PICTIONARY_JOUR5,
+  7: SCHEMA_REBUS_JOUR7,
+  9: SCHEMA_DESSIN_JOUR9,
+  11: SCHEMA_SYNCHRO_JOUR11,
+  15: SCHEMA_PENDU_JOUR15,
+  17: SCHEMA_MOTSCROISES_JOUR17,
+};
+
+export const schemaDuJour = (jour: DayNumber): SchemaContenu | null => SCHEMAS[jour] ?? null;
+
+/** Tous les schémas, dans l'ordre des cases */
+export const schemasDesJeux = (): SchemaContenu[] =>
+  (Object.keys(SCHEMAS).map(Number) as DayNumber[]).sort((a, b) => a - b).map((j) => SCHEMAS[j]!);
 
 export const joursAvecJeu = (): DayNumber[] => Object.keys(JEUX).map(Number).sort((a, b) => a - b);
 

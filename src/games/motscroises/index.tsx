@@ -7,14 +7,14 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { GameContext, GameModule, Who } from "../../core/contracts";
-import { MOTSCROISES_JOUR17, MOTSCROISES_VERDICTS, type MotsCroisesContent } from "../../data/games/motscroises-jour17";
+import type { GameContext, GameModule } from "../../core/contracts";
+import { MOTSCROISES_JOUR17, SCHEMA_MOTSCROISES_JOUR17, MOTSCROISES_VERDICTS } from "../../data/games/motscroises-jour17";
+import { prenomsDe, lireContenu } from "../shared/contenu";
 import { Cadre, PanneauFin, PanneauRegles, Puce } from "../shared/ui";
 import { monterReact } from "../shared/monter";
 import { enregistrerMeilleur, lireMeilleur } from "../shared/scores";
 import { construireGrille, type Entree, type Grille } from "./grille";
 
-const PRENOMS: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 const CLAVIER = ["AZERTYUIOP", "QSDFGHJKLM", "WXCVBN"];
 const base = (c: string) => c.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
 
@@ -30,7 +30,8 @@ const casesDe = (e: Entree) =>
   [...e.mot].map((_, i) => ({ ligne: e.ligne + (e.dir === "v" ? i : 0), col: e.col + (e.dir === "h" ? i : 0) }));
 
 function MotsCroises({ ctx }: { ctx: GameContext }) {
-  const contenu = (ctx.content as MotsCroisesContent | null) ?? MOTSCROISES_JOUR17;
+  const contenu = useMemo(() => lireContenu(ctx.content, MOTSCROISES_JOUR17, SCHEMA_MOTSCROISES_JOUR17), [ctx.content]);
+  const PRENOMS = prenomsDe(ctx);
   const prenomAutre = PRENOMS[ctx.partner];
 
   const grille = useMemo<Grille>(
