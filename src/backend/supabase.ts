@@ -5,13 +5,15 @@
  */
 import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
 import type {
-  BackendApi, DayNumber, PreparedContent, PreparedResult, Progress, RealtimeRoom, ReminderStatus, Salon, SalonApi, Who,
+  BackendApi, DayNumber, InvitationInfo, JoueurSalon, PreparedContent, PreparedResult, Progress, RealtimeRoom,
+  ReminderStatus, Salon, SalonApi, SalonConfig, SalonCree, SalonErreurCode, Who,
 } from "../core/contracts";
 import { browserStatus, currentSubscription, subscribe, subscriptionKeys } from "./push";
 import type { PasswordRecovery } from "./index";
 import {
   FROZEN_MESSAGE, PHOTO_MAX_DIMENSION, emailOf, PREPARED_DAYS, READ_URL_TTL_SECONDS, UPLOAD_URL_TTL_SECONDS,
-  SALON_DEMO_CONFIG, checkPhotoSize, compressImage, isWho, lienSalonUrl, partnerOf, salonError,
+  checkMotDePasse, checkPhotoSize, checkSalonConfig, compressImage, isWho, lienInvitationUrl, lienSalonUrl, partnerOf,
+  salonError, siteBaseUrl,
 } from "./config";
 
 const BUCKET = "photos";
@@ -39,6 +41,30 @@ class SwitchableStorage {
   removeItem = (k: string) => { this.pick()?.removeItem(k); this.other()?.removeItem(k); };
 }
 const AUTH_KEY = "cc-auth";
+/** Dernier salon ouvert sur cet appareil (le site le rouvre sans lien). */
+const SALON_KEY = "cc-salon";
+
+const SALON_CODES: SalonErreurCode[] = [
+  "INVITATION_INVALIDE", "INVITATION_UTILISEE", "LIMITE_CREATION", "NON_AUTORISE", "SALON_INCONNU",
+  "MOT_DE_PASSE_FAIBLE", "CONFIG_INVALIDE", "INDISPONIBLE",
+];
+/** Les fonctions SQL lèvent « CODE : message » ; on en refait une SalonError (message par défaut si besoin). */
+function salonErrorFrom(message: string, fallback: SalonErreurCode = "INDISPONIBLE") {
+  const code = SALON_CODES.find((c) => message.includes(c));
+  if (!code) return salonError(fallback, fallback === "INDISPONIBLE" ? "Le serveur n'a pas pu répondre : " + message : undefined);
+  const text = message.split(code).pop()!.replace(/^\s*:\s*/, "").trim();
+  return salonError(code, text ? text.charAt(0).toUpperCase() + text.slice(1) + (/[.!?]$/.test(text) ? "" : ".") : undefined);
+}
+const readSalonParam = () => {
+  try { return new URLSearchParams(location.search).get("salon"); } catch { return null; }
+};
+const readStoredSalon = () => {
+  try { return localStorage.getItem(SALON_KEY); } catch { return null; }
+};
+type SalonRow = { id: string; config: SalonConfig; created_at: string };
+type SalonPublic = { id: string; joueurs: Record<Who, JoueurSalon>; inviteArrive: boolean; createdAt: string };
+/** Compte connecté : sa place et son salon (table profiles). */
+type Profil = { who: Who; salonId: string };
 
 /** Extrait le chemin Storage d'une URL signée (…/object/sign/photos/<chemin>?token=…), ou renvoie la chaîne telle quelle. */
 export function toStoragePath(urlOrPath: string): string {
@@ -60,7 +86,12 @@ function friendly(message: string): string {
 export class SupabaseBackend implements BackendApi, PasswordRecovery {
   readonly mode = "supabase" as const;
   private sb: SupabaseClient;
-  private who: Who | null = null;
+  private who: Who | null = null;           // place dans le SALON COURANT (null si pas membre de ce salon)
+  private profil: Profil | null = null;     // compte connecté (peut appartenir à un autre salon)
+  private salonId: string | null = readSalonParam() || readStoredSalon();
+  private salonCache: Salon | null = null;
+  private salonListeners = new Set<(salon: Salon | null) => void>();
+  private salonChannel: RealtimeChannel | null = null;
   private whoReady: Promise<Who | null>;
   private authListeners = new Set<(who: Who | null) => void>();
   private lastEmitted: Who | null | undefined = undefined;
@@ -81,7 +112,9 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
       if (event === "INITIAL_SESSION") return;
       // Pas d'appel Supabase directement dans ce rappel (risque de blocage) : on diffère.
       setTimeout(() => {
-        if (event === "SIGNED_OUT") { this.who = null; this.whoReady = Promise.resolve(null); this.emitAuth(null); return; }
+        if (event === "SIGNED_OUT") {
+          this.who = null; this.profil = null; this.whoReady = Promise.resolve(null); this.emitAuth(null); this.watchSalon(); return;
+        }
         this.whoReady = this.loadWho();
         this.whoReady.then((w) => this.emitAuth(w), () => this.emitAuth(null));
       }, 0);
@@ -98,14 +131,26 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
     this.authListeners.forEach((cb) => cb(who));
   }
 
-  /** Lit l'identité (alexandre/flavie) de l'utilisateur connecté dans la table profiles. */
+  /**
+   * Lit la place (alexandre/flavie) et le salon du compte connecté (table profiles).
+   * Sans salon courant (ni lien, ni salon retenu), le salon du compte devient le salon courant.
+   */
   private async loadWho(): Promise<Who | null> {
     const { data: { session } } = await this.sb.auth.getSession();
-    if (!session) { this.who = null; return null; }
-    const { data, error } = await this.sb.from("profiles").select("who").eq("user_id", session.user.id).maybeSingle();
+    if (!session) { this.who = null; this.profil = null; this.watchSalon(); return null; }
+    const { data, error } = await this.sb.from("profiles").select("who, salon_id").eq("user_id", session.user.id).maybeSingle();
     if (error) throw new Error("Lecture du profil impossible : " + error.message);
-    this.who = isWho(data?.who) ? data.who : null;
+    this.profil = data && isWho(data.who) ? { who: data.who, salonId: String(data.salon_id) } : null;
+    if (this.profil && !this.salonId) this.setSalonId(this.profil.salonId);
+    this.who = this.profil && this.profil.salonId === this.salonId ? this.profil.who : null;
+    this.watchSalon();
     return this.who;
+  }
+
+  private setSalonId(id: string | null) {
+    if (id !== this.salonId) this.salonCache = null;
+    this.salonId = id;
+    try { if (id) localStorage.setItem(SALON_KEY, id); else localStorage.removeItem(SALON_KEY); } catch { /* indisponible */ }
   }
 
   private async requireMe(): Promise<Who> {
@@ -120,17 +165,38 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
 
   async signIn(who: Who, password: string, options?: { rester?: boolean }) {
     this.storage.persist = options?.rester !== false; // à régler AVANT que Supabase n'écrive la session
-    const { error } = await this.sb.auth.signInWithPassword({ email: emailOf(who), password });
+    const email = await this.loginEmail(who);
+    const { error } = await this.sb.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message === "Invalid login credentials" ? "Mot de passe incorrect." : error.message);
     this.whoReady = this.loadWho();
     const got = await this.whoReady;
     if (got !== who) {
       await this.sb.auth.signOut();
       this.who = null;
+      this.profil = null;
       this.whoReady = Promise.resolve(null);
-      throw new Error("Ce compte n'est pas relié à " + who + " (table profiles).");
+      throw new Error("Ce compte n'appartient pas à ce calendrier.");
     }
     this.emitAuth(got);
+    this.emitSalon();
+  }
+
+  /** Adresse de connexion d'une place du salon courant (réelle, ou technique si aucune n'a été donnée). */
+  private async loginEmail(who: Who): Promise<string> {
+    if (!this.salonId) return emailOf(who);   // pas de salon : anciens comptes (VITE_EMAIL_*)
+    const { data, error } = await this.sb.rpc("salon_login_email", { p_salon: this.salonId, p_place: who });
+    if (error) throw new Error("Connexion impossible : " + error.message);
+    if (!data) {
+      throw new Error(who === "flavie"
+        ? "Cette personne n'a pas encore rejoint le calendrier : envoie-lui le lien d'invitation."
+        : "Ce calendrier n'existe pas (ou plus).");
+    }
+    return String(data);
+  }
+
+  /** Adresse technique (aucun e-mail possible) : <salon>-<place>@… */
+  private isTechnicalEmail(email: string, who: Who) {
+    return !!this.salonId && email.startsWith(`${this.salonId}-${who}@`);
   }
 
   async signOut() {
@@ -141,15 +207,24 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
     } catch { /* sans gravité */ }
     await this.sb.auth.signOut();
     this.who = null;
+    this.profil = null;
     this.whoReady = Promise.resolve(null);
     this.emitAuth(null);
+    this.watchSalon();
+    this.emitSalon();   // le contenu n'est plus lisible
   }
 
   /* ----- mot de passe oublié (méthodes en plus du contrat) ----- */
 
   async resetPassword(who: Who) {
-    const back = typeof location !== "undefined" ? location.origin + location.pathname : undefined;
-    const { error } = await this.sb.auth.resetPasswordForEmail(emailOf(who), { redirectTo: back });
+    const email = await this.loginEmail(who);
+    if (this.isTechnicalEmail(email, who)) {
+      throw new Error("Aucune adresse e-mail n'a été donnée pour ce compte : le mot de passe ne peut pas être "
+        + "réinitialisé par e-mail.");
+    }
+    const back = typeof location !== "undefined"
+      ? siteBaseUrl() + (this.salonId ? `?salon=${encodeURIComponent(this.salonId)}` : "") : undefined;
+    const { error } = await this.sb.auth.resetPasswordForEmail(email, { redirectTo: back });
     if (error) throw new Error("Envoi de l'e-mail impossible : " + error.message);
   }
 
@@ -179,14 +254,14 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
   async markOpened(day: DayNumber) {
     const me = await this.requireMe();
     // ignoreDuplicates : ne touche pas à completed_at si la ligne existe déjà
-    const { error } = await this.sb.from("progress").upsert({ who: me, day }, { onConflict: "who,day", ignoreDuplicates: true });
+    const { error } = await this.sb.from("progress").upsert({ who: me, day }, { onConflict: "salon_id,who,day", ignoreDuplicates: true });
     if (error) throw new Error(friendly(error.message));
   }
 
   async markCompleted(day: DayNumber) {
     const me = await this.requireMe();
     const { error } = await this.sb.from("progress")
-      .upsert({ who: me, day, completed_at: new Date().toISOString() }, { onConflict: "who,day" });
+      .upsert({ who: me, day, completed_at: new Date().toISOString() }, { onConflict: "salon_id,who,day" });
     if (error) throw new Error(error.message);
   }
 
@@ -226,21 +301,28 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
     const photos = content.photos.map(toStoragePath);
     const { error } = await this.sb.from("prepared_content").upsert(
       { day, from_who: me, to_who: partnerOf(me), message: content.message, photos },
-      { onConflict: "day,from_who" },
+      { onConflict: "salon_id,day,from_who" },
     );
     // Le serveur refuse (CASE_FIGEE) si le destinataire a déjà ouvert la case
     if (error) throw new Error(friendly(error.message));
   }
 
-  /** Envoie une photo dans <moi>/<uuid>.jpg et renvoie une URL signée valable 60 jours. */
+  /** Envoie une photo dans <salon>/<moi>/<uuid>.jpg et renvoie une URL signée valable 60 jours. */
   async uploadPhoto(file: Blob): Promise<string> {
     const me = await this.requireMe();
+    const salon = this.profil!.salonId;
     const small = await compressImage(file, PHOTO_MAX_DIMENSION);
     checkPhotoSize(small);
     const ext = small.type === "image/png" ? "png" : small.type === "image/webp" ? "webp" : "jpg";
-    const path = `${me}/${crypto.randomUUID()}.${ext}`;
+    const path = `${salon}/${me}/${crypto.randomUUID()}.${ext}`;
     const up = await this.sb.storage.from(BUCKET).upload(path, small, { contentType: small.type || "image/jpeg", upsert: false });
-    if (up.error) throw new Error("Envoi de la photo impossible : " + up.error.message);
+    if (up.error) {
+      // La règle d'accès refuse aussi quand le quota de photos du salon est atteint
+      if (/row-level security|violates/i.test(up.error.message)) {
+        throw new Error("Envoi de la photo refusé : le calendrier a peut-être atteint son nombre maximal de photos.");
+      }
+      throw new Error("Envoi de la photo impossible : " + up.error.message);
+    }
     const { data, error } = await this.sb.storage.from(BUCKET).createSignedUrl(path, UPLOAD_URL_TTL_SECONDS);
     if (error || !data) throw new Error("URL de la photo impossible : " + (error?.message ?? "?"));
     return data.signedUrl;
@@ -255,12 +337,13 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
   async setGameState<T>(day: DayNumber, key: string, value: T) {
     await this.requireMe();
     const { error } = await this.sb.from("game_state")
-      .upsert({ day, key, value: value as unknown }, { onConflict: "day,key" });
+      .upsert({ day, key, value: value as unknown }, { onConflict: "salon_id,day,key" });
     if (error) throw new Error(error.message);
   }
 
   joinRoom(roomId: string): RealtimeRoom {
-    return new SupabaseRoom(this.sb, roomId, this.who, () => this.requireMe());
+    const now = this.who && this.profil ? { who: this.who, salon: this.profil.salonId } : null;
+    return new SupabaseRoom(this.sb, roomId, now, async () => ({ who: await this.requireMe(), salon: this.profil!.salonId }));
   }
 
   /* ----- rappels par notification ----- */
@@ -292,26 +375,172 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
     return "active";
   }
 
-  /*
-   * ----- salons : PROVISOIRE (lot 1) -----
-   * Tant que le schéma multi-salons n'est pas en place (lot 2), le Supabase ne contient qu'un salon :
-   * celui d'Alexandre et Flavie, avec la configuration par défaut. Création et invitations : INDISPONIBLE.
-   */
-  private principal(): Salon {
-    return { id: "principal", config: structuredClone(SALON_DEMO_CONFIG), inviteArrive: true, demo: false, createdAt: "2026-11-17T00:00:00.000Z" };
+  /* ----- salons (docs/salons.md, supabase/migrations/0004_salons.sql, Edge Function « salons ») ----- */
+
+  private salonListenersEmit(salon: Salon | null) {
+    this.salonListeners.forEach((cb) => cb(salon));
   }
+  /** Relit le salon courant et prévient les écouteurs. */
+  private emitSalon() {
+    this.salonCache = null;
+    void this.fetchSalon().then((s) => this.salonListenersEmit(s), () => this.salonListenersEmit(null));
+  }
+
+  /**
+   * Membre connecté : écoute les changements de la config (l'autre personne modifie les réglages).
+   * Nécessite la table salons dans la publication Realtime (fait par 0004_salons.sql).
+   */
+  private watchSalon() {
+    const id = this.who && this.salonId ? this.salonId : null;
+    if (this.salonChannel && this.salonChannel.topic === `realtime:salon:${id}`) return;
+    if (this.salonChannel) { void this.sb.removeChannel(this.salonChannel); this.salonChannel = null; }
+    if (!id) return;
+    this.salonChannel = this.sb.channel(`salon:${id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "salons", filter: `id=eq.${id}` }, () => this.emitSalon())
+      .subscribe();
+  }
+
+  /** Salon courant : complet pour un membre connecté, sinon prénoms et couleurs seulement (contenu vide). */
+  private async fetchSalon(): Promise<Salon | null> {
+    try { await this.whoReady; } catch { /* session illisible : on lit en visiteur */ }
+    const id = this.salonId;
+    if (!id) return null;
+    if (this.salonCache?.id === id) return structuredClone(this.salonCache);
+    let salon: Salon | null = null;
+    if (this.who) {
+      const { data, error } = await this.sb.from("salons").select("id, config, created_at").eq("id", id).maybeSingle();
+      if (error) throw salonErrorFrom(error.message);
+      if (data) {
+        const row = data as SalonRow;
+        const { count } = await this.sb.from("profiles").select("who", { count: "exact", head: true }).eq("who", "flavie");
+        salon = {
+          id: row.id, config: { joueurs: row.config.joueurs, contenu: row.config.contenu ?? {} },
+          inviteArrive: (count ?? 0) > 0, demo: false, createdAt: row.created_at,
+        };
+      }
+    }
+    if (!salon) {
+      // uuid invalide (lien abîmé) : Postgres refuse la conversion → salon inconnu
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+      const { data, error } = await this.sb.rpc("salon_public", { p_salon: id });
+      if (error) throw salonErrorFrom(error.message);
+      if (!data) return null;
+      const p = data as SalonPublic;
+      salon = { id: p.id, config: { joueurs: p.joueurs, contenu: {} }, inviteArrive: !!p.inviteArrive, demo: false, createdAt: p.createdAt };
+    }
+    if (this.salonId !== id) return this.fetchSalon();   // salon changé pendant la lecture
+    this.salonCache = salon;
+    return structuredClone(salon);
+  }
+
+  /** Appelle l'Edge Function « salons » (création de comptes, réservée au serveur). */
+  private async callSalons<T>(body: Record<string, unknown>): Promise<T> {
+    const { data, error } = await this.sb.functions.invoke("salons", { body });
+    if (!error) return data as T;
+    const ctx = (error as { context?: Response }).context;
+    let payload: { code?: SalonErreurCode; message?: string } | null = null;
+    try { payload = ctx && typeof ctx.json === "function" ? await ctx.json() : null; } catch { /* corps illisible */ }
+    if (payload?.code && SALON_CODES.includes(payload.code)) throw salonError(payload.code, payload.message);
+    throw salonError("INDISPONIBLE", "Le serveur des calendriers ne répond pas. Réessaie dans un instant.");
+  }
+
+  /** Connexion juste après la création d'un compte, puis ouverture de son salon. */
+  private async enterSalon(salonId: string, email: string, password: string, rester?: boolean) {
+    this.storage.persist = rester !== false;
+    this.setSalonId(salonId);
+    const { error } = await this.sb.auth.signInWithPassword({ email, password });
+    if (error) throw salonError("INDISPONIBLE", "Compte créé, mais la connexion a échoué : " + error.message);
+    this.whoReady = this.loadWho();
+    const who = await this.whoReady;
+    this.emitAuth(who);
+    this.emitSalon();
+  }
+
   readonly salons: SalonApi = {
-    getSalon: async () => this.principal(),
-    onSalonChange: () => () => { /* rien ne change tant qu'il n'y a qu'un salon */ },
-    creerSalon: async () => { throw salonError("INDISPONIBLE"); },
-    modifierSalon: async () => { throw salonError("INDISPONIBLE"); },
-    lienConnexion: async () => lienSalonUrl("principal"),
-    lienInvitation: async () => { throw salonError("INDISPONIBLE"); },
-    lireInvitation: async () => ({ statut: "invalide" }),
-    accepterInvitation: async () => { throw salonError("INDISPONIBLE"); },
+    getSalon: () => this.fetchSalon(),
+
+    onSalonChange: (cb) => {
+      this.salonListeners.add(cb);
+      return () => { this.salonListeners.delete(cb); };
+    },
+
+    creerSalon: async (input): Promise<SalonCree> => {
+      const config = checkSalonConfig(input.config);
+      checkMotDePasse(input.motDePasse);
+      const r = await this.callSalons<{ salonId: string; jeton: string; email: string }>({
+        action: "creer", config, motDePasse: input.motDePasse, email: input.email?.trim() || undefined,
+      });
+      await this.enterSalon(r.salonId, r.email, input.motDePasse, input.rester);
+      const salon = await this.fetchSalon();
+      if (!salon) throw salonError("INDISPONIBLE");
+      return { salon, lienConnexion: lienSalonUrl(r.salonId), lienInvitation: lienInvitationUrl(r.jeton) };
+    },
+
+    modifierSalon: async (config) => {
+      const clean = checkSalonConfig(config);
+      const me = await this.me();
+      if (!me || !this.salonId) throw salonError("NON_AUTORISE");
+      const { data, error } = await this.sb.from("salons").update({ config: clean }).eq("id", this.salonId).select("id");
+      if (error) throw salonErrorFrom(error.message, "NON_AUTORISE");
+      if (!data?.length) throw salonError("NON_AUTORISE");   // la RLS filtre en silence
+      this.salonCache = null;
+      const salon = await this.fetchSalon();
+      if (!salon) throw salonError("SALON_INCONNU");
+      this.salonListenersEmit(structuredClone(salon));
+      return salon;
+    },
+
+    lienConnexion: async () => {
+      if (!this.salonId) throw salonError("SALON_INCONNU");
+      return lienSalonUrl(this.salonId);
+    },
+
+    lienInvitation: async (options) => {
+      if (!(await this.me())) throw salonError("NON_AUTORISE");
+      const { data, error } = await this.sb.rpc("salon_invitation", { p_nouveau: options?.nouveau === true });
+      if (error) throw salonErrorFrom(error.message, "NON_AUTORISE");
+      return lienInvitationUrl(String(data));
+    },
+
+    lireInvitation: async (jeton): Promise<InvitationInfo> => {
+      let t = jeton;
+      if (t === undefined) { try { t = new URLSearchParams(location.search).get("invitation") ?? undefined; } catch { /* rien */ } }
+      if (!t) return { statut: "invalide" };
+      const { data, error } = await this.sb.rpc("salon_invitation_info", { p_token: t });
+      if (error) throw salonErrorFrom(error.message);
+      const d = data as { statut: string; salonId?: string; joueurs?: Record<Who, JoueurSalon> } | null;
+      if (d?.statut === "valide" && d.salonId && d.joueurs) return { statut: "valide", jeton: t, salonId: d.salonId, joueurs: d.joueurs };
+      if (d?.statut === "utilisee" && d.salonId && d.joueurs) return { statut: "utilisee", salonId: d.salonId, joueurs: d.joueurs };
+      return { statut: "invalide" };
+    },
+
+    accepterInvitation: async (jeton, motDePasse, options) => {
+      checkMotDePasse(motDePasse);
+      const r = await this.callSalons<{ salonId: string; email: string }>({
+        action: "accepter", jeton, motDePasse, email: options?.email?.trim() || undefined,
+      });
+      await this.enterSalon(r.salonId, r.email, motDePasse, options?.rester);
+    },
+
     ouvrirSalon: async (id) => {
-      if (id !== "principal") throw salonError("SALON_INCONNU");
-      return this.principal();
+      const before = this.who;
+      const prev = this.salonId;
+      this.setSalonId(id);
+      this.who = this.profil && this.profil.salonId === id ? this.profil.who : null;
+      this.whoReady = Promise.resolve(this.who);
+      let salon: Salon | null = null;
+      try { salon = await this.fetchSalon(); } catch { salon = null; }
+      if (!salon) {
+        // Salon inconnu : on revient au précédent
+        this.setSalonId(prev);
+        this.who = before;
+        this.whoReady = Promise.resolve(before);
+        throw salonError("SALON_INCONNU");
+      }
+      this.watchSalon();
+      if (this.who !== before) this.emitAuth(this.who);
+      if (id !== prev) this.salonListenersEmit(structuredClone(salon));
+      return salon;
     },
   };
 }
@@ -333,17 +562,19 @@ class SupabaseRoom implements RealtimeRoom {
   private sb: SupabaseClient;
   private roomId: string;
 
-  constructor(sb: SupabaseClient, roomId: string, who: Who | null, resolveWho: () => Promise<Who>) {
+  /** Salle privée du salon : « room:<salon>:<salle> » (seuls ses membres y entrent, voir 0004_salons.sql). */
+  constructor(sb: SupabaseClient, roomId: string, now: { who: Who; salon: string } | null,
+    resolve: () => Promise<{ who: Who; salon: string }>) {
     this.sb = sb;
     this.roomId = roomId;
-    this.who = who;
-    if (who) this.open(who);
-    else resolveWho().then((w) => { this.who = w; this.open(w); }).catch((e) => console.error("[salle]", e));
+    this.who = now?.who ?? null;
+    if (now) this.open(now.who, now.salon);
+    else resolve().then((r) => { this.who = r.who; this.open(r.who, r.salon); }).catch((e) => console.error("[salle]", e));
   }
 
-  private open(who: Who) {
+  private open(who: Who, salon: string) {
     if (this.closed) return;
-    const ch = this.sb.channel(`room:${this.roomId}`, {
+    const ch = this.sb.channel(`room:${salon}:${this.roomId}`, {
       config: { private: true, broadcast: { self: false, ack: false }, presence: { key: who } },
     });
     this.channel = ch;
