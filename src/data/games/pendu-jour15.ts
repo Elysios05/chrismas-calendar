@@ -1,6 +1,9 @@
 /**
  * Jour 15 — Le pendu du bonhomme qui fond.
  *
+ * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
+ * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ *
  * ALEXANDRE : tout se remplace ici.
  *  - `mot`    : en majuscules ou non, peu importe. Les accents sont gérés : taper E révèle les É et È,
  *               donc « PAIN D'ÉPICES » se joue sans piège. Les espaces et apostrophes sont offerts.
@@ -11,6 +14,7 @@
  * Évite les mots de plus de 18 lettres : la grille devient illisible sur un téléphone.
  */
 
+import type { SchemaContenu } from "../../games/shared/contenu";
 export type MotPendu = { mot: string; indice: string; perso?: boolean };
 
 export type PenduContent = {
@@ -46,13 +50,13 @@ export const PENDU_JOUR15: PenduContent = {
     { mot: "CASSE-NOISETTE", indice: "Un ballet, et un soldat en bois." },
     { mot: "MARRONS CHAUDS", indice: "Ça se vend au coin de la rue en décembre." },
 
-    // --- À vous deux (à remplacer par vos vrais mots) ---
-    { mot: "LJUBLJANA", indice: "Là où l'un de vous se réveille le matin.", perso: true },
-    { mot: "NOTRE PREMIER NOËL", indice: "Ce que vous fêtez cette année.", perso: true },
-    { mot: "APPEL DU SOIR", indice: "Tous les jours, et toujours trop court.", perso: true },
-    { mot: "VALISE", indice: "L'objet des retrouvailles… et des départs.", perso: true },
-    { mot: "RACLETTE", indice: "Le plat qui vous réconcilie avec l'hiver.", perso: true },
-    { mot: "DÉCALAGE", indice: "Une heure de trop entre vous deux.", perso: true },
+    // --- À deux (génériques : chaque couple met les siens dans l'éditeur du salon) ---
+    { mot: "PREMIER RENCARD", indice: "Là où tout a commencé.", perso: true },
+    { mot: "COUP DE FOUDRE", indice: "Ça tombe dessus sans prévenir.", perso: true },
+    { mot: "PETIT DÉJEUNER", indice: "Encore meilleur quand c'est l'autre qui le prépare.", perso: true },
+    { mot: "VALISE", indice: "Elle part toujours trop pleine.", perso: true },
+    { mot: "RACLETTE", indice: "Le plat qui réconcilie avec l'hiver.", perso: true },
+    { mot: "FOU RIRE", indice: "Impossible de s'arrêter, surtout quand il ne faut pas.", perso: true },
   ],
 };
 
@@ -63,3 +67,25 @@ export const PENDU_VERDICTS: { min: number; ligne: string }[] = [
   { min: 1, ligne: "Un mot sauvé. Le bonhomme, lui, a connu des jours meilleurs…" },
   { min: 0, ligne: "Une flaque. Il ne reste qu'une flaque. Bravo 🫠" },
 ];
+
+/** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */
+export const SCHEMA_PENDU_JOUR15: SchemaContenu = {
+  jour: 15,
+  titre: "Jour 15 — Le pendu du bonhomme qui fond",
+  intro: "Des mots à trouver lettre par lettre, avec un indice de Pingou après 3 erreurs. Coche « à vous deux » pour vos mots à vous.",
+  champs: [
+    { type: "nombre", cle: "motsParPartie", label: "Mots par partie", min: 1, max: 6 },
+    {
+      type: "liste", cle: "mots", label: "Mots", libelleElement: "Mot", min: 3, max: 30, modele: {},
+      champs: [
+        { type: "texte", cle: "mot", label: "Mot", aide: "Lettres, espaces et apostrophes ; 18 lettres au plus.", max: 22, motif: "^[\\p{L}' -]+$", motifAide: "Seulement des lettres, des espaces et des apostrophes.", exemple: "PAIN D'ÉPICES" },
+        { type: "texte", cle: "indice", label: "Indice", max: 100, exemple: "Ça sent la cannelle et le miel." },
+        { type: "case", cle: "perso", label: "Mot à vous deux" },
+      ],
+    },
+  ],
+};
+
+export function reparerPendu(c: PenduContent): PenduContent {
+  return { ...c, motsParPartie: Math.min(c.motsParPartie, c.mots.length) };
+}

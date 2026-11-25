@@ -1,6 +1,9 @@
 /**
  * Jour 7 — Rébus en emojis.
  *
+ * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
+ * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ *
  * ALEXANDRE : tout se remplace ici.
  *  - `emojis`   : la suite d'emojis affichée en grand (2 à 4, c'est le plus lisible)
  *  - `reponse`  : écris-la normalement, avec accents et article. La correction est tolérante :
@@ -13,6 +16,7 @@
  * Évite les réponses de plus de quatre mots : on les tape au doigt sur un téléphone.
  */
 
+import type { SchemaContenu } from "../../games/shared/contenu";
 export type Rebus = {
   id: string;
   emojis: string;
@@ -41,19 +45,37 @@ export const REBUS_JOUR7: RebusContent = {
     { id: "chaussette", emojis: "🧦🔥", reponse: "la chaussette sur la cheminée", variantes: ["chaussette de Noël", "la chaussette"], indice: "On l'accroche la veille, on la vide le matin." },
     { id: "bonhomme", emojis: "☃️🥕", reponse: "le nez du bonhomme de neige", variantes: ["le bonhomme de neige", "carotte"], indice: "Un légume qui sert de visage." },
 
-    // --- À vous deux (à remplacer par vos vraies histoires) ---
-    { id: "distance", emojis: "✈️💻❤️", reponse: "l'amour à distance", variantes: ["amour longue distance", "la distance"], indice: "C'est toute notre année, ça." },
-    { id: "raclette", emojis: "🧀🥔♨️", reponse: "la raclette", variantes: ["soirée raclette"], indice: "Le plat qui vous réconcilie avec l'hiver." },
-    { id: "film", emojis: "🎬🛋️🍿", reponse: "la soirée film", variantes: ["soirée cinéma", "notre soirée film"], indice: "Chacun chez soi, mais on appuie sur « lecture » en même temps." },
-    { id: "appel", emojis: "📞🌙", reponse: "l'appel du soir", variantes: ["le coup de fil du soir", "appel du soir"], indice: "Tous les jours, et souvent trop court." },
+    // --- À deux (génériques : chaque couple met les siens dans l'éditeur du salon) ---
+    { id: "lune", emojis: "🍯🌙", reponse: "la lune de miel", variantes: ["lune de miel"], indice: "Le voyage juste après le « oui »." },
+    { id: "raclette", emojis: "🧀🥔♨️", reponse: "la raclette", variantes: ["soirée raclette"], indice: "Le plat qui réconcilie avec l'hiver." },
+    { id: "film", emojis: "🎬🛋️🍿", reponse: "la soirée film", variantes: ["soirée cinéma", "soirée canapé"], indice: "Un plaid, un écran, et on se dispute pour choisir." },
+    { id: "coeur", emojis: "❤️🔥", reponse: "le coup de foudre", variantes: ["coup de foudre"], indice: "Ça tombe dessus sans prévenir." },
   ],
 };
 
 /** Mots de Pingou selon le nombre de rébus trouvés sur 8 */
 export const REBUS_VERDICTS: { min: number; ligne: string }[] = [
-  { min: 8, ligne: "Les huit ! Vous parlez emoji couramment tous les deux 🧩" },
+  { min: 8, ligne: "Les huit ! Chez vous, on parle emoji couramment 🧩" },
   { min: 6, ligne: "Joli score ! Il en reste deux pour te vexer tranquillement." },
   { min: 4, ligne: "La moitié : honorable. Les autres, c'était un peu tordu, je l'avoue." },
   { min: 1, ligne: "C'est un début… Pingou te laisse une revanche quand tu veux." },
   { min: 0, ligne: "Zéro. Même moi je suis gêné. On recommence ? 🐧" },
 ];
+
+/** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */
+export const SCHEMA_REBUS_JOUR7: SchemaContenu = {
+  jour: 7,
+  titre: "Jour 7 — Rébus en emojis",
+  intro: "Une suite d'emojis, une réponse à taper. Mets-y vos souvenirs et vos private jokes ; la correction pardonne accents, majuscules et articles.",
+  champs: [
+    {
+      type: "liste", cle: "enigmes", label: "Rébus", libelleElement: "Rébus", min: 3, max: 20, modele: { id: "" },
+      champs: [
+        { type: "texte", cle: "emojis", label: "Emojis", aide: "2 à 4, c'est le plus lisible.", max: 24, exemple: "🍫🪵" },
+        { type: "texte", cle: "reponse", label: "Réponse", aide: "Quatre mots au plus : on la tape au doigt.", max: 40, exemple: "la bûche de Noël" },
+        { type: "textes", cle: "variantes", label: "Autres réponses acceptées", min: 0, max: 6, maxLongueur: 40, exemple: "bûche" },
+        { type: "texte", cle: "indice", label: "Indice de Pingou", max: 100, facultatif: true, exemple: "Ça se mange, et ça ne brûle pas." },
+      ],
+    },
+  ],
+};

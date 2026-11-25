@@ -16,7 +16,8 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 `npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
 **avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
 
-**🆕 Salons (décision d'Alexandre du 25 nov, avant le 30)** — lire `docs/salons.md`. Dès que le chef annonce dans **#84** la fusion du contrat `SalonApi`, ce point passe **avant les nouveaux jeux** : chaque jeu (déjà livré, puis chaque nouveau) lit son contenu depuis le salon (sinon le défaut de `src/data/games/`) et exporte un schéma de contenu pour l'éditeur ; plus aucun prénom en dur. En attendant, continue la liste ci-dessous en écrivant déjà le contenu de chaque nouveau jeu comme un objet séparé et remplaçable.
+**🆕 Salons (décision d'Alexandre du 25 nov, avant le 30)** — lire `docs/salons.md`. ✅ Fait pour les 10 jeux livrés
+le 25 nov (branche `jeux/salons-contenu`) ; **chaque nouveau jeu** doit faire pareil (voir `src/games/README.md`). Dès que le chef annonce dans **#84** la fusion du contrat `SalonApi`, ce point passe **avant les nouveaux jeux** : chaque jeu (déjà livré, puis chaque nouveau) lit son contenu depuis le salon (sinon le défaut de `src/data/games/`) et exporte un schéma de contenu pour l'éditeur ; plus aucun prénom en dur. En attendant, continue la liste ci-dessous en écrivant déjà le contenu de chaque nouveau jeu comme un objet séparé et remplaçable.
 
 Faits : 1, 2, 3, **5, 6** (PR #83 en attente de fusion), 7, 11, 15, 17. Restent 10, **dans l'ordre d'ouverture des cases** :
 1. ~~Jour **3** (défi photo croisé)~~ — fait le 24 nov (PR #77, fusionnée)
@@ -43,6 +44,28 @@ Avant de poser une question, relire les issues ouvertes (y compris celles des au
 du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
+
+### 25 novembre 2026 — salons : contenu et prénoms du salon (branche `jeux/salons-contenu`, #84)
+
+**Fait :** `src/games/shared/contenu.ts` = `prenomsDe(ctx)` (repli neutre « Joueur 1/2 », jamais vu en vrai),
+`de(prenom)`, type `SchemaContenu`/`ChampContenu` (JSON pur : texte, nombre, case, choix, textes, liste d'objets avec
+`modele`) et `lireContenu()` (fusion champ par champ + vérification, ids fabriqués si absents, `reparer` par jeu).
+Les 10 jeux livrés lisent le salon ; schémas exportés depuis chaque fichier `src/data/games/*.ts` (`SCHEMA_…`),
+registre : `schemaDuJour`, `schemasDesJeux` (jours 2 et 6 : pas de schéma). `FenetreJeu` accepte `prenoms`.
+Textes neutres (#84 point 7) : « a quitté la partie », « On y va ! », « Jouer en solo », « Aucun des deux »,
+« Sam n'est pas là », « ouvre le bal »… Atelier : boutons Salon défaut / perso (Camille et Sam) / abîmé,
+`?jour=` et `?salon=` dans l'URL. Vérifié : 10 jeux × 3 salons sans erreur, synchro « Qui ? » propose les prénoms.
+⚠️ `npm run capture` toujours cassé (#87).
+
+**Décidé avec Alexandre (25 nov) : option A.** Leur contenu personnel (Ljubljana, train de nuit, décalage…) est
+copié tel quel dans `src/data/salons/alexandre-flavie.ts` (`CONTENU_ALEXANDRE_FLAVIE`, une entrée par jour, champs
+du schéma seulement, vérifié : rien n'est écarté par `lireContenu`). Le **défaut** de `src/data/games/` est devenu
+générique (mots « à deux » valables pour tout couple, plus d'allusions à la distance). Atelier : salon « A & F ».
+Reste à brancher ce contenu dans leur vrai salon et dans le salon démo : demandé au chef dans #84 (Backend/Interface).
+Forme du schéma annoncée dans #84 (PR #94).
+
+**Prochaine étape :** jour 10 (attrape-flocons, score à battre, PixiJS) — demander ses règles à Alexandre, et le
+faire directement « salon » (schéma si quelque chose se personnalise).
 
 ### 25 novembre 2026 — jour 9, dessin à deviner (branche `jeux/dessin-jour9`)
 

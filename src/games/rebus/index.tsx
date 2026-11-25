@@ -9,14 +9,14 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { GameContext, GameModule, Who } from "../../core/contracts";
-import { REBUS_JOUR7, REBUS_VERDICTS, type RebusContent } from "../../data/games/rebus-jour7";
+import type { GameContext, GameModule } from "../../core/contracts";
+import { REBUS_JOUR7, SCHEMA_REBUS_JOUR7, REBUS_VERDICTS } from "../../data/games/rebus-jour7";
+import { prenomsDe, lireContenu } from "../shared/contenu";
 import { Cadre, PanneauFin, PanneauRegles, Points, Puce } from "../shared/ui";
 import { monterReact } from "../shared/monter";
 import { enregistrerMeilleur, lireMeilleur } from "../shared/scores";
 import { bonneReponse, masquer, positionsLettres, prochaineLettre } from "./reponse";
 
-const PRENOMS: Record<Who, string> = { alexandre: "Alexandre", flavie: "Flavie" };
 
 type Etape = "regles" | "jeu" | "fin";
 type Retour = { ton: "bon" | "rate" | "passe"; texte: string } | null;
@@ -26,7 +26,8 @@ function verdict(trouves: number) {
 }
 
 function Rebus({ ctx }: { ctx: GameContext }) {
-  const contenu = (ctx.content as RebusContent | null) ?? REBUS_JOUR7;
+  const contenu = useMemo(() => lireContenu(ctx.content, REBUS_JOUR7, SCHEMA_REBUS_JOUR7), [ctx.content]);
+  const PRENOMS = prenomsDe(ctx);
   const enigmes = contenu.enigmes;
   const total = enigmes.length;
   const prenomAutre = PRENOMS[ctx.partner];
