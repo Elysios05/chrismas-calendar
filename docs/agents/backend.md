@@ -151,3 +151,56 @@ passe par la connexion démo : il ne peut pas valider le mode Supabase (vérifi�
 **Reste non testable sans vrai projet** : Edge Function sous Deno (`npm:web-push`), pg_cron/pg_net/Vault, Realtime privé, notifications sur
 iOS. Le déploiement de la fonction sans `supabase/config.toml` (`functions deploy` seul) n'a pas pu être vérifié.
 **Ticket Interface** : `LoginScreen.tsx` affiche « Mot de passe incorrect » pour toute erreur (réseau, profil non relié).
+
+### 25 novembre 2026 — Salons, lot 1 : contrat + démo (branche `backend/salons-contrat`, #84)
+Spécification : `docs/salons.md` (décision d'Alexandre du 25 nov, à livrer avant le 30). Le chef m'a confié `src/core/contracts.ts` pour ce lot.
+- **Contrat** : `BackendApi.salons?: SalonApi` (facultatif seulement pour les faux backends d'atelier) ; types `SalonConfig`
+  (`joueurs[who] = { prenom, couleurs: { coat, hat, pompom, hair, longHair } }`, `contenu["1".."24"]`), `Salon`, `SalonCree`,
+  `InvitationInfo`, `SalonErreurCode`. Méthodes : `getSalon`, `onSalonChange`, `creerSalon`, `modifierSalon`, `lienConnexion`,
+  `lienInvitation({ nouveau })`, `lireInvitation(jeton?)`, `accepterInvitation(jeton, mdp)`, `ouvrirSalon(id)`.
+  Toutes les méthodes existantes portent sur le **salon courant** (inchangées). `GameContext.prenoms?` ajouté ; `content` = contenu du salon ou `undefined`.
+  `Who` = place (alexandre = créateur, flavie = invité·e).
+- **Liens** : `<site>?salon=<id>` (connexion) et `<site>?invitation=<jeton>` (usage unique ; `nouveau: true` invalide l'ancien).
+  Le backend lit `?salon=` tout seul ; l'Interface lit `?invitation=` via `lireInvitation()` et nettoie l'adresse après.
+- **config.ts** : `SALON_DEMO_CONFIG` (= PLAYERS), `DEMO_SALON_ID`, `checkSalonConfig` (prénom 1–30 car., couleurs 0..0xffffff,
+  jours 1–24, 200 Ko max), `checkMotDePasse` (6 car.), `SalonError`/`salonError` (message français + `code`), `SALON_CREATIONS_PAR_HEURE = 5`.
+- **DemoBackend** : salon « demo » inchangé (mêmes clés localStorage, exemples, mots de passe ignorés). Salons créés : registre
+  `cc-demo:salons`, données `cc-demo:s:<id>:data`, sessions par salon, salon courant par onglet puis navigateur, mots de passe
+  vérifiés (en clair, simulation locale), pas d'exemples, salles temps réel séparées, limite 5 créations/h. `?demo-reset` efface tout.
+- **SupabaseBackend** : `salons` PROVISOIRE (un seul salon « principal » avec `SALON_DEMO_CONFIG` ; création/invitation → `INDISPONIBLE`) jusqu'au lot 2.
+- **Souvenirs** : prénoms lus dans la config du salon (plus de noms en dur).
+- Tests : `demo_backend_test.py` 97 vérifications (40 nouvelles sur les salons). Captures démo inchangées.
+- `npm run capture` : sélecteur `.hud` périmé dans `tests/qa/commun.mjs` (Qualité) → corrigé en local seulement (`.stage-host`),
+  et `QA_PORT=4187` pour ne pas réutiliser le serveur d'une autre copie.
+- Question posée sur #59 : l'invité·e doit-il/elle obligatoirement choisir un mot de passe ?
+
+**Lot 2** : fait le 25 nov (voir ci-dessous).
+
+### 25 novembre 2026 — Salons, lot 2 : Supabase multi-salons (branche `backend/salons-supabase`, #84)
+Décision d'Alexandre (#59) : **option A**, l'invité·e choisit obligatoirement son mot de passe à la première connexion.
+- **`0004_salons.sql`** (après 0001–0003, ré-exécutable) : tables `salons` (config JSON vérifiée par `salon_config_check`,
+  mêmes règles que `checkSalonConfig`, `day_override` par salon), `salon_invitations` (jeton 64 car., usage unique),
+  `salon_creations` (IP hachée). `profiles.salon_id` + unicité `(salon_id, who)`. `salon_id` (défaut `my_salon()`) et
+  clés primaires par salon dans `progress`, `prepared_content`, `game_state`, `push_subscriptions`, `reminder_log`.
+  RLS par appartenance partout ; cases figées, photos (`<salon>/<place>/…`, quota `salon_photo_max`), temps réel
+  (`room:<salon>:…`), rappels (`reminder_targets` renvoie `salon_id`, `prenom`, `prenom_autre`) par salon.
+  Données d'avant les salons → « salon principal » `00000000-…-0001` (rien de perdu). `salons` ajoutée à la publication Realtime.
+  Fonctions : `salon_public`, `salon_invitation_info`, `salon_login_email` (visiteurs) ; `salon_invitation(nouveau)` (créateur) ;
+  `salon_create` (limites `salon_creations_par_heure` 5/IP et `salon_creations_par_jour` 50), `salon_join`,
+  `salon_claim_invitation` / `salon_release_invitation`, `purge_salons_vides(14)`, `supprimer_salon(id)` (service_role).
+- **Edge Function `salons`** (`supabase/functions/salons`, `--no-verify-jwt`) : `creer` / `accepter` créent les comptes Auth
+  (adresse réelle facultative, sinon `<salon>-<place>@salons.invalid`, repli `example.com`, secret `SALON_EMAIL_DOMAIN`),
+  annulent proprement en cas d'échec ; erreurs `{ code, message }`.
+- **`SupabaseBackend.salons`** complet : salon courant = `?salon=` > `localStorage cc-salon` > salon du compte connecté ;
+  `me()` = place dans le salon courant (null si le compte est d'un autre salon) ; `signIn` lit l'adresse par `salon_login_email` ;
+  upserts sur `salon_id,…` ; photos `<salon>/<place>/` ; salles `room:<salon>:<salle>` ; `onSalonChange` (+ postgres_changes).
+- **Rappels** : `message.ts` prend les prénoms du salon et le lien `./?salon=<id>&case=N` ; journal par salon.
+- **Guide** `docs/supabase.md` : une seule installation (0001→0004, déploiement de `salons`), plus de comptes à la main,
+  `day_override` par salon, `supprimer_salon`, réglages des quotas, § 11 « seul avec deux appareils » dans un salon de test
+  (création → lien d'invitation → première connexion → … → suppression puis vrai salon le 30).
+- Tests : SQL 155 vérifications (`run_sql_tests.sh`, dont migration d'une base existante), `message_test.ts`,
+  `supabase_salons_test.py` (33, faux Supabase intercepté par Playwright : création → invitation → 3e appareil),
+  `demo_backend_test.py` 97. Build avec variables factices OK.
+- **Non vérifiable sans vrai projet** : acceptation des adresses techniques par Supabase Auth (repli prévu), Edge Function sous Deno,
+  postgres_changes sur `salons`, IP vue par la fonction (`x-forwarded-for`).
+- Prochaine étape : relire les retours de la PR ; l'Interface branche ses écrans sur `salons` (rien à changer côté contrat).
