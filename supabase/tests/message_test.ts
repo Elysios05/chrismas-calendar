@@ -15,4 +15,8 @@ ok(r16.body.includes("case 16 est toujours vide") && r16.body.includes("Alexandr
 ok(r16.title.includes("Pingou") && r16.path === "./?case=16", "relance signée Pingou, même lien");
 ok(r24.body.includes("toute dernière") && r24.body.includes("Flavie"), "relance spéciale du 24");
 ok(reminderMessage(16, "alexandre", "rappel").body === m16.body, "rappel de 20 h inchangé (validé par Alexandre)");
+const s16 = reminderMessage(16, "flavie", "rappel", { prenom: "Inès", autre: "Léo", salonId: "abc-1" });
+ok(s16.body.includes("Léo l'ouvrira à 7 h") && !s16.body.includes("Alexandre") && s16.to === "Inès", "prénoms du salon");
+ok(s16.path === "./?salon=abc-1&case=16", "lien vers le bon salon");
+ok(reminderMessage(16, "flavie", "relance", { autre: "Léo" }).body.includes("Léo l'ouvre demain"), "relance avec les prénoms du salon");
 console.log("Tous les tests du message sont passés.");
