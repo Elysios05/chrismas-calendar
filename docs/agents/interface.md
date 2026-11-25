@@ -33,7 +33,9 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 3. ~~Relire les issues `[Interface]`~~ — fait le 24 nov : aucune ouverte. Suite demandée au chef dans **#81**
    (avec le signalement de `npm run capture` cassé). PR `interface/nettoyage-entete` en attente de fusion.
 4. ~~Réponse du chef dans #81~~ : reçue (25 nov), PR #82 fusionnée.
-**🆕 Salons (décision d'Alexandre du 25 nov, avant le 30)** — lire `docs/salons.md`. Dès que le chef annonce dans **#84** la fusion du contrat `SalonApi`, ce point passe **avant tous les autres** : accueil « Créer notre calendrier », assistant de création, page du lien à envoyer, première connexion par lien, connexion par salon, éditeur de contenu générique. Avant cela, tu peux déjà proposer à Alexandre 2–3 maquettes de ces écrans.
+**🆕 Salons** — ✅ maquettes (piste B choisie), assistant de création et invitation faits (25 nov). Restent :
+réglages du salon, éditeur de contenu générique. ~~Ancien texte :~~
+**Salons (décision d'Alexandre du 25 nov, avant le 30)** — lire `docs/salons.md`. Dès que le chef annonce dans **#84** la fusion du contrat `SalonApi`, ce point passe **avant tous les autres** : accueil « Créer notre calendrier », assistant de création, page du lien à envoyer, première connexion par lien, connexion par salon, éditeur de contenu générique. Avant cela, tu peux déjà proposer à Alexandre 2–3 maquettes de ces écrans.
 
 5. **Nom du monde tronqué sur téléphone** (« La Forêt et le Lac … ») : proposer 2–3 options à Alexandre avec captures
    (ligne plus petite, nom court par monde, défilement), puis faire celle qu'il choisit.
@@ -43,7 +45,27 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 
 ## Journal
 
-### 📍 Où j'en suis — 25 novembre 2026 (midi)
+### 📍 Où j'en suis — 25 novembre 2026 (après-midi)
+
+**Salons, étape 3 : création d'un salon et invitation** (branche `interface/maquettes-salons`, PR à fusionner).
+- **Alexandre a choisi la piste B « Pingou »** (25 nov) parmi trois maquettes (`maquettes.html?vue=salon-a|b|c&ecran=…`) :
+  Pingou en haut avec sa bulle, une question par écran, les réponses en bas, fond nuit étoilée. Écartées :
+  A « Carte » (carte crème de la connexion, 4 étapes à points) et C « Atelier » (une page, aperçu en direct).
+- `src/ui/salons/` : `EcranPingou.tsx` (mise en page commune, barre de progression + retour, `Personnage` SVG,
+  nuanciers, champ mot de passe), `CreerSalon.tsx` (accueil → ton prénom → ton manteau (+ « plus de choix » :
+  bonnet, pompon, cheveux, longueur) → son prénom → son manteau → contenu « plus tard » → mot de passe →
+  lien à copier / partager), `Invitation.tsx` (`?invitation=` : valide / déjà utilisée / invalide), `salons.css`.
+  Répliques dans `pingou/lines.ts` → `PINGOU_SALON` : **validées telles quelles par Alexandre (25 nov)**.
+- Maquettes vivantes : `maquettes.html?vue=creer` et `?vue=invitation` (crée un salon Sam & Camille dans la démo).
+- **Branchement dans `App.tsx` = chef** (demandé dans #84) : `CreerSalon` quand `getSalon()` renvoie null,
+  `Invitation` quand l'adresse contient `invitation`.
+- L'étape « contenu » ne fait que prévenir (« plus tard, dans les réglages ») : l'éditeur générique attend les
+  schémas de contenu des Jeux.
+
+**Prochaine tâche** : réglages du salon (prénoms, couleurs, lien de connexion, nouveau lien d'invitation),
+puis éditeur de contenu générique dès que les Jeux publient leurs schémas (#84).
+
+### 25 novembre 2026 (midi) — salons, étape 2
 
 **Salons, étape 2 : plus aucun prénom en dur dans `src/ui/`** (branche `interface/prenoms-du-salon`, partie de
 `interface/salon-dans-la-case` → PR #86 à fusionner d'abord) :
@@ -195,6 +217,8 @@ ouverte n'est pour l'Interface.
 - Connexion (#75) : répliques « réseau gelé » et « la porte coince de notre côté » validées (24 nov).
 - Règles d'écriture des répliques : une phrase courte par bulle, 150 caractères au plus, tutoiement,
   un emoji au maximum et jamais au milieu d'une phrase. Tout est dans `pingou/lines.ts`.
+
+- Salons : **piste B « Pingou »** (une question par écran) et ses répliques `PINGOU_SALON` validées (25 nov).
 
 ### ⚠️ Pièges découverts (ils coûtent cher à retrouver)
 - **La bulle de Pingou ne doit jamais changer de taille.** Elle s'écrivait lettre par lettre ;
