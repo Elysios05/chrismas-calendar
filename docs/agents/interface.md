@@ -43,6 +43,31 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 
 ## Journal
 
+### 📍 Où j'en suis — 25 novembre 2026 (midi)
+
+**Salons, étape 2 : plus aucun prénom en dur dans `src/ui/`** (branche `interface/prenoms-du-salon`, partie de
+`interface/salon-dans-la-case` → PR #86 à fusionner d'abord) :
+- `useSalon.ts` : `PRENOMS_PAR_DEFAUT` (tiré de `PLAYERS`, seul usage qui lui reste) et `usePrenoms(backend)`
+  (prénoms du salon, sinon le repli). `DayWindow` passe aussi par ce repli (fini « ton binôme »).
+- Avec le backend : `LoginScreen` (titre + Pingou), `Settings`, `PreparedEditor` → `usePrenoms(backend)`.
+- Sans backend : `Hud`, `RaceIndicator`, `FinalScreen`, `PreparedCase`, `RappelVeille` reçoivent une prop
+  facultative `prenoms` (repli `PRENOMS_PAR_DEFAUT`). **Le chef doit la passer depuis `App.tsx`** pour `Hud`,
+  `FinalScreen` et `RappelVeille` (demandé dans #84), ainsi que la couleur de la pastille depuis
+  `salon.config.joueurs[me].couleurs.coat` au lieu de `PLAYERS`.
+- **Textes neutres choisis par Alexandre (25 nov)** : « C'est qui, ce soir ? » (connexion) ; « Je vous laisse en
+  tête-à-tête. » (après une lettre) ; « Et vous voilà au bout, ensemble. » (écran final) et Pingou du 24 :
+  « Vous avez fait tout ce chemin à distance, et vous voilà au bout, ensemble. » ; **pas de point médian** :
+  « Se souvenir de moi sur cet appareil », « Profil : X », « Un rappel t'arrivera la veille… ».
+  « elle » à la place du partenaire → son prénom (« Voir ce que X verra », `editeurRepris(autre)`).
+- Signalé hors dossier : `src/data/planning.ts` « Chacun son tour » (masculin), équipe Jeux.
+
+**Captures** : le salon de démo s'appelle Alexandre & Flavie, on ne voit donc pas de différence à l'écran.
+Renommer le salon de démo en local touche `src/backend/` : refusé, ne pas le refaire. Pour une preuve visuelle, il
+faudra une option de la Qualité (salon de démo aux prénoms différents) ou attendre l'assistant de création.
+
+**Prochaine tâche** : maquettes des écrans des salons (accueil « Créer notre calendrier », assistant, lien à
+envoyer, page d'invitation) à montrer à Alexandre, 2–3 pistes, dans `maquettes.html`.
+
 ### 📍 Où j'en suis — 25 novembre 2026
 
 **Salons, étape 1 livrée** (branche `interface/salon-dans-la-case`, PR vers `main`) — demandée par le chef dans #84 :
