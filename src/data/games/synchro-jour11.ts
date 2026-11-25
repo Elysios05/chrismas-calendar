@@ -1,6 +1,9 @@
 /**
  * Jour 11 — Quiz « Sommes-nous synchro ? » (en direct, ou chacun son tour).
  *
+ * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
+ * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ *
  * Ce n'est pas un quiz de connaissances : vous répondez tous les deux à la même question,
  * sans voir l'autre, et **même réponse = +1 synchro**.
  *
@@ -44,12 +47,12 @@ export const SYNCHRO_JOUR11: SynchroContent = {
     { id: "jetaime", type: "qui", emoji: "📞", texte: "Qui dit « je t'aime » en premier au téléphone ?",
       pingou: "Vous n'êtes même pas d'accord là-dessus ? 🐧" },
     { id: "loto", type: "choix", emoji: "💸", texte: "On gagne au loto demain. Premier réflexe ?",
-      options: ["On vit enfin ensemble", "On achète un appartement", "On voyage un an", "On ne dit rien à personne"],
+      options: ["On change de vie", "On achète une maison", "On voyage un an", "On ne dit rien à personne"],
       pingou: "Deux plans différents pour le même magot." },
     { id: "retard", type: "qui", emoji: "⏰", texte: "Qui est systématiquement en retard ?",
       pingou: "Curieusement, personne ne se désigne soi-même…" },
-    { id: "soir", type: "choix", emoji: "🌙", texte: "La soirée parfaite à distance, c'est…",
-      options: ["Un film lancé en même temps", "Un appel qui dure des heures", "Jouer ensemble", "Chacun son truc, mais en visio"],
+    { id: "soir", type: "choix", emoji: "🌙", texte: "La soirée parfaite, c'est…",
+      options: ["Un film sous un plaid", "Parler pendant des heures", "Jouer ensemble", "Sortir danser"],
       pingou: "Pas la même soirée parfaite. Il y a des indices à prendre, là." },
     { id: "cuisine", type: "qui", emoji: "🍳", texte: "Qui cuisine le mieux, honnêtement ?",
       pingou: "L'honnêteté avait ses limites, visiblement." },
@@ -64,7 +67,7 @@ export const SYNCHRO_JOUR11: SynchroContent = {
     { id: "pardon", type: "qui", emoji: "🤝", texte: "Qui s'excuse en premier après une dispute ?",
       pingou: "Pas d'accord non plus. Au moins vous êtes constants." },
     { id: "dans5ans", type: "choix", emoji: "🔮", texte: "Dans cinq ans, on se voit…",
-      options: ["Dans la même ville, enfin", "À l'étranger, ensemble", "Avec un chat et trop de plantes", "Aucune idée, et c'est bien"],
+      options: ["Exactement comme maintenant", "À l'étranger, ensemble", "Avec un chat et trop de plantes", "Aucune idée, et c'est bien"],
       pingou: "Deux avenirs différents… il faudra en reparler 💞" },
   ],
 };
