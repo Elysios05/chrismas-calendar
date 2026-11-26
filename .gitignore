@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Contenu personnel d'un salon : jamais dans le dépôt public (chargé directement dans Supabase)
+prive/

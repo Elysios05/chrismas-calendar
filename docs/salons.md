@@ -23,7 +23,8 @@ Décidé par Alexandre le 25 nov 2026 (0 h 20), **à livrer avant le 30 nov**. R
    - `joueurs.alexandre|flavie` : prénom, couleurs (manteau, bonnet, pompon, cheveux, cheveux longs) ;
    - `contenu` : un objet par jour de jeu personnalisable (`contenu["1"]` = questions du quiz, etc.), qui
      **remplace** le contenu par défaut de `src/data/games/` ; absent = contenu par défaut (générique).
-   - Le contenu actuel de `src/data/games/` devient le **contenu par défaut**.
+   - Le contenu par défaut de `src/data/games/` est **générique**. Le contenu personnel d'un couple n'est **jamais** dans
+     le dépôt (public) : il vit seulement dans la config de son salon (Supabase), ou dans `prive/` (ignoré par git).
 4. **Liens** : création de salon → lien de connexion du créateur (à garder) + **lien d'invitation** pour l'autre
    (jeton à usage unique, puis choix du mot de passe). E-mail facultatif, seulement pour « mot de passe oublié ».
 5. **Création ouverte à tous** → garde-fous : quotas par salon (photos : nombre et taille), limite de création
