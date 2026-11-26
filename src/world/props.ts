@@ -48,13 +48,21 @@ function socle(g: Graphics, x0: number, y0: number, w: number, d: number, drop: 
  * Lumière d'une fenêtre éclairée qui tombe sur la neige devant la façade (+y) : une nappe en trapèze, plus
  * vive contre le mur et qui s'élargit en s'effaçant. Plus la fenêtre est haute, plus la nappe va loin et pâlit.
  */
-export const LUMIERE_SOL: "flaques" | "aucune" | "ellipse" = "flaques";
 export function windowSpill(g: Graphics, yWall: number, a: number, b: number, z0: number) {
   const reach = 0.4 + z0 * 0.55, force = 1 / (1 + z0 * 1.2);
   for (let i = 0; i < 4; i++) {
     const t = 1 - i * 0.24; // de la nappe la plus large (pâle) à la plus serrée (vive)
     const L = reach * t, spread = 0.06 + L * 0.55;
     poly(g, [P(a + 0.02, yWall, 0), P(b - 0.02, yWall, 0), P(b + spread, yWall + L, 0), P(a - spread, yWall + L, 0)], 0xffc864, 0.1 * force);
+  }
+}
+
+/** Rond de lumière posé sur la neige (cercle au sol, donc ellipse à l'écran), plus vif au centre */
+export function groundPool(g: Graphics, cx: number, cy: number, r: number, color = 0xffc864, alpha = 0.09) {
+  for (let i = 0; i < 4; i++) {
+    const rr = r * (1 - i * 0.22), pts = [];
+    for (let k = 0; k < 20; k++) { const a = (k / 20) * Math.PI * 2; pts.push(P(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 0)); }
+    poly(g, pts, color, alpha);
   }
 }
 
@@ -231,8 +239,7 @@ function drawHouse(
     hearth.extra.addChild(stack);
     hearth.anim.push({ kind: "smoke", puffs, phase: rnd(51) * 6 });
   }
-  if (pal.night && LUMIERE_SOL === "flaques") for (const [a, b, z0] of wins) windowSpill(g, y0 + d, a, b, z0);
-  if (pal.night && LUMIERE_SOL === "ellipse") { const p = P(cx, y0 + d, h * 0.3); g.ellipse(p.x, p.y + 6, 44, 14).fill({ color: 0xffd46b, alpha: 0.18 }); }
+  if (pal.night) for (const [a, b, z0] of wins) windowSpill(g, y0 + d, a, b, z0);
 }
 
 /** Traîneau du Père Noël. En vol, on lui attelle deux rennes et une traînée d'étoiles. */
@@ -358,10 +365,12 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
     }
     case "lamp": {
       const p = P(cx, cy);
+      // la nuit, la lanterne dessine un rond de lumière sur la neige à son pied (plus de disque en l'air)
+      if (pal.night) groundPool(g, cx, cy, 0.85);
       g.rect(p.x - 2, p.y - 46, 4, 46).fill(c(0x2b2f45));
       g.roundRect(p.x - 7, p.y - 58, 14, 14, 3).fill(pal.night ? 0xffd46b : c(0xf4e6b0));
       g.rect(p.x - 9, p.y - 61, 18, 4).fill(c(0x2b2f45));
-      if (pal.night) g.circle(p.x, p.y - 51, 34).fill({ color: 0xffd46b, alpha: 0.16 });
+      if (pal.night) { g.circle(p.x, p.y - 51, 15).fill({ color: 0xffd46b, alpha: 0.14 }); g.circle(p.x, p.y - 51, 10).fill({ color: 0xffd46b, alpha: 0.14 }); }
       break;
     }
     case "rock": {
@@ -804,7 +813,7 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
         onLeft(g, y0 + d + 0.012, a + 0.115, a + 0.145, z, z + 0.3, c(0xfbf3ea));
       };
       win(x0 + 0.25, 0.22); win(x0 + 1.55, 0.22);
-      if (pal.night && LUMIERE_SOL === "flaques") for (const [a, z] of [[x0 + 0.25, 0.22], [x0 + 1.55, 0.22], [x0 + 0.35, 0.86], [x0 + 0.9, 0.86], [x0 + 1.45, 0.86]]) windowSpill(g, y0 + d, a, a + 0.26, z);
+      if (pal.night) for (const [a, z] of [[x0 + 0.25, 0.22], [x0 + 1.55, 0.22], [x0 + 0.35, 0.86], [x0 + 0.9, 0.86], [x0 + 1.45, 0.86]]) windowSpill(g, y0 + d, a, a + 0.26, z);
       win(x0 + 0.35, 0.86); win(x0 + 0.9, 0.86); win(x0 + 1.45, 0.86);
       onRight(g, x0 + w + 0.008, y0 + 0.35, y0 + 0.62, 0.86, 1.14, 0xffd46b);
       onRight(g, x0 + w + 0.008, y0 + 0.88, y0 + 1.15, 0.86, 1.14, 0xffd46b);
@@ -822,7 +831,6 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       const ccx = x0 + w * 0.7, ccy = y0 + d * 0.3;
       box(g, ccx, ccy, h + 0.25, 0.22, 0.22, 0.55, { top: c(0x5b5f70), left: c(0x9a9286), right: c(0x7d7667) });
       chimneySmoke(extra, anim, P(ccx + 0.11, ccy + 0.11, h + 0.86), rnd(72) * 6);
-      if (pal.night && LUMIERE_SOL === "ellipse") { const p = P(cx, y0 + d, 0.4); g.ellipse(p.x, p.y + 8, 60, 18).fill({ color: 0xffd46b, alpha: 0.2 }); }
       break;
     }
     case "postOffice": {
