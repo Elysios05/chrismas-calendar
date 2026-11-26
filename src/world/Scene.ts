@@ -9,6 +9,7 @@ import { Aurora } from "./aurora";
 import { PLAYERS, Person, Penguin, type Who } from "./actors";
 import { makeGround, poke, spawnLife, updateCritter, type Critter, type LifeEnv } from "./life";
 import type { CouleursJoueur, JoueurSalon, SoundApi, ZoneId } from "../core/contracts";
+import { Inclinaison } from "./inclinaison";
 import { Survol, ZOOM_SURVOL, marquerPresente, mondesPresentes, oublierPresentations } from "./presentation";
 
 export type NodeState = "locked" | "available" | "opened";
@@ -124,6 +125,10 @@ export class Scene {
   // du cadeau du jour ne s'assombrissent jamais. Le calque suit la caméra du monde à chaque image.
   overlay = new Container();
   giftLight = new Sprite();
+  /** Halo doux autour de son propre personnage (issue #10), surtout le soir */
+  playerLight = new Sprite();
+  /** Pencher le téléphone fait dériver la neige (issue #10) */
+  inclinaison = new Inclinaison();
   labels = new Container();
   snowLayer = new Container();
   whiteout = new Graphics();
@@ -224,7 +229,11 @@ export class Scene {
     this.giftLight.blendMode = "add";
     this.giftLight.tint = 0xffc95e;
     this.giftLight.visible = false;
-    this.overlay.addChild(this.giftLight, this.labels);
+    this.playerLight.texture = this.giftLight.texture;
+    this.playerLight.anchor.set(0.5);
+    this.playerLight.blendMode = "add";
+    this.playerLight.tint = 0xffe2a8;
+    this.overlay.addChild(this.playerLight, this.giftLight, this.labels);
     app.stage.addChild(this.world, this.tint, this.fog, this.cloudLayer, this.overlay, this.whiteout, this.confettiLayer, this.snowLayer);
     const flakeTex = app.renderer.generateTexture(new Graphics().circle(6, 6, 6).fill(0xffffff));
     for (let i = 0; i < 260; i++) {
@@ -255,6 +264,8 @@ export class Scene {
           return { x: m.wx * sc + this.world.x, y: m.wy * sc + this.world.y, visible: c.visible };
         },
         giftState: (day: number) => this.states.get(day) ?? "locked",
+        /** Simule l'inclinaison du téléphone (-1…1), et rend l'inclinaison lissée */
+        incliner: (x: number, y = 0) => { this.inclinaison.simuler(x, y); return { x: this.inclinaison.x, y: this.inclinaison.y }; },
         scrollForDay: (day: number) => this.scrollForDay(day),
         playOpen: (day: number) => this.playOpen(day),
         /** bascule jour/nuit : reconstruction en cours ? et durée de la dernière (calcul pur et totale) */
@@ -1171,7 +1182,15 @@ export class Scene {
       scrollTo({ top: Math.max(0, Math.min(this.maxScroll, this.scrollForDay(jour))), behavior: "smooth" });
     };
     addEventListener("keydown", touche);
+
+    // --- inclinaison du téléphone : sans autorisation (Android), tout de suite ; sur iOS, au premier
+    // toucher de la carte, seul moment où le navigateur accepte de poser la question ---
+    const gyro = () => { canvas.removeEventListener("pointerup", gyro); void this.inclinaison.demarrer(); };
+    if (Inclinaison.demandeAutorisation()) canvas.addEventListener("pointerup", gyro);
+    else gyro();
     this.retirerNavigation = () => {
+      canvas.removeEventListener("pointerup", gyro);
+      this.inclinaison.arreter();
       canvas.removeEventListener("pointerdown", bas);
       removeEventListener("pointermove", deplace);
       removeEventListener("pointerup", haut);
@@ -1327,12 +1346,15 @@ export class Scene {
     // neige
     const density = wx.snow, wind = wx.wind, speed = wx.speed;
     const active = Math.floor(Math.min(1, density / 1.6) * this.flakes.length);
+    this.inclinaison.update(dt);
+    const tilt = this.inclinaison;
     this.flakes.forEach((f, i) => {
       f.s.visible = i < active;
       if (!f.s.visible) return;
       f.ph += 0.02 * dt;
-      f.s.y += f.vy * speed * dt;
-      f.s.x += (Math.sin(f.ph) * 0.4 + wind * (1 + f.z) * 1.6) * dt;
+      // pencher le téléphone : les flocons proches (z grand) réagissent plus que les lointains
+      f.s.y += f.vy * speed * Math.max(0.45, 1 + tilt.y * 0.6) * dt;
+      f.s.x += (Math.sin(f.ph) * 0.4 + wind * (1 + f.z) * 1.6 + tilt.x * (0.8 + f.z * 2.4)) * dt;
       if (f.s.y > innerHeight + 10) { f.s.y = -10; f.s.x = Math.random() * innerWidth; }
       if (f.s.x > innerWidth + 10) f.s.x = -10;
       if (f.s.x < -10) f.s.x = innerWidth + 10;
@@ -1428,7 +1450,21 @@ export class Scene {
     this.placeActors();
     for (const who of ["alexandre", "flavie"] as Who[]) this.people[who].update(dt);
     this.penguin.update(dt);
+    this.eclairerJoueur();
     this.guetterArrivee();
+  }
+
+  /** Le halo suit son personnage ; presque rien de jour, une vraie lanterne la nuit */
+  private eclairerJoueur() {
+    const moi = this.people[this.leader];
+    const l = Math.min(1, this.light);
+    this.playerLight.visible = !!moi && moi.visible && l > 0.02;
+    if (!this.playerLight.visible) return;
+    const p = this.overlay.toLocal(moi.getGlobalPosition());
+    const souffle = 1 + Math.sin(this.time * 0.035) * 0.04;
+    this.playerLight.position.set(p.x, p.y - 20);
+    this.playerLight.scale.set(1.5 * souffle, 1.15 * souffle);
+    this.playerLight.alpha = l * 0.42;
   }
 
   /* ------------------- présentation des mondes (issue #12) ------------------- */
