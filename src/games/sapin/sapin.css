@@ -21,6 +21,9 @@
   width: 30px; height: 30px; border-radius: 50%; border: 3px solid #fff; cursor: pointer; padding: 0;
   box-shadow: 0 0 0 1px rgba(27, 39, 71, .25);
 }
+/* pastille dessinée à 30 px, mais zone tactile d'environ 35×44 px (issue #129) : on déborde sur les écarts */
+.sapin-couleur { position: relative; }
+.sapin-couleur::after { content: ""; position: absolute; inset: -4px -2.5px -10px; border-radius: 12px; }
 .sapin-couleur.choisi { box-shadow: 0 0 0 3px var(--ink, #1b2747); transform: scale(1.1); }
 .sapin-annuler {
   margin-left: 6px; border: 0; border-radius: 12px; padding: 7px 12px; font: inherit; font-weight: 700; font-size: 14px;

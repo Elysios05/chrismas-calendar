@@ -6,7 +6,7 @@
  * Clavier AZERTY maison comme le pendu, « Vérifier » gratuit, « Une lettre » payée en points.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ToucherReact } from "react";
 import type { GameContext, GameModule } from "../../core/contracts";
 import { MOTSCROISES_JOUR17, SCHEMA_MOTSCROISES_JOUR17, MOTSCROISES_VERDICTS } from "../../data/games/motscroises-jour17";
 import { prenomsDe, lireContenu } from "../shared/contenu";
@@ -182,6 +182,27 @@ function MotsCroises({ ctx }: { ctx: GameContext }) {
     });
   };
 
+  // Les cases font ~23 px sur téléphone (issue #129) : un toucher à côté d'une case (sur un vide ou dans
+  // l'écart entre deux cases) choisit la case blanche la plus proche, à moins d'un pas de grille.
+  const toucherGrille = (e: ToucherReact<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest(".mc-case")) return; // la case gère elle-même son toucher
+    const zone = e.currentTarget.getBoundingClientRect();
+    const ecart = parseFloat(getComputedStyle(e.currentTarget).columnGap) || 0;
+    const taille = (zone.width - ecart * (grille.colonnes - 1)) / grille.colonnes;
+    const pas = taille + ecart;
+    const x = e.clientX - zone.left, y = e.clientY - zone.top;
+    const l0 = Math.floor(y / pas), c0 = Math.floor(x / pas);
+    let meilleure: { l: number; c: number; d: number } | null = null;
+    for (let l = l0 - 1; l <= l0 + 1; l++) {
+      for (let c = c0 - 1; c <= c0 + 1; c++) {
+        if (grille.solution[l]?.[c] == null) continue;
+        const d = Math.hypot(x - (c * pas + taille / 2), y - (l * pas + taille / 2));
+        if (d <= pas && (!meilleure || d < meilleure.d)) meilleure = { l, c, d };
+      }
+    }
+    if (meilleure) choisirCase(meilleure.l, meilleure.c);
+  };
+
   const commencer = () => {
     setSaisie(vide()); setRevelees(0); setFausses(new Set()); setEtape("jeu");
     const premiere = grille.entrees[0];
@@ -246,6 +267,7 @@ function MotsCroises({ ctx }: { ctx: GameContext }) {
       <div className="jeu-centre mc">
         <div
           className="mc-grille"
+          onClick={toucherGrille}
           style={{ gridTemplateColumns: `repeat(${grille.colonnes}, 1fr)`, maxWidth: `${grille.colonnes * 40}px` }}
         >
           {grille.solution.map((rangee, l) => rangee.map((bonne, c) => {

@@ -187,6 +187,9 @@
   font: inherit; font-size: 16px; font-weight: 700;
   box-shadow: 0 3px 0 rgba(27, 39, 71, .16); cursor: pointer; transition: transform .08s;
 }
+/* zone tactile étendue jusqu'au milieu des écarts (issue #129) : plus aucun toucher « dans le vide » entre deux touches */
+.pendu-touche { position: relative; }
+.pendu-touche::after { content: ""; position: absolute; inset: -3px -2.5px; }
 .pendu-touche:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(27, 39, 71, .16); }
 .pendu-touche.bonne { background: #e4f6ef; color: var(--green, #2fa37a); }
 .pendu-touche.ratee { background: #eceef3; color: #a9b0c0; }
@@ -203,6 +206,8 @@
   box-shadow: 0 2px 0 rgba(27, 39, 71, .14); cursor: pointer;
   display: grid; place-items: center;
 }
+/* zone tactile étendue sur la moitié de l'écart (issue #129) ; les vides autour sont gérés par toucherGrille() */
+.mc-case::after { content: ""; position: absolute; inset: -1.5px; }
 .mc-case i { position: absolute; top: 1px; left: 3px; font-size: 9px; font-style: normal; font-weight: 600; color: var(--ink-soft, #5b6680); }
 .mc-case.active { background: #e8f1fb; }
 .mc-case.choisie { background: #fff; box-shadow: 0 0 0 3px var(--red, #d9354b) inset, 0 2px 0 rgba(27, 39, 71, .14); }

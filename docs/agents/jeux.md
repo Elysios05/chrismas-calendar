@@ -53,6 +53,26 @@ du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
 
+### 26 novembre 2026 — issue #129, petites cibles tactiles sur téléphone (branche `jeux/cibles-tactiles-129`)
+
+**Décision technique prise seul :** on ne change **pas le dessin** (pas de goût en jeu), on élargit seulement ce
+que le doigt peut toucher.
+- **Pendu (15) et clavier des mots croisés (17)** : `.pendu-touche::after` déborde jusqu'au milieu des écarts →
+  plus de toucher « dans le vide » entre deux touches (zone ≈ 34×48 px au lieu de 29×42). Mesuré : 99 % des points
+  du clavier tombent sur une touche.
+- **Mots croisés (17)** : `.mc-case::after` couvre la moitié de l'écart, et `toucherGrille()` (clic sur la grille
+  hors d'une case) choisit la **case blanche la plus proche** à moins d'un pas de grille. Mesuré : 175 touchers sur
+  192, faits à 0,7 case du centre, choisissent la bonne case voisine (avant : quasi aucun).
+- **Sapin (21)** : pastille toujours dessinée à 30 px, zone tactile ≈ 35×44 px (déborde sur les écarts et la marge
+  du bas ; pas vers le haut pour ne pas voler la rangée des décos).
+- Rien touché à `.jeu-boite` (demande de l'Interface dans #129).
+
+**Vérifié :** `npm run build` OK ; touchers simulés Playwright en 390×844 (atelier, 0 erreur) ;
+`npm run capture -- --jour=17 --case=17` et `--jour=21 --case=21` (mobile) : 0 erreur console.
+
+**Prochaine étape :** jour 19 (défi photo croisé « ta déco de Noël ») : reprendre le jour 3. Demander d'abord ses
+règles à Alexandre.
+
 ### 26 novembre 2026 — jour 18, bataille de boules de neige : le duel des forts (branche `jeux/boules-neige-jour18`)
 
 **Décidé avec Alexandre :** « duel des forts » (parmi 3 options : duel des forts / coop contre les lutins / duel aux
