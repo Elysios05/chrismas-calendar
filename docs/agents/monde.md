@@ -525,7 +525,7 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     performance téléphone, options B et C du 26 nov).
 
 - 26 nov (nuit) — **#113, un habitant devant un cadeau empêchait de l'ouvrir** (case 10 au jour 10 : un patineur
-  passait devant le paquet et recevait le toucher). Branche `monde/toucher-cadeaux`.
+  passait devant le paquet et recevait le toucher). Branche `monde/toucher-cadeaux`, PR #117.
   - Correction (option 1 de l'Interface, confirmée par la Qualité, décision technique) : quand on touche un habitant,
     `Scene.cadeauSous(x, y)` refait le test de toucher en rendant les habitants intouchables le temps du test ;
     si un cadeau ou son étiquette est dessous, c'est la case qui s'ouvre, sinon l'habitant est chatouillé comme avant.
