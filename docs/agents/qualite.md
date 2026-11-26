@@ -34,3 +34,12 @@
 - Reprise après interruption. `origin/main` fusionnée (salons #85, jeux 5-6 #83, en-tête #82, télésiège #80) sans conflit. `npm run capture` réparé (suit `.entete`) ; serveur de capture propre à chaque copie de travail (port).
 - e2e : 48 réussis, 0 échec, 18 ignorés. Parcours jeux : jours 2, 3, 7, 11, 15, 17. État des lieux : `docs/qa/etat-des-lieux-2026-11-25.md`.
 - Prochaine étape : parcours des jours 5 et 6 (direct à deux pages) et du test deux onglets (#56) ; axe-core (#34) couvert.
+
+### 26 novembre 2026 (branche `qualite/e2e-salons`)
+- **e2e des salons** (`tests/e2e/salons.spec.ts`) : création Sam & Camille → lien d'invitation affiché → l'invité·e l'ouvre dans un autre onglet, choisit son mot de passe, arrive sur la carte → prénoms du salon dans l'en-tête, la bulle de Pingou et les réglages, jamais « Alexandre »/« Flavie » (texte affiché + `title`/`aria-label`) → lien déjà servi et lien inconnu (« Ce lien ne marche plus ») → « Les questions des jeux » seulement chez le créateur, carte « surprise » chez l'invité·e.
+- **Atteindre l'assistant de création en démo** : impossible dans l'appli (le salon démo existe toujours). On utilise `maquettes.html?vue=creer` de l'Interface sur un serveur de dév (port `QA_PORT_DEV`, 4181, lancé par `playwright.config.ts`), puis la vraie appli sur le même serveur (même origine = même stockage de démo). Ce test est donc le seul à tourner sur le serveur de dév.
+- **`npm run capture -- --prenoms=Sam,Camille`** : écrit la config du salon `demo` dans le registre local avant le chargement ; la capture échoue si « Alexandre »/« Flavie » reste dans le texte visible. Voir `docs/qa/capture.md`.
+- **Jeux 9 (dessin) et 10 (flocons)** ajoutés à `jeux.spec.ts`. Le jour 10 tolère UNE erreur connue (issue #109, scène Pixi détruite pendant son tick) : retirer `tolere` quand c'est corrigé.
+- **Balayage « Alexandre/Flavie » en dur** : issues #110 (titre de page + manifeste, chef) et #111 (lettre d'exemple du salon démo, Backend). Le reste (Pingou, jeux, souvenirs, rappels) passe par les prénoms du salon ; les valeurs par défaut et `src/data/salons/` sont voulues.
+- Constat : le lien d'invitation déjà servi dit « Ce lien a déjà servi, {prénom} » (et non « Ce lien ne marche plus », réservé aux liens inconnus).
+- Prochaine étape : parcours à deux pages (jours 5, 6, 11 en direct) et « deux salons ne se voient pas » (e2e, cf. `docs/salons.md`).

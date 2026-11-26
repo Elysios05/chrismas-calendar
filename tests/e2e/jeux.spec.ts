@@ -14,7 +14,7 @@ test.beforeEach(async ({ context, page }, info) => {
   msgs = C.collecterConsole(page);
 });
 
-const erreurs = () => msgs.filter((m) => m.type !== "warning");
+const erreurs = (tolere?: RegExp) => msgs.filter((m) => m.type !== "warning" && !(tolere && tolere.test(m.texte)));
 const fenetre = (page: Page) => page.locator(".sheet-panel");
 
 async function ouvrirCase(page: Page, jour: number) {
@@ -41,7 +41,7 @@ async function passerRegles(page: Page, bouton = "C'est parti") {
 }
 
 /** « Fermer » → écran « case finie » → retour à la route, puis relit le stockage de la démo. */
-async function terminerEtVerifier(page: Page, jour: number, { score = true }: { score?: boolean } = {}) {
+async function terminerEtVerifier(page: Page, jour: number, { score = true, tolere }: { score?: boolean; tolere?: RegExp } = {}) {
   const fermer = page.locator(".jeu-btn", { hasText: "Fermer" });
   await expect(fermer).toBeVisible({ timeout: 300_000 });
   await fermerBulle(page);
@@ -52,7 +52,7 @@ async function terminerEtVerifier(page: Page, jour: number, { score = true }: { 
   const d = await page.evaluate(() => JSON.parse(localStorage.getItem("cc-demo:data-v2") ?? "null"));
   expect(d?.progress?.alexandre?.completed, "la case doit être marquée terminée").toContain(jour);
   if (score) expect(Object.keys(d.gameState ?? {}), "le score doit être enregistré").toContain(`${jour}:meilleur:alexandre`);
-  expect(erreurs(), JSON.stringify(erreurs(), null, 1)).toEqual([]);
+  expect(erreurs(tolere), JSON.stringify(erreurs(tolere), null, 1)).toEqual([]);
 }
 
 test("jour 2 : la luge se joue jusqu'à la fin (arrivée ou dernier choc)", async ({ page }) => {
@@ -107,6 +107,55 @@ test("jour 7 : le rébus se joue jusqu'au bout (on passe les 8 énigmes)", async
   }
   await expect(page.locator(".jeu-panneau h2")).toContainText(/\d+ rébus sur 8/);
   await terminerEtVerifier(page, 7);
+});
+
+test("jour 9 : le dessin à deviner se joue jusqu'au bout (3 dessins envoyés, une devinette, galerie)", async ({ page }) => {
+  test.setTimeout(600_000);
+  await C.ouvrirDemo(page, { jour: 9 });
+  await ouvrirCase(page, 9);
+  await passerRegles(page, "Prendre mes crayons");
+  for (let i = 1; i <= 3; i++) {
+    // choix d'un thème encore libre
+    await page.locator(".des-theme:not([disabled])").first().click();
+    await expect(page.locator(".pic-toile")).toBeVisible();
+    // un trait à la souris sur le tableau, puis « J'ai fini »
+    const b = (await page.locator(".pic-toile").boundingBox())!;
+    await page.mouse.move(b.x + b.width * 0.25, b.y + b.height * 0.3);
+    await page.mouse.down();
+    await page.mouse.move(b.x + b.width * 0.5, b.y + b.height * 0.6, { steps: 6 });
+    await page.mouse.move(b.x + b.width * 0.75, b.y + b.height * 0.35, { steps: 6 });
+    await page.mouse.up();
+    await page.locator(".pic-fini").click();
+    // légende : ce que l'autre doit trouver, puis envoi
+    await page.getByLabel(/Ce que .* doit trouver/).fill(`réponse ${i}`);
+    await page.getByRole("button", { name: /^Envoyer à/ }).click();
+  }
+  // galerie : en démo, les dessins de l'autre côté sont des exemples → on devine le premier (langue au chat)
+  await expect(page.locator(".des-galerie")).toBeVisible();
+  await expect(page.getByText("Mode démo : les dessins de")).toBeVisible();
+  await page.getByRole("button", { name: /Deviner/ }).click();
+  await expect(page.locator(".pic-toile")).toBeVisible();
+  await page.getByRole("button", { name: /Langue au chat/ }).click();
+  await expect(page.locator(".des-revele")).toBeVisible();
+  await page.getByRole("button", { name: "Continuer" }).click();
+  await expect(page.locator(".des-galerie")).toBeVisible();
+  await terminerEtVerifier(page, 9, { score: false });
+  // les 3 dessins sont bien enregistrés
+  const d = await page.evaluate(() => JSON.parse(localStorage.getItem("cc-demo:data-v2") ?? "null"));
+  const cles = Object.keys(d?.gameState ?? {}).filter((k) => k.startsWith("9:") && k.includes("alexandre"));
+  expect(cles.length, `clés du jeu 9 : ${cles}`).toBeGreaterThanOrEqual(3);
+});
+
+test("jour 10 : les flocons se jouent jusqu'au bout (sans bouger : les glaçons ou le temps mettent fin à la partie)", async ({ page }) => {
+  test.setTimeout(900_000);
+  await C.ouvrirDemo(page, { jour: 10 });
+  await ouvrirCase(page, 10);
+  await passerRegles(page, "C'est parti");
+  await expect(page.locator(".jeu-canvas canvas")).toBeVisible();
+  // Bug connu (issue Jeux) : à la fin de la partie, le moteur détruit la scène PixiJS depuis son propre tick
+  // (« Cannot read properties of null (reading 'clear') »). Seule cette erreur est tolérée, le reste doit être propre.
+  test.info().annotations.push({ type: "bug", description: "exception Pixi à la fin du jeu 10 (issue Jeux)" });
+  await terminerEtVerifier(page, 10, { tolere: /reading 'clear'[\s\S]*RenderTargetSystem/ });
 });
 
 test("jour 11 : Synchro se joue en solo jusqu'au bout (Flavie absente)", async ({ page }) => {

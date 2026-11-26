@@ -18,6 +18,7 @@ npm run capture                                          # jour 1, 12 h, mobile 
 | `--joueur=alexandre\|flavie` | qui est connecté | alexandre |
 | `--appareils=mobile,ordinateur` | 390×844 (x2) et 1280×800 | les deux |
 | `--attente=ms` | délai avant la photo | 1500 |
+| `--prenoms=Sam,Camille` | salon de démo aux prénoms différents ; la capture échoue si « Alexandre » ou « Flavie » reste dans le texte visible | prénoms du salon de démo |
 | `--sortie=dossier` | où écrire les PNG | `/tmp/captures` (hors dépôt) |
 | `--sans-build` | ne construit jamais (échoue si `dist/` manque) | construit seulement si `dist/` est absent ou plus vieux que `src/` |
 
