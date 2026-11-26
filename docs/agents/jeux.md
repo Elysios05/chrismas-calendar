@@ -46,7 +46,7 @@ Faits : 1, 2, 3, **5, 6** (PR #83 en attente de fusion), 7, 11, 15, 17. Restent 
 5. ~~Jour **13** (en direct)~~ — fait le 26 nov (PR #107, fusionnée)
 6. ~~Jour **14** (activité synchronisée)~~ — fait le 26 nov, branche `jeux/biscuits-jour14`
 7. ~~Jour **18** (en direct)~~ — fait le 26 nov, branche `jeux/boules-neige-jour18`
-8. Jour **19** (défi photo)
+8. ~~Jour **19** (défi photo)~~ — fait le 26 nov, branche `jeux/defi-photo-jour19`
 9. ~~Jour 21~~ → **confié à l'équipe Monde** (26 nov, #29)
 10. ~~Jour 22~~ → **confié à l'équipe Monde** (26 nov, #29)
 11. Jour **23** (activité synchronisée)
@@ -63,6 +63,26 @@ Avant de poser une question, relire les issues ouvertes (y compris celles des au
 du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
+
+### 26 novembre 2026 — jour 19, défi photo croisé « ta déco de Noël » (branche `jeux/defi-photo-jour19`)
+
+**Décidé avec Alexandre :**
+- La déco peut être **n'importe où** (chez soi, dans la rue, une vitrine, chez quelqu'un), pas forcément chez nous.
+- Questions : **mélange** « coulisses » (où je l'ai trouvée, qui l'a installée, combien de temps devant) et
+  « souvenirs » (ce que ça me rappelle, depuis quand je connais l'endroit).
+- Mode démo : la photo de l'autre est un **sapin décoré dessiné** au canevas.
+
+**Fait :** même jeu que le jour 3. `creerDefiPhoto(id, titre, config)` prend maintenant une config (contenu par
+défaut, schéma, dessin de démo, pastille de fin) ; `defiPhotoJour19` dans `src/games/photo/index.tsx`, contenu
+`src/data/games/photo-jour19.ts` (+ `SCHEMA_PHOTO_JOUR19` pour l'éditeur du salon), sapin `dessinerSapinExemple()`
+dans `exemple.ts`, registre (jeu, contenu, schéma). Pas d'entrée « 19 » dans `alexandre-flavie.ts` : le contenu
+générique leur convient tel quel (à ajouter si Alexandre veut une touche perso).
+
+**Vérifié :** `npm run build` OK ; atelier 390×844 joué jusqu'à la découverte de la photo de démo (0 erreur) ;
+jour 3 inchangé ; `npm run capture -- --jour=19 --case=19` mobile + ordinateur : 0 erreur console.
+
+**Prochaine étape :** jour 23 (film de Noël lancé au même moment, activité synchronisée) : demander d'abord ses
+règles à Alexandre.
 
 ### 26 novembre 2026 — issue #129, petites cibles tactiles sur téléphone (branche `jeux/cibles-tactiles-129`)
 

@@ -23,6 +23,7 @@ import { PENDU_JOUR15, SCHEMA_PENDU_JOUR15 } from "../data/games/pendu-jour15";
 import { MOTSCROISES_JOUR17, SCHEMA_MOTSCROISES_JOUR17 } from "../data/games/motscroises-jour17";
 import { SYNCHRO_JOUR11, SCHEMA_SYNCHRO_JOUR11 } from "../data/games/synchro-jour11";
 import { PHOTO_JOUR3, SCHEMA_PHOTO_JOUR3 } from "../data/games/photo-jour3";
+import { PHOTO_JOUR19, SCHEMA_PHOTO_JOUR19 } from "../data/games/photo-jour19";
 import { PICTIONARY_JOUR5, SCHEMA_PICTIONARY_JOUR5 } from "../data/games/pictionary-jour5";
 import { FRIANDISES_JOUR6 } from "../data/games/friandises-jour6";
 import { DESSIN_JOUR9, SCHEMA_DESSIN_JOUR9 } from "../data/games/dessin-jour9";
@@ -50,6 +51,7 @@ const JEUX: Partial<Record<DayNumber, Chargeur>> = {
   15: () => import("./pendu/index").then((m) => m.penduJour15),
   17: () => import("./motscroises/index").then((m) => m.motsCroisesJour17),
   18: () => import("./boules/index").then((m) => m.boulesJour18),
+  19: () => import("./photo/index").then((m) => m.defiPhotoJour19),
   21: () => import("./sapin/index").then((m) => m.sapinJour21),
   22: () => import("./tri-cadeaux/index").then((m) => m.triCadeauxJour22),
   // les autres jours : à venir (défis photo, en direct, pendu, mots croisés…)
@@ -71,6 +73,7 @@ const CONTENU: Partial<Record<DayNumber, unknown>> = {
   15: PENDU_JOUR15,
   17: MOTSCROISES_JOUR17,
   18: BOULES_JOUR18,
+  19: PHOTO_JOUR19,
   21: SAPIN_JOUR21,
   22: TRI_CADEAUX_JOUR22,
 };
@@ -86,6 +89,7 @@ const SCHEMAS: Partial<Record<DayNumber, SchemaContenu>> = {
   14: SCHEMA_BISCUITS_JOUR14,
   15: SCHEMA_PENDU_JOUR15,
   17: SCHEMA_MOTSCROISES_JOUR17,
+  19: SCHEMA_PHOTO_JOUR19,
 };
 
 export const schemaDuJour = (jour: DayNumber): SchemaContenu | null => SCHEMAS[jour] ?? null;
