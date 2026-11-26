@@ -723,6 +723,8 @@ export class Scene {
       let n = 0;
       for (const p of lot.decors) {
         if (++n % 12 === 0) yield;
+        // le 24 ouvert, l'attelage est parti avec le traîneau
+        if (p.attelage && flying) continue;
         const o = drawProp(p.kind, p.x, p.y, pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop, alongX: p.alongX, flying: p.kind === "sleigh" && flying });
         if (o.anim) anims.push(...o.anim);
         o.y = -p.z * ZH;
