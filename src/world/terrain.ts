@@ -10,10 +10,14 @@ export type Cell = { x: number; y: number; h: number; zone: number; road: boolea
   /** sol dessiné à part au bout du monde : la place du pôle Nord et la piste d'envol */
   sol?: "place" | "piste" };
 /** `drop` = dénivelé à combler sous un bâtiment, côté aval (hauteur du soubassement) */
-export type PlacedProp = { kind: PropKind; x: number; y: number; z: number; zone: number; seed: number; drop: number; alongX?: boolean };
+export type PlacedProp = { kind: PropKind; x: number; y: number; z: number; zone: number; seed: number; drop: number; alongX?: boolean;
+  /** renne de l'attelage : il part avec le traîneau quand la case 24 est ouverte */
+  attelage?: boolean };
 export type Terrain = { path: PathCell[]; nodes: DayNode[]; cells: Map<string, Cell>; props: PlacedProp[]; V: Map<string, number>;
   /** bout de la piste d'envol (cases) : au jour 24, la caméra descend jusque-là */
-  bout?: { x: number; y: number } };
+  bout?: { x: number; y: number };
+  /** ancienne place du traîneau, devant chez le Père Noël : les lutins y apportent toujours les cadeaux */
+  depot?: { x: number; y: number } };
 
 /** Hauteur du terrain en un point quelconque (interpolation bilinéaire des sommets) */
 export function heightAt(t: Terrain, x: number, y: number) {
@@ -542,9 +546,10 @@ export function buildTerrain(seed = 2026): Terrain {
 
   /* ---------- le bout du monde : place du pôle Nord, piste d'envol, puis la forêt (choix d'Alexandre) ----------
    * Place carrée de 5 × 5 cases juste sous la fin de la route (un losange à l'écran), poteau au centre.
-   * La piste part de son bord gauche, vers le bas à gauche de l'écran, sur 3 cases de large. */
+   * La piste part de son coin bas (sous le poteau, au milieu de l'écran), vers le bas à gauche, sur 3 cases de large
+   * et 6 de long : plus longue, elle sortait de l'écran du téléphone. */
   const PX = fin.x + 1, PY = fin.y + 1; // coin haut de la place
-  const piste = { x0: PX + 1, x1: PX + 3, y0: PY + 5, y1: PY + 15 };
+  const piste = { x0: PX + 2, x1: PX + 4, y0: PY + 5, y1: PY + 10 };
   const dansPlace = (x: number, y: number) => x >= PX && x <= PX + 4 && y >= PY && y <= PY + 4;
   const dansPiste = (x: number, y: number) => x >= piste.x0 && x <= piste.x1 && y >= piste.y0 && y <= piste.y1;
   // réservé : la scène et une case de marge, plus le passage entre la route et la place
@@ -573,10 +578,22 @@ export function buildTerrain(seed = 2026): Terrain {
   met("bench", PX + 1.4, PY + 0.4);
   for (const [x, y] of [[PX + 3, PY + 1.2], [PX + 1.2, PY + 2.8], [PX + 2.9, PY + 3.1], [PX + 3.9, PY + 1.9]]) met("visitor", x, y);
   met("snowman", PX + 5.6, PY + 3.2);
-  met("presents", PX + 4.2, PY + 4.3);
   // la piste : un attelage de rennes au départ, des lanternes tout du long, l'écurie à côté
-  for (let r = 0; r < 3; r++) for (const dx of [-0.45, 0.45]) met("deer", piste.x0 + 1 + dx, piste.y0 + 0.6 + r * 1.3);
-  for (let y = piste.y0 + 1; y <= piste.y1; y += 3) { met("iceLantern", piste.x0 - 0.7, y); met("iceLantern", piste.x1 + 0.7, y); }
+  // le traîneau du Père Noël attend au bas de la piste, tourné vers la place (choix d'Alexandre) : le 24,
+  // il remonte la piste et s'envole vers le haut à droite, au-dessus du poteau du pôle Nord.
+  // À son ancienne place, devant chez le Père Noël, une pile de cadeaux que les lutins continuent d'apporter.
+  const traineau = props.find((pr) => pr.kind === "sleigh");
+  if (traineau) {
+    T0.depot = { x: traineau.x, y: traineau.y };
+    props.push({ ...traineau, kind: "presents", seed: Math.floor(R2() * 1e6) });
+    Object.assign(traineau, { x: piste.x0 + 1, y: piste.y1 - 0.6, z: heightAt(T0, piste.x0 + 1.5, piste.y1 - 0.1), drop: 0 });
+  }
+  // l'attelage, devant lui (vers la place)
+  for (let r = 0; r < 3; r++) for (const dx of [-0.45, 0.45]) {
+    met("deer", piste.x0 + 1 + dx, piste.y1 - 2.1 - r * 1.2);
+    props[props.length - 1].attelage = true;
+  }
+  for (let y = piste.y0 + 1; y <= piste.y1; y += 2) { met("iceLantern", piste.x0 - 0.7, y); met("iceLantern", piste.x1 + 0.7, y); }
   met("stable", piste.x1 + 3.2, piste.y0 + 4);
   met("presents", piste.x0 - 1.6, piste.y0 + 0.2);
   met("brazier", piste.x1 + 1.6, piste.y1 + 0.6);
