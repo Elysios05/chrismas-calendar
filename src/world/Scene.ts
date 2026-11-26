@@ -602,7 +602,12 @@ export class Scene {
     b.life = spawnLife(this.terrain, pal);
     yield;
     for (const cr of b.life) {
-      cr.on("pointertap", () => poke(cr, this.lifeEnv, this.lifeGround));
+      cr.on("pointertap", (e) => {
+        // un cadeau sous l'habitant passe en priorité (issue #113) : sinon un patineur sur le cadeau du jour l'empêche de s'ouvrir
+        const day = this.cadeauSous(e.global.x, e.global.y);
+        if (day !== null) this.cb.onNodeTap(day);
+        else poke(cr, this.lifeEnv, this.lifeGround);
+      });
       updateCritter(cr, 0, this.lifeGround, this.terrain);
       b.objects.addChild(cr);
     }
@@ -949,6 +954,24 @@ export class Scene {
   }
 
   /** Dessine un cadeau ; par défaut dans la scène affichée, sinon dans une scène en construction */
+  /** Le cadeau (ou son étiquette) qu'on toucherait à ce point de l'écran si les habitants n'étaient pas là */
+  private cadeauSous(x: number, y: number): number | null {
+    const avant = this.life.map((cr) => cr.eventMode);
+    for (const cr of this.life) cr.eventMode = "none";
+    let cible: Container | null;
+    try {
+      cible = this.app.renderer.events.rootBoundary.hitTest(x, y) as Container | null;
+    } finally {
+      this.life.forEach((cr, i) => { cr.eventMode = avant[i]; });
+    }
+    for (; cible; cible = cible.parent) {
+      for (const [day, cont] of this.gifts) {
+        if (cont === cible || (cont as Container & { meta?: { label?: Container } }).meta?.label === cible) return day;
+      }
+    }
+    return null;
+  }
+
   makeGift(n: DayNode, b?: Built) {
     const st = (b ? b.states : this.states).get(n.day) ?? "locked";
     const c = (b?.pal ?? this.pal).c;
