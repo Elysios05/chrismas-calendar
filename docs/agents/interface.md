@@ -40,9 +40,24 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 5. ~~**Nom du monde tronqué sur téléphone**~~ — fait le 26 nov (nom court, PR `interface/nom-du-monde`).
 6. **À partir du 27 nov** (Supabase branché) : vérification complète de l'interface en vrai — messages d'erreur de #75
    avec de vraies erreurs. ~~Audit axe-core, revue des 24 jours~~ : faits le 26 nov (bug de la case 10 → **#113**).
-7. ~~Issue au chef pour la suite~~ : ouverte le 26 nov → **#116** (attendre sa réponse).
+7. ~~Issue au chef pour la suite~~ : réponse reçue dans **#116** (26 nov) :
+   - A (erreurs #75 sur vrai Supabase) : **après le 27**, Alexandre donnera URL + clé anonyme dans `.env.local` (jamais commité).
+   - ~~C : #110 côté React~~ — fait (PR `interface/titre-salon`).
+   - ~~**B**~~ : revue des 15 jeux sur 390×844 — fait le 26 nov (PR `interface/revue-jeux-mobile`, issue [Jeux] **#129** pour les petites cibles tactiles).
+   - **D** (prochaine tâche) : jour 19 (défi photo, proche du jeu photo du jour 3) — **Alexandre a dit oui (26 nov)**, annoncé dans #116. À faire après B ; attendre que le chef confirme dans #116 les fichiers de `src/games/` qu'il me confie.
 
 ## Journal
+
+### 📍 Où j'en suis — 26 novembre 2026 (soir, après #116)
+
+**#110, partie React : faite** (branche `interface/titre-salon`). `useTitreDuSalon(salon)` dans `src/ui/useSalon.ts` :
+titre de l'onglet « Calendrier de l'Avent — Prénom & Prénom » d'après le salon, titre générique sans salon ou avant
+son chargement (jamais les prénoms de repli), et remis en générique quand on quitte la carte. Un seul appel ajouté
+dans `Calendar` (`App.tsx`), puisque le chef m'a confié ce point. Vérifié en démo : générique sur l'écran de connexion,
+« … — Alexandre & Flavie » dans la carte. Remarque laissée au chef : l'écran de connexion affiche
+« Alexandre & Flavie » en sous-titre (prénoms par défaut, le salon n'est pas encore connu à ce moment-là).
+
+**Prochaine tâche** : B (défauts de tous les jeux sur 390×844, correctifs dans `src/ui/`, issue [Jeux] pour le reste), puis D (jour 19, accord d'Alexandre obtenu ; fichiers à confirmer par le chef dans #116).
 
 ### 📍 Où j'en suis — 26 novembre 2026 (tard)
 
@@ -434,3 +449,17 @@ Tickets #17 et #25.
   De 166 px à 135 px de haut.
 - Fond de page de nuit : écrit sous `html[data-nuit="oui"]`. Le chef a posé la ligne qui manquait
   dans `App.tsx` ; c'est en place.
+
+### Revue des jeux sur téléphone (branche `interface/revue-jeux-mobile`, 26 nov)
+Point B de #116. Les 15 jeux passés en 390×844 (script jetable hors dépôt, sur les aides de `tests/qa/commun.mjs`,
+accord d'Alexandre : `npm run capture` ne sait pas entrer dans un jeu).
+- **Bug corrigé** : « Revoir la case » passait directement à l'étape jeu sans relire le salon → prénoms « Joueur 2 »,
+  contenu par défaut au lieu du contenu du couple, et lettre déjà lue affichée vide. Le bouton repasse par `commencer()`.
+- **Fenêtre pendant une partie** (`.sheet-panel--jeu`), **validé par Alexandre** (option « titre sur 1 ligne ») :
+  pleine hauteur sur téléphone (820 px max sur ordinateur), en-tête d'une ligne sans la date ni le type (titre coupé
+  par « … » s'il est long), le jeu remplit le reste, Pingou se range dessous. Avant : clavier du pendu et bas des mots
+  croisés coupés, bulle de Pingou sous le pli, double défilement. `.jeu-boite` voit son `min-height` neutralisé
+  dans ce cadre (prévenu dans #129).
+- Pour les Jeux (#129) : cases des mots croisés 22 px, pastilles du sapin 30 px, touches du pendu 27 px de large.
+- Prochaine étape : **D, jour 19** (attendre que le chef confirme dans #116 les fichiers de `src/games/` confiés),
+  puis **A** après le 27 (erreurs #75 sur vrai Supabase).
