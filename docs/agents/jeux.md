@@ -12,6 +12,13 @@
 - **Synchronisé** : biscuits + minuteur partagé (14), film lancé ensemble (23).
 
 ## À faire (par priorité) — mis à jour par le chef le 24 nov
+**🎯 Plan final (chef, 27 nov — validé par Alexandre)** : à finir **samedi 28 au soir**.
+1. **PRIORITÉ ABSOLUE : contenu d'Alexandre & Flavie** dans `src/data/salons/alexandre-flavie.ts` + contenu par défaut
+   générique (voir le point juste en dessous). Le chef le chargera ensuite dans leur vrai salon Supabase.
+2. ~~#129 cibles tactiles~~ (PR #131, fusionnée).
+3. Le **jour 19 est confié à l'Interface**, le **jour 23 au Monde** : ne les fais pas.
+4. Ensuite : corrections remontées par la Qualité ; fermer #56 et #109 quand la Qualité confirme.
+
 **🆕 Contenu d'Alexandre & Flavie séparé du contenu générique (décision d'Alexandre, 25 nov — PRIORITÉ 1)** :
 - Copier **tout** le contenu actuel de `src/data/games/` (questions, mots, rébus, LJUBLJANA, « à vous deux »…) dans
   `src/data/salons/alexandre-flavie.ts` : un objet `CONTENU_ALEXANDRE_FLAVIE` indexé par jour (`{ "1": …, "7": … }`),
@@ -71,6 +78,25 @@ générique leur convient tel quel (à ajouter si Alexandre veut une touche pers
 jour 3 inchangé ; `npm run capture -- --jour=19 --case=19` mobile + ordinateur : 0 erreur console.
 
 **Prochaine étape :** jour 23 (film de Noël lancé au même moment, activité synchronisée) : demander d'abord ses
+
+### 26 novembre 2026 — issue #129, petites cibles tactiles sur téléphone (branche `jeux/cibles-tactiles-129`)
+
+**Décision technique prise seul :** on ne change **pas le dessin** (pas de goût en jeu), on élargit seulement ce
+que le doigt peut toucher.
+- **Pendu (15) et clavier des mots croisés (17)** : `.pendu-touche::after` déborde jusqu'au milieu des écarts →
+  plus de toucher « dans le vide » entre deux touches (zone ≈ 34×48 px au lieu de 29×42). Mesuré : 99 % des points
+  du clavier tombent sur une touche.
+- **Mots croisés (17)** : `.mc-case::after` couvre la moitié de l'écart, et `toucherGrille()` (clic sur la grille
+  hors d'une case) choisit la **case blanche la plus proche** à moins d'un pas de grille. Mesuré : 175 touchers sur
+  192, faits à 0,7 case du centre, choisissent la bonne case voisine (avant : quasi aucun).
+- **Sapin (21)** : pastille toujours dessinée à 30 px, zone tactile ≈ 35×44 px (déborde sur les écarts et la marge
+  du bas ; pas vers le haut pour ne pas voler la rangée des décos).
+- Rien touché à `.jeu-boite` (demande de l'Interface dans #129).
+
+**Vérifié :** `npm run build` OK ; touchers simulés Playwright en 390×844 (atelier, 0 erreur) ;
+`npm run capture -- --jour=17 --case=17` et `--jour=21 --case=21` (mobile) : 0 erreur console.
+
+**Prochaine étape :** jour 19 (défi photo croisé « ta déco de Noël ») : reprendre le jour 3. Demander d'abord ses
 règles à Alexandre.
 
 ### 26 novembre 2026 — jour 18, bataille de boules de neige : le duel des forts (branche `jeux/boules-neige-jour18`)
