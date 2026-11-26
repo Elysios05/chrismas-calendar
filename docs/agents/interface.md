@@ -62,11 +62,13 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 - Erreurs (champ vide, motif, nombre hors bornes, trop peu d'éléments) affichées au premier « Enregistrer » ;
   les cartes à corriger passent en rouge avec ⚠.
 - Entrée : bouton « 🎁 Les questions des jeux » dans l'accueil de `ReglagesSalon` ; Échap / ‹ remontent d'un écran.
-- Répliques **à faire valider** : `PINGOU_SALON.contenuListe / contenuCase / contenuEnregistre / contenuOriginal /
-  contenuQuitter / contenuIncomplet`.
+- Répliques `PINGOU_SALON.contenuListe / contenuCase / contenuEnregistre / contenuOriginal / contenuQuitter /
+  contenuIncomplet` : **validées telles quelles par Alexandre le 26 nov** (préférées à une version plus sobre).
 - Captures : `maquettes.html?vue=reglages-salon` puis « Les questions des jeux » (Playwright jetable, hors dépôt).
 
-**Prochaine tâche** : faire valider les répliques de l'éditeur ; puis point 5 de la liste (nom du monde tronqué).
+**PR #100 complète**, en attente de relecture et de fusion par le chef. Aucune issue `[Interface]` ouverte (vérifié le 26 nov).
+
+**Prochaine tâche** : point 5 de la liste (nom du monde tronqué sur téléphone), avec 2–3 options et des captures à montrer à Alexandre.
 À signaler au chef si besoin : l'éditeur montre les réponses (rébus, pendu…) à celui qui l'ouvre — normal pour
 celui qui prépare, mais l'autre peut aussi l'ouvrir.
 
