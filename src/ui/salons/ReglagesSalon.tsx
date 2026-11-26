@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import type { BackendApi, CouleursJoueur, Who } from "../../core/contracts";
-import { PINGOU_SALON, type PingouLine } from "../pingou/lines";
+import { PINGOU_SALON, textOf, type PingouLine } from "../pingou/lines";
 import { useDialog } from "../useDialog";
 import { useSalon } from "../useSalon";
 import { ChoixCouleurs, EcranPingou, Personnage, messageErreur } from "./EcranPingou";
@@ -192,12 +192,22 @@ export function ReglagesSalon({ backend, me, onFermer }: { backend: BackendApi; 
           ))}
         </ul>
 
-        <button type="button" className="salon-joueur ed-entree" onClick={() => { setLigneJeux(undefined); setVue({ etape: "jeux" }); }}>
-          <span className="ed-entree-icone" aria-hidden="true">🎁</span>
-          <span className="salon-joueur-nom">Les questions des jeux
-            <span className="ed-entree-note">Remplace celles de Pingou par les vôtres</span></span>
-          <span aria-hidden="true" className="ed-entree-fleche">›</span>
-        </button>
+        {/* Les questions des jeux sont réservées au créateur (place 1) : l'autre ne doit pas voir les réponses.
+            Protection d'interface seulement, la config reste lisible par les deux (arbitrage du chef, #84). */}
+        {me === "alexandre" ? (
+          <button type="button" className="salon-joueur ed-entree" onClick={() => { setLigneJeux(undefined); setVue({ etape: "jeux" }); }}>
+            <span className="ed-entree-icone" aria-hidden="true">🎁</span>
+            <span className="salon-joueur-nom">Les questions des jeux
+              <span className="ed-entree-note">Remplace celles de Pingou par les vôtres</span></span>
+            <span aria-hidden="true" className="ed-entree-fleche">›</span>
+          </button>
+        ) : (
+          <p className="salon-joueur ed-entree ed-surprise">
+            <span className="ed-entree-icone" aria-hidden="true">🎁</span>
+            <span className="salon-joueur-nom">Les questions des jeux
+              <span className="ed-entree-note">{textOf(PINGOU_SALON.contenuSurprise(joueurs.alexandre.prenom))}</span></span>
+          </p>
+        )}
 
         <BlocLien id="reg-lien-moi" titre="Ton lien de connexion" lien={lienMoi}
           note="Garde-le : il ouvre votre calendrier sur n'importe quel appareil."

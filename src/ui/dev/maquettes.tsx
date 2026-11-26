@@ -96,7 +96,7 @@ function MaquetteReglagesSalon() {
   // une seule création, même si StrictMode lance l'effet deux fois
   useEffect(() => { void (samEtCamille ??= creerSamEtCamille()).then(() => setPret(true)); }, []);
   if (!pret) return null;
-  return <div className="maq-monde"><ReglagesSalon backend={backend} me="alexandre" onFermer={() => alert("→ les réglages")} /></div>;
+  return <div className="maq-monde"><ReglagesSalon backend={backend} me={new URLSearchParams(location.search).get("moi") === "flavie" ? "flavie" : "alexandre"} onFermer={() => alert("→ les réglages")} /></div>;
 }
 
 function Maquettes() {
