@@ -13,14 +13,12 @@
 
 ## À faire (par priorité) — mis à jour par le chef le 24 nov
 **🎯 Plan final (chef, 27 nov — validé par Alexandre)** : à finir **samedi 28 au soir**.
-1. **PRIORITÉ ABSOLUE : contenu d'Alexandre & Flavie — ⚠️ CHANGEMENT (27 nov, décision d'Alexandre) : le dépôt est
-   PUBLIC, leur contenu ne doit JAMAIS y être commité.**
-   - Écris leur contenu dans **`prive/contenu-alexandre-flavie.json`** (dossier ignoré par git, vérifie avec `git status`) :
-     un objet indexé par jour (`{ "1": …, "7": … }`) au format exact de `salon.config.contenu` (valide pour chaque `SCHEMA_…`).
-     **Rien ne doit être perdu** : tout ce qui est perso dans `src/data/games/` aujourd'hui (questions, LJUBLJANA, souvenirs…).
-   - Puis rends le contenu par défaut de chaque jeu **générique** dans `src/data/games/` (PR normale).
-   - **Ne crée pas** `src/data/salons/alexandre-flavie.ts`. Dis à Alexandre d'envoyer le fichier JSON au chef (pièce jointe
-     dans sa conversation) : le chef le charge directement dans leur salon Supabase.
+1. **PRIORITÉ ABSOLUE — retirer leur contenu du dépôt public** (décision d'Alexandre, 27 nov) : le chef a **déjà chargé**
+   `CONTENU_ALEXANDRE_FLAVIE` (jours 1, 3, 5, 7, 9, 11, 14, 15, 17) dans leur vrai salon Supabase.
+   - Supprime `src/data/salons/alexandre-flavie.ts` et **toute mention** de leurs souvenirs perso dans le dépôt
+     (imports, commentaires des `src/data/games/*`, atelier de dev…). Le contenu par défaut reste générique.
+   - Pour un **nouveau** jeu qui a du contenu propre à eux : écris-le dans `prive/contenu-alexandre-flavie.json`
+     (dossier ignoré par git, vérifie `git status`) et dis à Alexandre d'envoyer le fichier au chef, qui le charge dans Supabase.
 2. ~~#129 cibles tactiles~~ (PR #131, fusionnée).
 3. Le **jour 19 est confié à l'Interface**, le **jour 23 au Monde** : ne les fais pas.
 4. Ensuite : corrections remontées par la Qualité ; fermer #56 et #109 quand la Qualité confirme.
