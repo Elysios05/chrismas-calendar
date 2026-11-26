@@ -43,3 +43,11 @@
 - **Balayage « Alexandre/Flavie » en dur** : issues #110 (titre de page + manifeste, chef) et #111 (lettre d'exemple du salon démo, Backend). Le reste (Pingou, jeux, souvenirs, rappels) passe par les prénoms du salon ; les valeurs par défaut et `src/data/salons/` sont voulues.
 - Constat : le lien d'invitation déjà servi dit « Ce lien a déjà servi, {prénom} » (et non « Ce lien ne marche plus », réservé aux liens inconnus).
 - Prochaine étape : parcours à deux pages (jours 5, 6, 11 en direct) et « deux salons ne se voient pas » (e2e, cf. `docs/salons.md`).
+
+### 26 novembre 2026, suite (reprise après réécriture de l'historique)
+- **Crochet `__PIXI_APP_INIT__` corrigé** (`commun.mjs`) : on garde l'application du monde, jamais celle d'un jeu (piste des Jeux, #109).
+- **Erreur `reading 'clear'` toujours là** après #112 : fin du jeu 10 et fermeture du sapin (jour 21). Tolérée dans ces deux parcours avec annotation `bug` (#109) ; retirer `tolere` quand c'est corrigé.
+- **Nouveaux parcours** dans `jeux.spec.ts` : jour 13 (solo : boule validée, décor, souvenir ; l'horloge de la page étant figée, le test la fait avancer à la main pour le compte à rebours), jour 21 (6 décos posées en solo, l'étoile attend l'autre ; le direct à deux n'est pas atteignable en démo), jour 22 (tri sans trier jusqu'à la fin). Le bonhomme (13) enregistre `13:journal`, pas de « meilleur score ».
+- **#113 reproduit** (habitant posé devant un cadeau : le toucher va à l'habitant, la case ne s'ouvre pas) ; commentaire sur l'issue, e2e à ajouter quand le Monde corrige.
+- Piège : après fermeture d'un jeu, le ticker du monde peut ne plus avancer (`attendreImages` bloque) ; ne pas rouvrir une case dans le même test.
+- Prochaine étape : parcours à deux pages (jours 5, 6, 11, 13, 21 en direct) et « deux salons ne se voient pas ».

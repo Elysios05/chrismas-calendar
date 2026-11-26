@@ -97,7 +97,13 @@ export async function preparerContexte(context, { heure } = {}) {
   });
   await context.addInitScript(() => {
     // crochet des outils de dév PixiJS : appelé par Application.init()
-    globalThis.__PIXI_APP_INIT__ = (app) => { globalThis.__qaApp = app; };
+    // On garde l'application du MONDE : un jeu PixiJS crée une 2e application qui ne doit pas la remplacer
+    // (sinon, après la fin de partie, on viserait une application détruite — voir #109). On ne remplace
+    // que si l'application gardée a été détruite (le monde recréé après un rechargement de scène).
+    globalThis.__PIXI_APP_INIT__ = (app) => {
+      const a = globalThis.__qaApp;
+      if (!a || !a.renderer || !a.stage) globalThis.__qaApp = app;
+    };
   });
   if (heure) await context.clock.setFixedTime(new Date(`${heure}`));
 }

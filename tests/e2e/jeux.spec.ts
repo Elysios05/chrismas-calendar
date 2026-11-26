@@ -1,4 +1,4 @@
-// Un parcours complet par jeu fini (jours 2, 3, 7, 11, 15, 17 ; le quiz du jour 1 est dans calendrier.spec.ts) :
+// Un parcours complet par jeu fini (jours 2, 3, 7, 9, 10, 11, 13, 15, 17, 21, 22 ; le quiz du jour 1 est dans calendrier.spec.ts) :
 // ouvrir la case, jouer jusqu'à l'écran de fin, « Fermer », puis vérifier ce qui est enregistré dans la démo.
 // Le jeu en direct à deux onglets reste en fixme tant que #56 (joinLive) n'est pas livré.
 import { test, expect, type Page } from "@playwright/test";
@@ -152,9 +152,9 @@ test("jour 10 : les flocons se jouent jusqu'au bout (sans bouger : les glaçons 
   await ouvrirCase(page, 10);
   await passerRegles(page, "C'est parti");
   await expect(page.locator(".jeu-canvas canvas")).toBeVisible();
-  // Bug connu (issue Jeux) : à la fin de la partie, le moteur détruit la scène PixiJS depuis son propre tick
-  // (« Cannot read properties of null (reading 'clear') »). Seule cette erreur est tolérée, le reste doit être propre.
-  test.info().annotations.push({ type: "bug", description: "exception Pixi à la fin du jeu 10 (issue Jeux)" });
+  // #109 : malgré la correction #112, l'erreur « reading 'clear' » arrive toujours en fin de partie (constaté le 26 nov) :
+  // seule cette erreur est tolérée, retirer `tolere` quand elle ne sort plus.
+  test.info().annotations.push({ type: "bug", description: "#109 : exception Pixi à la fin du jeu 10" });
   await terminerEtVerifier(page, 10, { tolere: /reading 'clear'[\s\S]*RenderTargetSystem/ });
 });
 
@@ -174,6 +174,25 @@ test("jour 11 : Synchro se joue en solo jusqu'au bout (Flavie absente)", async (
     await page.waitForTimeout(300);
   }
   await terminerEtVerifier(page, 11, { score: false }); // Synchro n'a pas de « meilleur score »
+});
+
+test("jour 13 : le bonhomme de neige se fait en solo jusqu'au bout (boule roulée, décor, souvenir)", async ({ page }) => {
+  test.setTimeout(600_000);
+  await C.ouvrirDemo(page, { jour: 13 });
+  await ouvrirCase(page, 13);
+  await passerRegles(page);
+  await expect(page.getByText("J'appelle Flavie")).toBeVisible();
+  await page.getByRole("button", { name: "Jouer quand même" }).click({ timeout: 40_000 }); // attente solo : 20 s
+  // on laisse le compte à rebours finir, puis on valide la boule telle quelle (« C'est bon ! »)
+  const cestBon = page.getByRole("button", { name: "C'est bon !" });
+  // l'horloge de la page est figée (Date.now constant) : le compte à rebours du jeu ne bouge pas tout seul, on la fait avancer
+  let t = new Date(C.HEURES.jour).getTime();
+  for (let i = 0; i < 60 && !(await cestBon.isVisible()); i++) { t += 1000; await page.clock.setFixedTime(new Date(t)); await page.waitForTimeout(1000); }
+  await expect(cestBon).toBeVisible({ timeout: 10_000 });
+  await cestBon.click();
+  await page.getByRole("button", { name: "J'ai fini" }).click({ timeout: 120_000 });
+  await expect(page.locator(".bh-fin")).toBeVisible({ timeout: 60_000 });
+  await terminerEtVerifier(page, 13, { score: false }); // le bonhomme n'a pas de « meilleur score » : son journal est enregistré (`13:journal`)
 });
 
 test("jour 15 : le pendu se joue jusqu'au bout (on tape les lettres dans l'ordre)", async ({ page }) => {
@@ -209,4 +228,45 @@ test("jour 17 : les mots croisés se jouent jusqu'au bout (lettres révélées, 
 test.fixme("jeu en direct à deux onglets (?moi=alexandre / ?moi=flavie)", async () => {
   // À FAIRE quand #56 (jeux en direct via joinLive) est livré : deux pages du même contexte, jour 11,
   // une réponse d'un côté visible de l'autre (« Flavie est là », cartes retournées ensemble).
+});
+
+test("jour 21 : le sapin se décore en solo (6 décos posées, l'étoile attend l'autre, le sapin est enregistré)", async ({ page }) => {
+  test.setTimeout(300_000);
+  // Le direct à deux (tenir l'étoile en même temps) n'est pas atteignable en démo : on joue « chacun son tour ».
+  // La case n'est marquée terminée qu'une fois l'étoile posée à deux : ici elle reste ouverte mais non terminée.
+  await C.ouvrirDemo(page, { jour: 21 });
+  await ouvrirCase(page, 21);
+  await passerRegles(page, "Décorer !");
+  const zone = page.locator(".sapin-canvas");
+  await expect(zone.locator("canvas")).toBeVisible({ timeout: 60_000 });
+  const b = (await zone.boundingBox())!;
+  for (let i = 0; i < 6; i++) {
+    await page.locator('[role=radiogroup][aria-label="Déco"] button').nth(i % 2 ? 3 : 0).click();
+    await page.mouse.click(b.x + b.width * (0.42 + 0.03 * i), b.y + b.height * (0.55 + 0.02 * i));
+    await page.waitForTimeout(400);
+  }
+  await expect(page.getByText(/⭐ 6\/6/)).toBeVisible({ timeout: 30_000 });
+  // l'étoile n'arrive que quand l'autre a posé ses 6 décos aussi : en solo, la puce reste à « 0/6 » pour Flavie
+  await expect(page.getByText(/⭐ 6\/6 · 0\/6/)).toBeVisible();
+  await expect(page.getByText("Tenez l'étoile à deux !")).toHaveCount(0);
+  // fermer par la croix de la case
+  await page.getByRole("button", { name: "Fermer la case" }).click();
+  await expect(fenetre(page)).toHaveCount(0);
+  // le sapin posé est enregistré dans le journal de la démo (il sera retrouvé à la réouverture, et sur la carte)
+  const d = await page.evaluate(() => JSON.parse(localStorage.getItem("cc-demo:data-v2") ?? "null"));
+  const cles = Object.keys(d?.gameState ?? {}).filter((k) => k.startsWith("21:"));
+  expect(cles.length, `clés du jeu 21 : ${Object.keys(d?.gameState ?? {})}`).toBeGreaterThan(0);
+  // même erreur Pixi que #109, à la fermeture du sapin (constaté le 26 nov) : seule celle-ci est tolérée
+  test.info().annotations.push({ type: "bug", description: "#109 : exception Pixi à la fermeture du jeu 21" });
+  const tolere = /reading 'clear'[\s\S]*RenderTargetSystem/;
+  expect(erreurs(tolere), JSON.stringify(erreurs(tolere), null, 1)).toEqual([]);
+});
+
+test("jour 22 : le tri des cadeaux se joue jusqu'au bout (sans trier : les vies ou le temps mettent fin à la partie)", async ({ page }) => {
+  test.setTimeout(900_000);
+  await C.ouvrirDemo(page, { jour: 22 });
+  await ouvrirCase(page, 22);
+  await passerRegles(page);
+  await expect(page.locator(".jeu-canvas canvas")).toBeVisible();
+  await terminerEtVerifier(page, 22);
 });
