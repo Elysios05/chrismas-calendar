@@ -510,13 +510,18 @@ export function buildTerrain(seed = 2026): Terrain {
     place(p.kind, alt, o.r);
   }
 
-  // porche d'entrée et de sortie de la grotte, à cheval sur le chemin
+  // voûtes d'entrée et de sortie de la grotte, à cheval sur le chemin. Elles sont hautes : posées juste
+  // après une case, elles passeraient devant son cadeau (cône `devant`, 5 pas). On les met donc 6 pas après
+  // la case 16 (entrée) et la case 20 (sortie), là où le chemin file encore tout droit.
   const caveZone = ZONES.findIndex((z) => z.id === "grotte");
   if (caveZone >= 0) {
-    const cz = path.filter((p) => p.zone === caveZone);
-    if (cz.length > 2) for (const p of [cz[0], cz[cz.length - 1]]) {
+    const jours = nodes.filter((n) => n.zone === caveZone).map((n) => n.day);
+    if (jours.length) for (const d of [Math.min(...jours) - 1, Math.max(...jours)]) {
+      const n = nodes.find((m) => m.day === d);
+      if (!n) continue;
+      const p = path[Math.min(path.length - 2, n.idx + 6)];
       // la voûte est percée dans le sens de la marche : on lit la direction sur le chemin
-      const nxt = path[Math.min(path.length - 1, p.i + 1)];
+      const nxt = path[p.i + 1];
       props.push({ kind: "caveMouth", x: p.x, y: p.y, z: p.z, zone: caveZone, seed: Math.floor(R() * 1e6), drop: 0, alongX: nxt.x !== p.x });
     }
   }

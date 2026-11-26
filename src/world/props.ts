@@ -538,40 +538,67 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       break;
     }
     case "caveMouth": {
-      // vraie voûte : une paroi de glace percée d'une arche, dans le sens de la marche
+      // vraie voûte de glace : un tunnel arrondi qui enjambe le chemin, percé dans le sens de la marche.
+      // Repère local : a le long du chemin (+a vers la caméra), b en travers (+b vers la caméra aussi).
       const along = opts.alongX ?? true;
-      const half = 1.9, open = 0.95, top = 1.5, peak = 2.5;
-      const ice = { top: 0x9ecfe6, left: 0x79b2d2, right: 0x4b84a8 };
-      // u : le long de la paroi (elle barre le passage), v : son épaisseur
-      const face = (u0: number, u1: number, z0: number, z1: number, col: number) => {
-        const q = (u: number, z: number) => (along ? P(cx + u, cy + 0.42, z) : P(cx + 0.42, cy + u, z));
-        poly(g, [q(u0, z1), q(u1, z1), q(u1, z0), q(u0, z0)], c(col));
-      };
-      const slab = (u0: number, u1: number, z0: number, z1: number) => {
-        // dessus de la paroi, pour lui donner de l'épaisseur
-        const t = (u: number, v: number, z: number) => (along ? P(cx + u, cy + v, z) : P(cx + v, cy + u, z));
-        poly(g, [t(u0, -0.42, z1), t(u1, -0.42, z1), t(u1, 0.42, z1), t(u0, 0.42, z1)], c(ice.top));
-        face(u0, u1, z0, z1, along ? ice.left : ice.right);
-      };
-      slab(-half, -open, 0, peak * 0.86);
-      slab(open, half, 0, peak * 0.86);
-      // le cintre de l'arche, en gradins
-      const steps = 4;
-      for (let i = 0; i < steps; i++) {
-        const u = open - (open * 0.55 * (i + 1)) / steps;
-        const z = top + ((peak - top) * (i + 1)) / steps;
-        slab(-u - 0.001, -0.001, top + ((peak - top) * i) / steps, z);
-        slab(0.001, u + 0.001, top + ((peak - top) * i) / steps, z);
+      const G = (a: number, b: number, z = 0) => (along ? P(cx + a, cy + b, z) : P(cx + b, cy + a, z));
+      const La = 0.6;               // demi-longueur du tunnel
+      const W = 2.2, H = 2.9;       // demi-largeur et hauteur de la masse de glace
+      const O = 0.95, T = 1.85;     // demi-largeur et hauteur de l'ouverture
+      const N = 14;
+      // profils : arc extérieur (bosse de glace) et arc de l'ouverture, de b < 0 vers b > 0
+      const outer = Array.from({ length: N + 1 }, (_, i) => { const t = Math.PI * (1 - i / N); return { b: W * Math.cos(t), z: H * Math.pow(Math.sin(t), 0.7) }; });
+      const inner = Array.from({ length: N + 1 }, (_, i) => { const t = Math.PI * (1 - i / N); return { b: O * Math.cos(t), z: T * Math.sin(t), t }; });
+      const ice = { top: c(0xd9f1fb), lit: c(0xb4e0f2), face: c(along ? 0x6fa8cc : 0x8cc3e0), shadow: c(0x4a7fa6), deep: pal.night ? 0x0a1c33 : c(0x16405f) };
+      // ombre de la voûte sur le sol
+      poly(g, [G(-La - 0.3, -W), G(La + 0.5, -W), G(La + 0.5, W + 0.3), G(-La - 0.3, W + 0.3)], c(0x2a5577), 0.22);
+      // 1) le fond : l'autre bouche du tunnel laisse voir le jour (ou la nuit bleue)
+      poly(g, inner.map((p) => G(-La, p.b, p.z)), pal.night ? 0x274f7a : c(0x9fd3ea));
+      // 2) l'intérieur : sol puis paroi de gauche, seule visible depuis la caméra
+      poly(g, [G(-La, -O), G(La, -O), G(La, O), G(-La, O)], ice.deep);
+      for (let i = 0; i < N; i++) {
+        const p0 = inner[i], p1 = inner[i + 1];
+        if (-Math.cos((p0.t + p1.t) / 2) - Math.sin((p0.t + p1.t) / 2) * 0.6 <= 0) continue;
+        poly(g, [G(-La, p0.b, p0.z), G(-La, p1.b, p1.z), G(La, p1.b, p1.z), G(La, p0.b, p0.z)], shade(ice.deep, 0.12 + i * 0.02));
       }
-      // stalactites sous le cintre, et l'ombre du porche sur le sol
-      for (let i = 0; i < 6; i++) {
-        const u = -open + 0.1 + (i * (2 * open - 0.2)) / 5;
-        const h2 = top + (peak - top) * (1 - Math.abs(u) / open) * 0.8;
-        const q = along ? P(cx + u, cy + 0.42, h2) : P(cx + 0.42, cy + u, h2);
-        poly(g, [{ x: q.x - 4, y: q.y }, { x: q.x + 4, y: q.y }, { x: q.x, y: q.y + 9 + rnd(i) * 15 }], c(0x8fd0e8));
+      if (pal.night) {
+        // la nuit, une lueur bleue au fond du tunnel (la façade la recouvre en partie)
+        const o = G(-La * 0.5, -O * 0.3, 0.6);
+        g.ellipse(o.x, o.y, 26, 20).fill({ color: 0x7fd8ff, alpha: 0.18 });
       }
-      const o = P(cx, cy, 0);
-      g.ellipse(o.x, o.y, 58, 28).fill({ color: 0x0c2740, alpha: 0.32 });
+      // 3) le dos de la voûte : bandes du toit, plus claires vers le sommet, chapeau de neige au milieu
+      for (let i = 0; i < N; i++) {
+        const p0 = outer[i], p1 = outer[i + 1];
+        const nb = p1.z - p0.z, nz = -(p1.b - p0.b); // normale sortante (b, z)
+        if (nb * 0.8 + nz * 0.6 <= 0 && i < N / 2 - 1) continue;
+        const k = Math.abs(i + 0.5 - N / 2) / (N / 2);
+        const col = k < 0.35 ? ice.top : k < 0.7 ? ice.lit : i > N / 2 ? ice.face : ice.shadow;
+        poly(g, [G(-La, p0.b, p0.z), G(-La, p1.b, p1.z), G(La, p1.b, p1.z), G(La, p0.b, p0.z)], col);
+      }
+      // 4) la façade, en deux moitiés (masse extérieure moins l'ouverture), puis les claveaux de l'arche
+      const half = (s: number) => {
+        const o = outer.filter((p) => s * p.b >= -1e-6).map((p) => G(La, p.b, p.z));
+        const n = inner.filter((p) => s * p.b >= -1e-6).map((p) => G(La, p.b, p.z));
+        return [...o, ...n.reverse()];
+      };
+      poly(g, half(-1), ice.face);
+      poly(g, half(1), shade(ice.face, -0.06));
+      const R1 = 1.32, B = 9;
+      for (let i = 0; i < B; i++) {
+        const t0 = Math.PI * (1 - i / B), t1 = Math.PI * (1 - (i + 1) / B), gap = 0.035;
+        const ring = (t: number, r: number) => G(La + 0.02, O * r * Math.cos(t), T * Math.min(r, 1.18) * Math.sin(t));
+        const pts = [ring(t0 - gap, 1), ring(t0 - gap, R1), ring(t1 + gap, R1), ring(t1 + gap, 1)];
+        poly(g, pts, i === Math.floor(B / 2) ? ice.top : i % 2 ? ice.lit : shade(ice.lit, -0.08));
+      }
+      // 5) neige sur le sommet de la façade, et stalactites pendues sous l'arche
+      const crest = outer.filter((p) => Math.abs(p.b) < W * 0.55);
+      poly(g, [...crest.map((p) => G(La + 0.03, p.b, p.z + 0.02)), ...crest.slice().reverse().map((p) => G(La + 0.03, p.b, p.z - 0.22 - 0.08 * Math.cos(p.b * 6)))], c(0xf6fcff));
+      for (let i = 0; i < 7; i++) {
+        const t = Math.PI * (0.15 + (0.7 * i) / 6);
+        const q = G(La + 0.02, O * Math.cos(t), T * Math.sin(t));
+        const len = 8 + rnd(i) * 14 * Math.sin(t);
+        poly(g, [{ x: q.x - 3.5, y: q.y - 1 }, { x: q.x + 3.5, y: q.y - 1 }, { x: q.x, y: q.y + len }], pal.night ? 0x9fe6ff : c(0xc8ecfa));
+      }
       break;
     }
     case "icicle": {
