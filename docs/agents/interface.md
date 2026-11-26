@@ -40,9 +40,20 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 5. ~~**Nom du monde tronqué sur téléphone**~~ — fait le 26 nov (nom court, PR `interface/nom-du-monde`).
 6. **À partir du 27 nov** (Supabase branché) : vérification complète de l'interface en vrai — messages d'erreur de #75
    avec de vraies erreurs. ~~Audit axe-core, revue des 24 jours~~ : faits le 26 nov (bug de la case 10 → **#113**).
-7. Ensuite : issue au chef pour la suite (aide aux Jeux côté interface si besoin).
+7. ~~Issue au chef pour la suite~~ : ouverte le 26 nov → **#116** (attendre sa réponse).
 
 ## Journal
+
+### 📍 Où j'en suis — 26 novembre 2026 (tard)
+
+**Point 7 : suite demandée au chef dans #116** (pas de Supabase dans la session, donc le reste du point 6 est bloqué).
+Options proposées : A) une clé d'un projet Supabase de test, ou confier le test des erreurs #75 à la Qualité sur le site
+déployé ; B) aide aux Jeux (tenue sur 390×844) ; C) #110 côté React (`document.title` selon le salon). Recommandé : A + B.
+- En attendant : **revue des 24 fenêtres de case sur ordinateur** (1280×800, jour 24, `npm run capture -- --case=N
+  --appareils=ordinateur`) : 0 erreur console, aucun défaut (fenêtres centrées, titres longs repliés proprement).
+  Astuce : une planche de 9 captures réduites (PIL) économise beaucoup de contexte pour la relecture.
+
+**Prochaine tâche** : lire la réponse du chef dans #116, puis #113.
 
 ### 📍 Où j'en suis — 26 novembre 2026 (fin de soirée)
 
