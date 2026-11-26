@@ -31,6 +31,8 @@ const LOW = new Set<PropKind>(["rock", "bush", "presents", "bench", "sled", "fen
 // demi-largeur du terrain (en tuiles, axe écran horizontal). 17 ne suffisait pas sur ordinateur :
 // le chemin s'écarte du centre de l'écran et le bord carré des tuiles apparaissait (issue #13).
 const HALF_WIDTH = 30;
+/** rangées de neige ajoutées sous la fin de la route (téléphone haut au jour 24, échelle 0,62 : ~45 rangées) */
+const RANGEES_SUD = 40;
 
 function rng(seed: number) {
   return () => {
@@ -509,6 +511,31 @@ export function buildTerrain(seed = 2026): Terrain {
       const nxt = path[Math.min(path.length - 1, p.i + 1)];
       props.push({ kind: "caveMouth", x: p.x, y: p.y, z: p.z, zone: caveZone, seed: Math.floor(R() * 1e6), drop: 0, alongX: nxt.x !== p.x });
     }
+  }
+
+  /* ---------- lisière sud ----------
+   * Au jour 24, la caméra descend sous la fin de la route : sur un téléphone haut, on voyait le bord du monde
+   * (une bande bleu foncé en dents de scie, #113). On prolonge le terrain de RANGEES_SUD rangées de neige plate.
+   * Ajoutées après coup et avec leur propre tirage : le décor du reste du monde ne change pas. */
+  const R2 = rng(seed + 24);
+  const fin = path[path.length - 1];
+  for (let k = kMax + 1; k <= kMax + RANGEES_SUD; k++) {
+    const c0 = center(k);
+    const rang: [number, number][] = [];
+    for (let u = c0 - HALF_WIDTH; u <= c0 + HALF_WIDTH; u++) if ((u + k) % 2 === 0) rang.push([(k + u) / 2, (k - u) / 2]);
+    rang.forEach(([cx, cy], i) => {
+      const d = Math.hypot(fin.x - cx, fin.y - cy);
+      const bord = Math.min(i, rang.length - 1 - i);
+      cells.set(key(cx, cy), { x: cx, y: cy, h: 0, zone: fin.zone, road: false, lake: false, d, front: true, rz: 0, pi: fin.i });
+      for (const [dx, dy] of corners) if (!V.has(key(cx + dx, cy + dy))) V.set(key(cx + dx, cy + dy), 0);
+      const pousse = (kind: PropKind, jitter: number) =>
+        props.push({ kind, x: cx + (R2() - 0.5) * jitter, y: cy + (R2() - 0.5) * jitter, z: 0, zone: fin.zone, seed: Math.floor(R2() * 1e6), drop: 0 });
+      // mêmes bords que le reste du monde (issue #13) : lisière au bout de la rangée, forêt serrée derrière
+      if (bord === 0) { if (k % 2 === 0) pousse("deepWood", 0); }
+      else if (bord < 5) { if (R2() < 0.6) pousse(R2() < 0.6 ? "tree" : "treeSmall", 0.7); }
+      // ailleurs, quelques sapins et sucres d'orge épars, comme au bas du pôle Nord
+      else if (R2() < 0.07) { const r = R2(); pousse(r < 0.45 ? "tree" : r < 0.8 ? "treeSmall" : "cane", 0.7); }
+    });
   }
 
   T0.props = props;

@@ -140,6 +140,8 @@ export class Scene {
   scale = 1;
   minY = 0;
   maxY = 0;
+  /** bord bas du terrain (monde) : la caméra ne descend jamais plus bas (#113) */
+  basY = Infinity;
   padTop = 120;
   scrollY = 0;
   camX = 0;
@@ -310,6 +312,11 @@ export class Scene {
   }
   /** Défilement maximal autorisé : un peu au-delà de la dernière case ouverte */
   get maxScroll() {
+    // jamais sous le bord du terrain, quel que soit l'écran : on y verrait le vide en dents de scie (#113)
+    const parBord = (this.basY - this.minY) * this.scale + this.padTop - innerHeight;
+    return Math.max(0, Math.min(parBord, this.maxScrollVoulu));
+  }
+  private get maxScrollVoulu() {
     const d = Math.min(24, this.lastOpenDay);
     if (this.yFin === null) return Math.max(0, this.scrollForDay(d) + innerHeight * 0.15);
     // on s'arrête juste sous la case du jour (choix d'Alexandre), et jamais au-delà du moment où
@@ -571,6 +578,10 @@ export class Scene {
     const ys = this.terrain.path.map((p) => P(p.x, p.y).y);
     this.minY = Math.min(...ys) - 260;
     this.maxY = Math.max(...ys) + 160;
+    // bas du terrain sans dents de scie : les tuiles de la dernière rangée k montent jusqu'à k + 1
+    let kBas = -Infinity;
+    for (const c of this.terrain.cells.values()) if (c.x + c.y > kBas) kBas = c.x + c.y;
+    this.basY = P((kBas + 1) / 2, (kBas + 1) / 2).y;
     this.resize();
     this.placeActors();
   }
