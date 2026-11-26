@@ -155,6 +155,8 @@ export function SceneBonhomme({
   return (
     <svg ref={svgRef} className="bh-scene" viewBox={`0 0 ${SCENE.l} ${SCENE.h}`} preserveAspectRatio="xMidYMid meet"
       xmlns="http://www.w3.org/2000/svg">
+      <defs><clipPath id="bh-cadre"><rect width={SCENE.l} height={SCENE.h} rx={18} /></clipPath></defs>
+      <g clipPath="url(#bh-cadre)">
       <Decor />
       {/* les bras passent derrière le corps */}
       {tries.filter((x) => x.o.type === "branche").map((x) => <ObjetSvg key={x.o.id} x={x} geo={geo} contenu={contenu} surPrendre={surPrendre} />)}
@@ -170,6 +172,7 @@ export function SceneBonhomme({
         </g>
       )}
       {enfants}
+      </g>
     </svg>
   );
 }

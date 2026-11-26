@@ -12,9 +12,9 @@
 }
 .bh-autre { left: 10px; top: 10px; }
 .bh-rondeur { right: 10px; top: 10px; }
-.bh-fini { position: absolute; z-index: 2; left: 50%; bottom: 14px; transform: translateX(-50%); }
 
 /* phase 2 : décoration */
+.bh-deco, .bh-fin { -webkit-user-select: none; user-select: none; }
 .bh-deco { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 8px; padding: 8px 10px 10px; }
 .bh-scene-boite { position: relative; flex: 1; min-height: 0; display: flex; justify-content: center; }
 .bh-scene { height: 100%; max-width: 100%; border-radius: 18px; touch-action: none; user-select: none; display: block; }
@@ -39,7 +39,7 @@
 .bh-piece span { font-size: 11px; font-weight: 600; color: var(--ink-soft, #5b6680); }
 .bh-piece:disabled { opacity: .45; cursor: default; }
 .bh-compte { text-align: center; font-size: 13px; font-weight: 600; color: var(--ink-soft, #5b6680); }
-.bh-btn-barre { padding: 6px 14px; font-size: 14px; }
+.bh-btn-barre { padding: 6px 12px; font-size: 14px; white-space: nowrap; }
 
 /* fin : le souvenir */
 .bh-fin {
@@ -47,11 +47,13 @@
   padding: 10px; overflow-y: auto;
 }
 .bh-fin-scene { flex: 0 1 380px; align-self: stretch; min-height: 0; display: flex; justify-content: center; }
-.bh-fin-scene .bh-scene { height: 100%; }
+.bh-fin-scene .bh-scene { height: 100%; max-height: 560px; align-self: center; }
 .bh-fin-panneau { flex: 0 1 380px; }
 .bh-detail { gap: 6px; margin: 10px 0; }
 .bh-detail b { font-size: 18px; }
 .bh-liste { list-style: none; padding: 0; margin: 10px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; text-align: left; font-size: 13px; color: var(--ink-soft, #5b6680); }
+.bh-liste li { margin: 2px 0; font-size: 13px; }
+.bh-liste li::before { content: none; }
 .bh-liste li.ok { color: var(--ink, #1b2747); font-weight: 600; }
 @media (max-width: 699px) {
   .bh-fin { flex-direction: column; justify-content: flex-start; }

@@ -28,6 +28,8 @@ export function Decorer({
 }) {
   const svg = useRef<SVGSVGElement>(null);
   const [enMain, setEnMain] = useState<EnMain | null>(null);
+  const enMainRef = useRef(enMain);
+  enMainRef.current = enMain;
   const miensRef = useRef(miens);
   miensRef.current = miens;
 
@@ -51,14 +53,13 @@ export function Decorer({
     };
     const lache = (e: PointerEvent) => {
       const p = versScene(e.clientX, e.clientY);
-      setEnMain((m) => {
-        if (m && p.dedans) {
-          const geo = geometrie(contenu, corps, tete);
-          const o: Objet = { id: m.id, type: m.type, ...rattacher(geo, p.x, p.y) };
-          surChange([...miensRef.current.filter((x) => x.id !== m.id), o]);
-        }
-        return null;
-      });
+      const m = enMainRef.current;
+      setEnMain(null);
+      if (m && p.dedans) {
+        const geo = geometrie(contenu, corps, tete);
+        const o: Objet = { id: m.id, type: m.type, ...rattacher(geo, p.x, p.y) };
+        surChange([...miensRef.current.filter((x) => x.id !== m.id), o]);
+      }
     };
     addEventListener("pointermove", bouge);
     addEventListener("pointerup", lache);
@@ -106,7 +107,8 @@ export function Decorer({
               onPointerDown={(e) => prendreDuPlateau(d.type, e)}>
               <svg viewBox="-24 -24 48 48" aria-hidden>
                 <DessinObjet type={d.type} x={d.type === "branche" ? -18 : d.type === "carotte" ? -10 : 0}
-                  y={d.type === "branche" ? 8 : d.type === "bonnet" ? 12 : 0} r={d.type === "branche" ? 40 : d.type === "echarpe" ? 28 : r}
+                  y={d.type === "branche" ? 8 : d.type === "bonnet" ? 12 : 0}
+                  r={d.type === "branche" ? 40 : d.type === "echarpe" ? 28 : d.type === "carotte" ? r * 1.5 : r}
                   cote={1} contenu={contenu} />
               </svg>
               <span>{d.nom}</span>

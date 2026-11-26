@@ -407,7 +407,10 @@ function Bonhomme({ ctx }: { ctx: GameContext }) {
         barre={(
           <>
             <Puce>⏱ {hud?.reste ?? contenu.secondesRouler}</Puce>
-            <Puce>⚪️ {hud?.cm ?? contenu.rayonDepart} cm{cible ? ` / ${Math.round(cible)}` : ""}</Puce>
+            <Puce>⚪️ {hud?.cm ?? contenu.rayonDepart}{cible ? ` / ${Math.round(cible)}` : ""} cm</Puce>
+            {hud && hud.avant === 0 && (
+              <button className="jeu-btn bh-btn-barre" onClick={() => roulage.current?.finir()}>C'est bon !</button>
+            )}
           </>
         )}
       >
@@ -417,9 +420,6 @@ function Bonhomme({ ctx }: { ctx: GameContext }) {
             <div className="bh-autre">{autre} · {nomRole(monRole === "tete" ? "corps" : "tete")} : {autreCm} cm</div>
           )}
           {hud && hud.avant === 0 && <div className="bh-rondeur">Rondeur {Math.round(hud.rondeur * 100)} %</div>}
-          {hud && hud.avant === 0 && (
-            <button className="jeu-btn bh-fini" onClick={() => roulage.current?.finir()}>C'est bon !</button>
-          )}
           {flash && <Flash texte={flash.texte} cle={flash.cle} />}
         </div>
       </Cadre>

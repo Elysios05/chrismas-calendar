@@ -59,7 +59,7 @@ export function lancerRoulage(o: OptionsRoulage): Roulage {
   const r0 = c.rayonDepart;
   let aire = Math.PI * r0 * r0; // cm²
   const rCm = () => Math.min(c.rayonMax, Math.sqrt(aire / Math.PI));
-  const rPx = (r: number) => m * (0.028 + 0.075 * (r - r0) / (c.rayonMax - r0));
+  const rPx = (r: number) => m * (0.04 + 0.085 * (r - r0) / (c.rayonMax - r0));
 
   let px = 0.5, py = 0.55; // position normalisée de la boule
   let tour = 0; // roulement accumulé (radians), pour les taches qui tournent
@@ -82,10 +82,8 @@ export function lancerRoulage(o: OptionsRoulage): Roulage {
       grille = new Float32Array(nx * ny);
       neigeTotale = 0;
       for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-        // un peu de relief : des congères plus épaisses, quelques plaques déjà tassées
-        const v = 0.55 + 0.45 * alea.reel();
-        const tasse = alea.chance(0.05);
-        grille[j * nx + i] = tasse ? 0.15 : v;
+        // un peu de relief : des congères plus épaisses que d'autres
+        grille[j * nx + i] = 0.55 + 0.45 * alea.reel();
         neigeTotale += grille[j * nx + i];
       }
       // une neige parfaitement ramassée à 80 % donne la plus grosse boule
@@ -99,7 +97,7 @@ export function lancerRoulage(o: OptionsRoulage): Roulage {
 
   const dessinerFond = () => {
     gf.setTransform(dpr, 0, 0, dpr, 0, 0);
-    gf.fillStyle = "#8e98a6";
+    gf.fillStyle = "#6f7887";
     gf.fillRect(0, 0, L, H);
     // pavés de la place du marché
     const a = creerAlea(c.graine + 7);
@@ -120,15 +118,31 @@ export function lancerRoulage(o: OptionsRoulage): Roulage {
     gn.setTransform(dpr, 0, 0, dpr, 0, 0);
     gn.clearRect(0, 0, L, H);
     const sx = L / nx, sy = H / ny;
+    // un manteau lisse : chaque cellule déborde largement sur ses voisines, sans contour
+    gn.fillStyle = "#f4f8fd";
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-      const v = grille[j * nx + i];
-      if (v <= 0.01) continue;
-      const b = Math.round(236 + 19 * v);
-      gn.fillStyle = `rgba(${b - 6},${b - 2},${b},${0.55 + 0.45 * v})`;
+      if (grille[j * nx + i] <= 0.01) continue;
       gn.beginPath();
-      gn.arc((i + 0.5) * sx, (j + 0.5) * sy, Math.max(sx, sy) * (0.72 + 0.12 * v), 0, Math.PI * 2);
+      gn.arc((i + 0.5) * sx, (j + 0.5) * sy, Math.max(sx, sy) * 0.78, 0, Math.PI * 2);
       gn.fill();
     }
+    // relief doux : ombres bleutées des congères, puis quelques reflets
+    const a = creerAlea(c.graine + 3);
+    gn.save();
+    gn.globalCompositeOperation = "source-atop";
+    for (let n = 0; n < 70; n++) {
+      const x = a.reel() * L, y = a.reel() * H, rr = m * (0.05 + a.reel() * 0.12);
+      const grad = gn.createRadialGradient(x, y, 0, x, y, rr);
+      grad.addColorStop(0, "rgba(176,198,226,.28)");
+      grad.addColorStop(1, "rgba(176,198,226,0)");
+      gn.fillStyle = grad;
+      gn.beginPath(); gn.ellipse(x, y, rr * 1.6, rr, 0, 0, Math.PI * 2); gn.fill();
+    }
+    gn.fillStyle = "rgba(255,255,255,.9)";
+    for (let n = 0; n < 160; n++) {
+      gn.beginPath(); gn.arc(a.reel() * L, a.reel() * H, 0.6 + a.reel() * 1.1, 0, Math.PI * 2); gn.fill();
+    }
+    gn.restore();
   };
 
   /* ---------- saisie ---------- */
@@ -296,6 +310,9 @@ export function lancerRoulage(o: OptionsRoulage): Roulage {
     grad.addColorStop(1, "#c9d7e8");
     g.fillStyle = grad;
     g.beginPath(); g.ellipse(0, 0, ex, ey, 0, 0, Math.PI * 2); g.fill();
+    g.lineWidth = 1.5;
+    g.strokeStyle = "rgba(27,39,71,.28)";
+    g.stroke();
     g.restore();
     // taches qui tournent avec la boule (impression de roulement)
     g.fillStyle = "rgba(140,160,185,.55)";
