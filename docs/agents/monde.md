@@ -10,7 +10,7 @@
 
 ## À faire (par priorité) — mis à jour par le chef le 24 nov
 **🆕 Renfort Jeux (choix d'Alexandre du 26 nov, #29)** : le chef te confie par écrit, en plus de `src/world/` :
-1. **Jour 22** « Tri des cadeaux » (score à battre, PixiJS) → `src/games/tri-cadeaux/` + son contenu dans `src/data/games/`
+1. ~~**Jour 22**~~ fait le 26 nov (branche `monde/jeu-22`). « Tri des cadeaux » (score à battre, PixiJS) → `src/games/tri-cadeaux/` + son contenu dans `src/data/games/`
    (contenu **générique** par défaut + schéma ; s'il y a du contenu propre à Alexandre & Flavie, il va dans
    `src/data/salons/alexandre-flavie.ts`, géré par l'équipe Jeux : demande-lui par #84).
 2. Puis **jour 21** « Décorer le sapin à deux » (en direct, `joinLive`, voir #56) → `src/games/sapin/`.
@@ -474,3 +474,22 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - **Prochaine étape** : relire #29. Si le chef a confié les jours par écrit → branche `monde/jeu-22`,
     lire `src/games/README.md` et le jeu du jour 10 (`src/games/flocons/`, même genre), proposer 2–3 règles à
     Alexandre avant de coder. Sinon, ne rien toucher dans `src/games/` et attendre.
+
+- 26 nov (soir) — **jour 22, tri des cadeaux** (score à battre), branche `monde/jeu-22`, confié par le chef dans #29 :
+  - **Règle choisie par Alexandre : tapis roulant** (contre « étiquettes à lire » et « remplir le traîneau »).
+    Les paquets sortent d'une trappe et avancent sur le tapis. On en attrape un au doigt et on le lâche dans la
+    hotte de sa couleur. Il y a 3 hottes, plus une 4e (dorée) qui s'ouvre à 30 s, et une poubelle pour le charbon.
+    Les erreurs : mauvaise hotte, cadeau tombé au bout du tapis, charbon dans une hotte. 3 erreurs et c'est fini.
+    La série multiplie les points (plafond ×3) et le tapis accélère. Partie de 90 s, bonus par vie restante.
+  - Chaque couleur a sa **forme** (★ rouge, sapin vert, boule bleue, cœur doré) sur l'étiquette et sur la hotte.
+    Clavier : touches 1 à 5, qui envoient le paquet le plus avancé sur le tapis.
+  - Même graine = mêmes paquets aux mêmes instants pour les deux. Vitesse en largeurs de tapis par seconde.
+    Le terrain fait `min(largeur, 1,05 × hauteur, 760 px)`. Le paquet lâché hors des hottes revient sur le tapis.
+  - Fichiers : `src/games/tri-cadeaux/` (index.tsx = habillage copié du jour 10, moteur.ts = PixiJS),
+    `src/data/games/tri-cadeaux-jour22.ts` (tous les réglages, sans code), 3 lignes dans `registry.ts`.
+    Jeu d'adresse : pas de schéma de contenu et rien à mettre dans le salon d'Alexandre & Flavie.
+  - Vérifié : build, `npm run capture -- --jour=22 --case=22` (0 erreur), partie jouée dans l'atelier
+    (`/jeux.html?jour=22`, 390×844 et 1280×800) : tri au doigt, au clavier, fin sur 3 erreurs, 4e hotte ouverte.
+    `npm run capture` ne sait pas jouer une partie : mon script est resté dans mon brouillon.
+  - **Prochaine étape** : jour 21 « Décorer le sapin à deux » (en direct, `joinLive`, voir #56 et les jours 5 et 6
+    de l'équipe Jeux), dans `src/games/sapin/`. Proposer d'abord 2–3 règles à Alexandre.
