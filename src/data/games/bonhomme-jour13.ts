@@ -57,7 +57,7 @@ export const BONHOMME_JOUR13: BonhommeContent = {
   points: { taille: 150, assortiment: 200, rondeur: 150, parElement: 60, aDeux: 80 },
   decos: [
     { type: "charbon", nom: "Charbon", taille: 0.11 },
-    { type: "carotte", nom: "Carotte", emoji: "🥕", taille: 0.38 },
+    { type: "carotte", nom: "Carotte", emoji: "🥕", taille: 0.55 },
     { type: "bouton", nom: "Bouton", emoji: "🔴", taille: 0.16 },
     { type: "branche", nom: "Bras", taille: 0.9 },
     { type: "echarpe", nom: "Écharpe", taille: 1.05 },

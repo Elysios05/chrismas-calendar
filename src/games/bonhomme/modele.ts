@@ -111,7 +111,7 @@ export function noterDecoration(objets: Objet[]): Element[] {
   const bouche = sur("tete", "charbon").filter((o) => o.v >= 0.05 && Math.abs(o.u) < 0.9).length >= 2;
   const nez = sur("tete", "carotte").some((o) => Math.abs(o.u) < 0.6 && o.v > -0.45 && o.v < 0.6);
   const chef = [...sur("tete", "bonnet"), ...sur("tete", "chapeau")].some((o) => o.v < -0.5 && Math.abs(o.u) < 0.7);
-  const echarpe = sur("tete", "echarpe").some((o) => o.v > 0.5) || sur("corps", "echarpe").some((o) => o.v < -0.5);
+  const echarpe = sur("tete", "echarpe").some((o) => o.v > 0.3) || sur("corps", "echarpe").some((o) => o.v < -0.4);
   const boutons = sur("corps", "bouton").filter((o) => Math.abs(o.u) < 0.6).length >= 2;
   const bras = sur("corps", "branche").some((o) => Math.abs(o.u) > 0.55);
   return [
