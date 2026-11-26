@@ -494,7 +494,7 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - **Prochaine étape** : jour 21 « Décorer le sapin à deux » (en direct, `joinLive`, voir #56 et les jours 5 et 6
     de l'équipe Jeux), dans `src/games/sapin/`. Proposer d'abord 2–3 règles à Alexandre.
 
-- 26 nov (soir, suite) — **jour 22 fusionné** (PR #108). **Jour 21, le sapin à deux**, branche `monde/jeu-21` :
+- 26 nov (soir, suite) — **jour 22 fusionné** (PR #108). **Jour 21, le sapin à deux**, branche `monde/jeu-21`, PR #115 :
   - **Choix d'Alexandre** (les trois recommandations) : **déco libre** sans score ni chrono (contre « missions de
     Pingou » et « chacun sa moitié ») ; **miniature sur la carte** à côté du cadeau 21 jusqu'au 24 ;
     **fin = étoile tenue à deux** en même temps (contre un bouton « Allumer » ou pas de fin).
@@ -515,7 +515,7 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     et `src/world/Scene.ts` : `setSapin(SapinCarte | null)` dessine le petit sapin derrière le cadeau 21
     (il grandit avec le nombre de décos, et ses décos restent vives la nuit une fois allumé), crochet `__calendrier.sapin`.
   - **À brancher par le chef** dans `App.tsx` : `lireSapinCarte(backend).then((s) => scene.setSapin(s))`
-    (`src/games/sapin/carte.ts`) au démarrage et à la fermeture de la case 21. Demandé dans #29.
+    (`src/games/sapin/carte.ts`) au démarrage et à la fermeture de la case 21. Demandé dans #29 (option C recommandée pour la suite).
   - Vérifié : build, oxlint (seuls les avertissements « only-export-components » communs à tous les jeux),
     `npm run capture -- --jour=21 --case=21` (0 erreur), deux parties jouées à deux onglets dans l'atelier
     (390×844 et 1280×800 : direct, main de l'autre, guirlande, étoile à deux, lumières), une partie en différé
