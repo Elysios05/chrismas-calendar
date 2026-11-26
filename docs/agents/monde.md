@@ -535,3 +535,18 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - Vérifié : build, oxlint, `npm run capture -- --jour=24` à 12:00 et 21:00, mobile et ordinateur (0 erreur) :
     plus de bande, caméra et décor existant inchangés.
   - **Prochaine étape** : option C (performance téléphone) si le chef la confirme dans #29.
+  - PR #118 fusionnée. Puis, à la demande d'Alexandre (« faire un vrai décor » dans le blanc du bas), branche
+    `monde/bout-du-monde` : **place du pôle Nord + piste d'envol + forêt** (il a choisi « les deux » parmi : place
+    du pôle Nord / piste d'envol / les deux ; avant ça, il avait écarté « forêt seule » et « village puis forêt »).
+    - Place 5 × 5 cases en losange juste sous la fin de la route (`Cell.sol = "place"`, dalles de glace dessinées par
+      `Scene.dessinerSol`), poteau rayé « Pôle Nord » au centre (nouveau décor `poleNord` dans `props.ts`), grand sapin,
+      lampadaires, braseros, bancs, visiteurs, bonhomme de neige. Le décor déjà posé à cet endroit est retiré.
+    - Piste d'envol (`sol = "piste"`, 3 cases de large, vers le bas à gauche) : attelage de 6 rennes au départ,
+      lanternes de glace, écurie à côté. Le traîneau du Père Noël n'a **pas** bougé (il décolle toujours de chez lui le 24).
+    - En dessous, la forêt s'épaissit jusqu'aux bosquets serrés. Tout est ajouté après la génération avec `rng(seed + 24)` :
+      le reste du monde est identique.
+    - Au jour 24, on peut descendre jusqu'à ce que le bout de la piste (`Terrain.bout`) soit aux 3/4 de l'écran.
+      Au jour 23, la scène reste sous la barrière de nuages (seul le haut du grand sapin dépasse).
+    - Vérifié : build, oxlint, `npm run capture -- --jour=24` (jour et nuit, mobile et ordinateur) et `--jour=23`,
+      0 erreur. La vue « descendue tout en bas » a été prise avec un script de mon brouillon (`npm run capture` ne défile pas).
+    - **À redemander à Alexandre** : faut-il déplacer le traîneau sur la piste pour qu'il décolle de là le 24 ?

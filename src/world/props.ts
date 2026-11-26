@@ -8,7 +8,7 @@ export type PropKind =
   | "bush" | "visitor" | "brazier" | "garland" | "bench" | "sled"
   | "caveMouth" | "icicle" | "iceLantern" | "igloo" | "fence"
   | "cloudBank" | "signpost" | "ridge" | "deepWood"
-  | "santaHouse" | "postOffice" | "stable";
+  | "santaHouse" | "postOffice" | "stable" | "poleNord";
 
 /** Parties animées d'un décor, que la scène fait vivre à chaque image */
 export type AnimPart =
@@ -931,6 +931,27 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       g.circle(p.x, p.y - 37, 6.5).fill(c(0xf2c9a6));
       g.circle(p.x, p.y - 41, 6.5).fill(c(hat));
       g.circle(p.x, p.y - 47, 2.6).fill(c(0xffffff));
+      break;
+    }
+    case "poleNord": {
+      // le pôle Nord, au bout de la route : poteau rayé, boule dorée, plaque. Il doit se voir de loin.
+      const p = P(cx, cy), H = 132;
+      g.ellipse(p.x, p.y + 2, 26, 11).fill({ color: c(0x9aa3b8), alpha: 0.35 });
+      g.ellipse(p.x, p.y - 2, 20, 9).fill(c(0xffffff));
+      g.rect(p.x - 6, p.y - H, 12, H).fill(c(0xffffff));
+      // bandes rouges en biais, comme un sucre d'orge
+      for (let yy = p.y - H + 4; yy < p.y - 8; yy += 16) poly(g, [{ x: p.x - 6, y: yy + 6 }, { x: p.x + 6, y: yy }, { x: p.x + 6, y: yy + 7 }, { x: p.x - 6, y: yy + 13 }], c(0xd9354b));
+      g.rect(p.x + 2, p.y - H, 4, H - 4).fill({ color: 0x000000, alpha: 0.08 });
+      // la boule dorée, qui brille la nuit
+      if (pal.night) g.circle(p.x, p.y - H - 8, 34).fill({ color: 0xffd46b, alpha: 0.22 });
+      g.circle(p.x, p.y - H - 8, 11).fill(0xf2b933);
+      g.circle(p.x - 3, p.y - H - 11, 4).fill({ color: 0xffffff, alpha: 0.6 });
+      // plaque « Pôle Nord »
+      const pw = 66, py = p.y - 74;
+      g.roundRect(p.x - pw / 2, py - 11, pw, 20, 5).fill(c(0x1b6b4f)).stroke({ width: 2, color: c(0xf2b933) });
+      const t = new Text({ text: "Pôle Nord", style: { fontFamily: "Fredoka", fontWeight: "700", fontSize: 12, fill: c(0xffffff) } });
+      t.anchor.set(0.5); t.position.set(p.x, py - 1);
+      extra.addChild(t);
       break;
     }
     case "brazier": {

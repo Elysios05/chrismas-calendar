@@ -6,10 +6,14 @@ import type { PropKind } from "./props";
 export type PathCell = { x: number; y: number; z: number; zone: number; i: number };
 export type DayNode = { day: number; idx: number; x: number; y: number; z: number; zone: number };
 /** `rz` = altitude de la route la plus proche : sert à mesurer la hauteur relative d'une cellule */
-export type Cell = { x: number; y: number; h: number; zone: number; road: boolean; lake: boolean; d: number; front: boolean; rz: number; pi: number };
+export type Cell = { x: number; y: number; h: number; zone: number; road: boolean; lake: boolean; d: number; front: boolean; rz: number; pi: number;
+  /** sol dessiné à part au bout du monde : la place du pôle Nord et la piste d'envol */
+  sol?: "place" | "piste" };
 /** `drop` = dénivelé à combler sous un bâtiment, côté aval (hauteur du soubassement) */
 export type PlacedProp = { kind: PropKind; x: number; y: number; z: number; zone: number; seed: number; drop: number; alongX?: boolean };
-export type Terrain = { path: PathCell[]; nodes: DayNode[]; cells: Map<string, Cell>; props: PlacedProp[]; V: Map<string, number> };
+export type Terrain = { path: PathCell[]; nodes: DayNode[]; cells: Map<string, Cell>; props: PlacedProp[]; V: Map<string, number>;
+  /** bout de la piste d'envol (cases) : au jour 24, la caméra descend jusque-là */
+  bout?: { x: number; y: number } };
 
 /** Hauteur du terrain en un point quelconque (interpolation bilinéaire des sommets) */
 export function heightAt(t: Terrain, x: number, y: number) {
@@ -533,9 +537,67 @@ export function buildTerrain(seed = 2026): Terrain {
       // mêmes bords que le reste du monde (issue #13) : lisière au bout de la rangée, forêt serrée derrière
       if (bord === 0) { if (k % 2 === 0) pousse("deepWood", 0); }
       else if (bord < 5) { if (R2() < 0.6) pousse(R2() < 0.6 ? "tree" : "treeSmall", 0.7); }
-      // ailleurs, quelques sapins et sucres d'orge épars, comme au bas du pôle Nord
-      else if (R2() < 0.07) { const r = R2(); pousse(r < 0.45 ? "tree" : r < 0.8 ? "treeSmall" : "cane", 0.7); }
     });
+  }
+
+  /* ---------- le bout du monde : place du pôle Nord, piste d'envol, puis la forêt (choix d'Alexandre) ----------
+   * Place carrée de 5 × 5 cases juste sous la fin de la route (un losange à l'écran), poteau au centre.
+   * La piste part de son bord gauche, vers le bas à gauche de l'écran, sur 3 cases de large. */
+  const PX = fin.x + 1, PY = fin.y + 1; // coin haut de la place
+  const piste = { x0: PX + 1, x1: PX + 3, y0: PY + 5, y1: PY + 15 };
+  const dansPlace = (x: number, y: number) => x >= PX && x <= PX + 4 && y >= PY && y <= PY + 4;
+  const dansPiste = (x: number, y: number) => x >= piste.x0 && x <= piste.x1 && y >= piste.y0 && y <= piste.y1;
+  // réservé : la scène et une case de marge, plus le passage entre la route et la place
+  const reserve = (x: number, y: number) =>
+    (x >= PX - 2 && x <= PX + 5 && y >= PY - 1 && y <= PY + 5) || (x >= piste.x0 - 2 && x <= piste.x1 + 5 && y >= piste.y0 - 1 && y <= piste.y1 + 1);
+  for (const c of cells.values()) {
+    if (dansPlace(c.x, c.y)) c.sol = "place";
+    else if (dansPiste(c.x, c.y)) c.sol = "piste";
+  }
+  const passage = cells.get(key(PX, PY - 1));
+  if (passage) passage.sol = "place";
+  // le décor déjà posé sur la scène s'en va (sans tirage : le reste du monde ne bouge pas)
+  for (let i = props.length - 1; i >= 0; i--) {
+    const pr = props[i];
+    if (reserve(Math.floor(pr.x + 0.5), Math.floor(pr.y + 0.5)) && pr.kind !== "sleigh") props.splice(i, 1);
+  }
+  const met = (kind: PropKind, x: number, y: number, drop = 0) =>
+    props.push({ kind, x, y, z: heightAt(T0, x + 0.5, y + 0.5), zone: fin.zone, seed: Math.floor(R2() * 1e6), drop });
+  // la place : le poteau, le grand sapin, des lampadaires aux coins, braseros, bancs et visiteurs
+  met("poleNord", PX + 2, PY + 2);
+  met("bigTree", PX - 0.5, PY + 4.2);
+  for (const [x, y] of [[PX - 0.6, PY + 0.4], [PX + 0.4, PY - 0.6], [PX + 4.6, PY - 0.4], [PX + 4.6, PY + 4.6]]) met("lamp", x, y);
+  met("brazier", PX + 3.4, PY + 0.8);
+  met("brazier", PX + 0.9, PY + 2.1);
+  met("bench", PX + 3.6, PY + 3.4);
+  met("bench", PX + 1.4, PY + 0.4);
+  for (const [x, y] of [[PX + 3, PY + 1.2], [PX + 1.2, PY + 2.8], [PX + 2.9, PY + 3.1], [PX + 3.9, PY + 1.9]]) met("visitor", x, y);
+  met("snowman", PX + 5.6, PY + 3.2);
+  met("presents", PX + 4.2, PY + 4.3);
+  // la piste : un attelage de rennes au départ, des lanternes tout du long, l'écurie à côté
+  for (let r = 0; r < 3; r++) for (const dx of [-0.45, 0.45]) met("deer", piste.x0 + 1 + dx, piste.y0 + 0.6 + r * 1.3);
+  for (let y = piste.y0 + 1; y <= piste.y1; y += 3) { met("iceLantern", piste.x0 - 0.7, y); met("iceLantern", piste.x1 + 0.7, y); }
+  met("stable", piste.x1 + 3.2, piste.y0 + 4);
+  met("presents", piste.x0 - 1.6, piste.y0 + 0.2);
+  met("brazier", piste.x1 + 1.6, piste.y1 + 0.6);
+
+  T0.bout = { x: (piste.x0 + piste.x1) / 2 + 0.5, y: piste.y1 + 1 };
+
+  /* ---------- fond sud : la forêt s'épaissit en descendant, jusqu'aux bosquets serrés tout en bas ---------- */
+  const kFin = fin.x + fin.y, kBas = kMax + RANGEES_SUD;
+  const occupe = new Set(taken);
+  for (const pr of props) occupe.add(key(Math.floor(pr.x + 0.5), Math.floor(pr.y + 0.5)));
+  for (const c of cells.values()) {
+    const k = c.x + c.y;
+    if (k <= kFin + 1 || c.road || c.lake || occupe.has(key(c.x, c.y)) || reserve(c.x, c.y)) continue;
+    if (Math.hypot(fin.x - c.x, fin.y - c.y) < 2.5) continue;
+    const t = (k - kFin) / (kBas - kFin); // 0 juste sous la route, 1 tout en bas
+    const pose = (kind: PropKind, jitter = 0.7) => {
+      const x = c.x + (R2() - 0.5) * jitter, y = c.y + (R2() - 0.5) * jitter;
+      props.push({ kind, x, y, z: heightAt(T0, x + 0.5, y + 0.5), zone: c.zone, seed: Math.floor(R2() * 1e6), drop: 0 });
+    };
+    if (t > 0.55 && R2() < 0.14) pose("deepWood", 0);
+    else if (R2() < 0.1 + 0.5 * t) { const r = R2(); pose(r < 0.55 ? "tree" : r < 0.85 ? "treeSmall" : "bush"); }
   }
 
   T0.props = props;
