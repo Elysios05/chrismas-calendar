@@ -105,6 +105,7 @@
 /* Éditeur de contenu des jeux (Notre calendrier → Les questions des jeux) — cartes repliables, 26 nov */
 .ed-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .ed-entree { width: 100%; border: 0; font: inherit; cursor: pointer; padding: 10px 14px 10px 12px; min-height: 64px; }
+.ed-surprise { cursor: default; margin: 0; opacity: 0.85; }
 .ed-entree-icone { flex: none; width: 44px; text-align: center; font-size: 28px; }
 .ed-entree-note { display: block; font-size: 13px; font-weight: 500; color: var(--ink-soft); }
 .ed-entree-fleche, .ed-jour > span:last-child { flex: none; font-size: 24px; color: var(--ink-soft); }
