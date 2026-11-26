@@ -12,7 +12,7 @@ import { LoginScreen } from "./ui/LoginScreen";
 import { lireSapinCarte } from "./games/sapin/carte";
 import { CreerSalon } from "./ui/salons/CreerSalon";
 import { Invitation } from "./ui/salons/Invitation";
-import { PRENOMS_PAR_DEFAUT, prenomsDuSalon, useSalon } from "./ui/useSalon";
+import { PRENOMS_PAR_DEFAUT, prenomsDuSalon, useSalon, useTitreDuSalon } from "./ui/useSalon";
 import { DayWindow } from "./ui/DayWindow";
 import { PreparedEditor, RappelVeille } from "./ui/PreparedEditor";
 import { Hud } from "./ui/Hud";
@@ -84,6 +84,7 @@ export default function App() {
 
 function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
   const salon = useSalon(backend);
+  useTitreDuSalon(salon); // titre de l'onglet selon le salon (#110)
   const prenoms = prenomsDuSalon(salon) ?? PRENOMS_PAR_DEFAUT;
   const host = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<Scene | null>(null);

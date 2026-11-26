@@ -40,9 +40,24 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 5. ~~**Nom du monde tronqué sur téléphone**~~ — fait le 26 nov (nom court, PR `interface/nom-du-monde`).
 6. **À partir du 27 nov** (Supabase branché) : vérification complète de l'interface en vrai — messages d'erreur de #75
    avec de vraies erreurs. ~~Audit axe-core, revue des 24 jours~~ : faits le 26 nov (bug de la case 10 → **#113**).
-7. ~~Issue au chef pour la suite~~ : ouverte le 26 nov → **#116** (attendre sa réponse).
+7. ~~Issue au chef pour la suite~~ : réponse reçue dans **#116** (26 nov) :
+   - A (erreurs #75 sur vrai Supabase) : **après le 27**, Alexandre donnera URL + clé anonyme dans `.env.local` (jamais commité).
+   - ~~C : #110 côté React~~ — fait (PR `interface/titre-salon`).
+   - **B** : lister les défauts de **tous les jeux** sur 390×844, corriger ce qui est dans `src/ui/`, issue [Jeux] pour le reste.
+   - **D** : jour 19 (défi photo, proche du jeu photo du jour 3) — **Alexandre a dit oui (26 nov)**, annoncé dans #116. À faire après B ; attendre que le chef confirme dans #116 les fichiers de `src/games/` qu'il me confie.
 
 ## Journal
+
+### 📍 Où j'en suis — 26 novembre 2026 (soir, après #116)
+
+**#110, partie React : faite** (branche `interface/titre-salon`). `useTitreDuSalon(salon)` dans `src/ui/useSalon.ts` :
+titre de l'onglet « Calendrier de l'Avent — Prénom & Prénom » d'après le salon, titre générique sans salon ou avant
+son chargement (jamais les prénoms de repli), et remis en générique quand on quitte la carte. Un seul appel ajouté
+dans `Calendar` (`App.tsx`), puisque le chef m'a confié ce point. Vérifié en démo : générique sur l'écran de connexion,
+« … — Alexandre & Flavie » dans la carte. Remarque laissée au chef : l'écran de connexion affiche
+« Alexandre & Flavie » en sous-titre (prénoms par défaut, le salon n'est pas encore connu à ce moment-là).
+
+**Prochaine tâche** : B (défauts de tous les jeux sur 390×844, correctifs dans `src/ui/`, issue [Jeux] pour le reste), puis D (jour 19, accord d'Alexandre obtenu ; fichiers à confirmer par le chef dans #116).
 
 ### 📍 Où j'en suis — 26 novembre 2026 (tard)
 
