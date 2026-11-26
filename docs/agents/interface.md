@@ -37,13 +37,25 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 réglages du salon, éditeur de contenu générique. ~~Ancien texte :~~
 **Salons (décision d'Alexandre du 25 nov, avant le 30)** — lire `docs/salons.md`. Dès que le chef annonce dans **#84** la fusion du contrat `SalonApi`, ce point passe **avant tous les autres** : accueil « Créer notre calendrier », assistant de création, page du lien à envoyer, première connexion par lien, connexion par salon, éditeur de contenu générique. Avant cela, tu peux déjà proposer à Alexandre 2–3 maquettes de ces écrans.
 
-5. **Nom du monde tronqué sur téléphone** (« La Forêt et le Lac … ») : proposer 2–3 options à Alexandre avec captures
-   (ligne plus petite, nom court par monde, défilement), puis faire celle qu'il choisit.
+5. ~~**Nom du monde tronqué sur téléphone**~~ — fait le 26 nov (nom court, PR `interface/nom-du-monde`).
 6. **À partir du 27 nov** (Supabase branché) : vérification complète de l'interface en vrai — messages d'erreur de #75
    avec de vraies erreurs, audit axe-core, revue des 24 jours (`--jour=1..24`, jour et nuit).
 7. Ensuite : issue au chef pour la suite (aide aux Jeux côté interface si besoin).
 
 ## Journal
+
+### 📍 Où j'en suis — 26 novembre 2026 (soir)
+
+**Point 5 : nom du monde tronqué sur téléphone** (branche `interface/nom-du-monde`, PR ouverte).
+- **Décidé avec Alexandre (26 nov)** : **nom court sur téléphone** (< 700 px) : « Saint-Nicolas » et
+  « Forêt & Lac gelé » ; les 4 autres noms tiennent tels quels. Écartés : texte plus petit (Saint-Nicolas restait
+  coupé) et deux lignes (l'îlot grandit, « Saint-Nicolas » coupé au tiret).
+- `NOM_COURT` dans `Hud.tsx`, indexé par le nom du monde (`zones.ts` est à Monde) ; si Monde renomme un monde,
+  le nom complet s'affiche à nouveau → revérifier sur téléphone. Le nom complet reste lu par le lecteur d'écran.
+- Captures : jour 6 nuit et jour 10 (téléphone), jour 10 (ordinateur), 0 erreur console.
+
+**Prochaine tâche** : point 6 (à partir du 27 nov, vérification complète en vrai avec Supabase). PR #100 toujours
+à fusionner par le chef.
 
 ### 📍 Où j'en suis — 25 novembre 2026 (soir)
 
