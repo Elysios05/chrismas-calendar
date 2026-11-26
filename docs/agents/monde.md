@@ -397,3 +397,47 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     décor plus haut que l'estimation (« [monde] lot … plus grand que prévu »).
   - `npm run capture` remarche sur `main` (#90 réglé).
   - Prochaine étape : **#12** (présentation à l'arrivée dans un nouveau monde) — question de goût, options à montrer.
+
+- 26 nov — #12 (présentation d'un monde à la première arrivée), branche `claude/intelligent-ride-qdbkzh` :
+  - **Choix d'Alexandre** : « survol de la route » (pas le grand dézoom ni le lever de rideau), et **les montagnes
+    aussi** sont présentées (au premier lancement, comme les autres mondes).
+  - **Fonctionnement** (`src/world/presentation.ts` + fin de `Scene.ts`) : quand la caméra s'est posée 1,2 s dans
+    un monde jamais présenté (pas de case en ouverture, pas de marche scriptée, pas de fenêtre ouverte, onglet visible),
+    `sound.playJingle(zone)` puis survol ~3,5 s : recul (zoom 0,74), glissade le long de la route, retour en douceur
+    (la caméra du survol est **mélangée** à celle du défilement : ni départ ni retour brusques).
+  - **Sens** : arrivé par le haut (cas normal, ou au chargement) → vers la suite du monde ; revenu par le bas → vers
+    l'entrée du monde. On s'arrête avant que le banc de nuages ne remplisse l'écran : le jour d'arrivée, le survol se
+    réduit donc à un recul sur place (rien d'ouvert à montrer plus loin) — assumé, la suite reste une surprise.
+  - **Coupure** : toucher, clic, molette, clavier → retour rapide (0,38 s), monde marqué présenté. Défilement
+    automatique ou ouverture d'une case → survol effacé **sans** marquer (il reviendra au prochain arrêt).
+  - **Mémoire** : `localStorage` `calendrier.mondesPresentes.<who>` (par joueur, par appareil ; pas de contrat backend).
+    `animations = "non"` → jingle seul, monde marqué.
+  - **Navigateur piloté** (`navigator.webdriver`) : jamais de déclenchement automatique, pour ne pas casser les
+    captures et tests e2e. Crochets : `__calendrier.presenter(z)`, `figerSurvol(ms|null)`, `survol()`,
+    `oublierPresentations()`.
+  - Culling corrigé : `diffuser` et les habitants utilisent l'échelle réelle du monde (`world.scale`), pas `this.scale`.
+  - **Aucun changement dans `App.tsx`** (la scène connaît déjà `leader` et le son). Le nom du monde s'anime déjà dans
+    le HUD au changement de monde (Interface).
+  - Vérifié (script perso dans mon brouillon, `npm run capture` ne sait pas photographier une animation) : jour 9 et
+    jour 20 mobile, jour 20 ordinateur, coupure à la molette et mémoire en temps réel.
+  - Prochaine étape : #10 (ambiance), #13 ; #61 (instantané pour le PDF) si le chef le remonte.
+
+- 26 nov — #10 (ambiance), branche `claude/intelligent-ride-qdbkzh` :
+  - **Lumière des maisons** — choix d'Alexandre : **B · flaques**, et **aussi les lampadaires**. L'ellipse beige
+    sous chaque maison (et celle de la maison du Père Noël) est supprimée. La nuit, chaque fenêtre de la façade
+    avant pose sur la neige une nappe en trapèze (`windowSpill` dans `props.ts`) : vive contre le mur, elle
+    s'élargit en s'effaçant ; plus la fenêtre est haute, plus elle porte loin et pâlit. Les fenêtres passent par
+    `fenetre()` dans `drawHouse`, qui les retient. Lampadaires : le grand disque en l'air devient un rond de
+    lumière au pied (`groundPool`, vrai cercle au sol) et une petite lueur autour de la lanterne.
+    Non touchés : lanterne du panneau « route barrée » (halo déjà validé), lanternes des chalets du marché, braseros.
+  - **Halo du joueur** — **discret** (choix d'Alexandre) : `playerLight` dans le calque du dessus, même texture que
+    la lumière du cadeau, teinte `0xffe2a8`, additif, suit son propre personnage (`leader`), alpha = 0,42 × soir.
+    Rien en plein jour. Souffle très léger.
+  - **Neige au gyroscope** — module `src/world/inclinaison.ts` (`deviceorientation`, gère le paysage, lissé, le
+    repos avant/arrière suit lentement la tenue du téléphone). Pencher à gauche/droite fait dériver les flocons
+    (les proches plus que les lointains) ; vers l'avant/l'arrière, ils tombent plus vite/lentement.
+    **iOS** : autorisation demandée **au premier toucher de la carte** (choix d'Alexandre, contre Pingou ou réglage).
+    Android et ordinateur : branché tout de suite. Crochet : `__calendrier.incliner(x, y)`.
+  - Vérifié : `npm run capture` jour 8 21:00 mobile + ordinateur ; inclinaison simulée par le crochet.
+    Pas testé sur un vrai iPhone (à faire par Alexandre après déploiement).
+  - Prochaine étape : #61 (instantané pour le PDF) si le chef le remonte, sinon demander au chef dans #29.
