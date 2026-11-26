@@ -31,7 +31,7 @@ Faits : 1, 2, 3, **5, 6** (PR #83 en attente de fusion), 7, 11, 15, 17. Restent 
 1. ~~Jour **3** (défi photo croisé)~~ — fait le 24 nov (PR #77, fusionnée)
 2. ~~Jours **5** et **6** (en direct)~~ — faits le 24 nov, branche `jeux/direct-jours-5-6` (PR #83)
 3. ~~Jour **9** (dessin à deviner)~~ — fait le 25 nov, branche `jeux/dessin-jour9`
-4. Jour **10** (score à battre)
+4. ~~Jour **10** (score à battre)~~ — fait le 26 nov, branche `jeux/flocons-jour10`
 5. Jour **13** (en direct)
 6. Jour **14** (activité synchronisée)
 7. Jour **18** (en direct)
@@ -52,6 +52,26 @@ Avant de poser une question, relire les issues ouvertes (y compris celles des au
 du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
+
+### 26 novembre 2026 — jour 10, attrape-flocons dans la tempête (branche `jeux/flocons-jour10`)
+
+**Décisions prises avec Alexandre :** Pingou glisse sur le lac gelé avec un **panier** au-dessus de la tête
+(doigt ou flèches) ; **les quatre difficultés** : glaçons à éviter (une vie chacun), rafales annoncées par
+Pingou (« Rafale ! → »), flocons dorés rares (80 points, ils tombent plus vite), tempête qui monte (cadence,
+vitesse, part de glaçons, neige et brume) ; fin à **90 s ou 3 vies**, au premier des deux.
+
+**Décisions techniques prises seul :** tout ce qui tombe est tiré d'avance depuis la graine, donc les deux joueurs
+ont la même tempête. Le terrain fait au plus 0,8 × la hauteur de large, et les vitesses sont exprimées en hauteurs
+ou en largeurs d'écran : ordinateur et téléphone ont la même difficulté. Série : ×0,1 par flocon d'affilée (plafond
+×3). Un flocon perdu casse la série, mais pas un doré. Bonus de 150 par vie restante si on tient les 90 s.
+Pas de schéma de salon (jeu d'adresse, comme 2 et 6) : `ctx.content` est ignoré. Réglages dans
+`src/data/games/flocons-jour10.ts`.
+
+**Vérifié :** build, capture `--jour=10 --case=10`, partie en cours dans l'atelier (390×844 et 1280×800), aucune
+erreur console. Défauts vus et corrigés : barre du haut qui débordait sur téléphone (titre raccourci en
+« Jour 10 · Flocons »), terrain trop étroit sur ordinateur, bandes visibles dans le ciel.
+
+**Prochaine étape :** jour 13 (bonhomme à deux, en direct sur `joinLive`, #56). Demander d'abord ses règles à Alexandre.
 
 ### 25 novembre 2026 — salons : contenu et prénoms du salon (branche `jeux/salons-contenu`, #84)
 
