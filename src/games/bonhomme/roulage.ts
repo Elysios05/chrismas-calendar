@@ -224,7 +224,7 @@ export function lancerRoulage(o: OptionsRoulage): Roulage {
     if (!grille.length) { dimensionner(); if (!grille.length) return; }
     const maintenant = Date.now();
     const avant = Math.ceil((o.debut - maintenant) / 1000);
-    const reste = Math.max(0, c.secondesRouler - (maintenant - o.debut) / 1000);
+    const reste = Math.min(c.secondesRouler, Math.max(0, c.secondesRouler - (maintenant - o.debut) / 1000));
     const enJeu = avant <= 0 && !fini;
 
     let r = rCm();

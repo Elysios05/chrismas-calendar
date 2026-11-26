@@ -143,7 +143,8 @@ function Bonhomme({ ctx }: { ctx: GameContext }) {
   const rAutre = saBoule?.r ?? autreCm;
   cibleRef.current = monRole === "tete"
     ? (rAutre ? rAutre * contenu.rapportIdeal : contenu.teteConseillee)
-    : (rAutre ? rAutre / contenu.rapportIdeal : null);
+    // le corps vise une tête déjà finie (différé) ; en direct, c'est la tête qui s'ajuste au corps
+    : (saBoule ? saBoule.r / contenu.rapportIdeal : null);
 
   /* ---------- départ en direct ---------- */
   lancerDirect.current = (startsAt: number) => {
@@ -385,7 +386,7 @@ function Bonhomme({ ctx }: { ctx: GameContext }) {
                 ? (pret.partner ? "Attention… 3, 2, 1…" : `C'est noté. On attend ${autre}…`)
                 : (pret.partner ? `${autre} n'attend plus que toi !` : "Dès que chacun a cliqué, on roule les boules.")}
             </p>
-            <div className="duel-pret">
+            <div className="bh-pret">
               <span className={pret.me ? "ok" : ""}>{PRENOMS[ctx.me]} {pret.me ? "✅" : "…"}</span>
               <span className={pret.partner ? "ok" : ""}>{autre} {pret.partner ? "✅" : "…"}</span>
             </div>
@@ -415,7 +416,7 @@ function Bonhomme({ ctx }: { ctx: GameContext }) {
         )}
       >
         <div className="jeu-canvas bh-terrain" ref={hote}>
-          {(!hud || hud.avant > 0) && <div className="duel-decompte" key={hud?.avant ?? 3}>{hud?.avant ?? 3}</div>}
+          {(!hud || hud.avant > 0) && <div className="bh-decompte" key={hud?.avant ?? 3}>{hud?.avant ?? 3}</div>}
           {plan?.direct && autreCm !== null && (
             <div className="bh-autre">{autre} · {nomRole(monRole === "tete" ? "corps" : "tete")} : {autreCm} cm</div>
           )}
