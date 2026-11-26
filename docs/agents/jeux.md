@@ -67,7 +67,7 @@ ou en largeurs d'écran : ordinateur et téléphone ont la même difficulté. S�
 Pas de schéma de salon (jeu d'adresse, comme 2 et 6) : `ctx.content` est ignoré. Réglages dans
 `src/data/games/flocons-jour10.ts`.
 
-**Vérifié :** build, capture `--jour=10 --case=10`, partie en cours dans l'atelier (390×844 et 1280×800), aucune
+**Vérifié :** build, capture `--jour=12 --case=10` sur ordinateur (la fenêtre de la case s'ouvre bien ; sur téléphone et au jour 10, la capture ne touche pas le cadeau : issue #101 pour la Qualité), partie en cours dans l'atelier (390×844 et 1280×800), aucune
 erreur console. Défauts vus et corrigés : barre du haut qui débordait sur téléphone (titre raccourci en
 « Jour 10 · Flocons »), terrain trop étroit sur ordinateur, bandes visibles dans le ciel.
 
