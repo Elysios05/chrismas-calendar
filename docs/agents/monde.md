@@ -20,7 +20,7 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 3. ~~**#14**~~ : fait le 25 nov (monde dessiné par lots autour de l'écran) — PR à fusionner.
 4. **#12** : courte présentation à l'arrivée dans un nouveau monde.
 5. **#10** : neige au gyroscope, lumière des maisons, halo sur le joueur.
-6. **#61** : instantané du décor autour d'une case (pour le PDF des souvenirs).
+6. ~~**#61**~~ : fait le 26 nov (`scene.snapshotAround(day, w, h)`) — à brancher par le chef et le Backend.
 
 ## Questions à poser à Alexandre
 Style des montagnes, palette de chaque monde, densité du décor, look de Pingou et des personnages, animation d'ouverture.
@@ -441,3 +441,20 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - Vérifié : `npm run capture` jour 8 21:00 mobile + ordinateur ; inclinaison simulée par le crochet.
     Pas testé sur un vrai iPhone (à faire par Alexandre après déploiement).
   - Prochaine étape : #61 (instantané pour le PDF) si le chef le remonte, sinon demander au chef dans #29.
+
+- 26 nov — #61 (instantané du décor pour le PDF des souvenirs), branche `claude/intelligent-ride-qdbkzh` :
+  - **API** : `scene.snapshotAround(day, width, height): Promise<string>` → data URL PNG (`""` si case inconnue).
+    Contrat demandé par le chef dans #61, rien de nouveau dans `contracts.ts`.
+  - **Rendu** : scène à part, hors écran, **toujours de jour** (même si l'écran est en nuit), avec le décor actuel :
+    les lots du monde dont l'étendue coupe le cadre (`chargerLot` vers une cible jetable), un fond uni `bgDay` du
+    monde de la case, les cadeaux voisins dans leur état actuel et **celui du jour forcé ouvert**. Sans étiquettes,
+    personnages, Pingou, habitants, brouillard, nuages ni banc de nuages (le décor au-delà est dessiné).
+    Cadre : 640 px du monde de large (`Scene.LARGEUR_INSTANTANE`), hauteur au ratio demandé, cadeau un peu sous le
+    milieu ; `resolution = width / 640`. Décors animés posés une fois (`animerDecor`, extrait de `tick`) ; traîneau
+    du 24 à mi-envol.
+  - On rend la main toutes les ~30 ms de dessin. Mesuré sous SwiftShader (téléphone simulé, nuit) : 1,3 à 3,4 s par
+    image de 900×600. Tout est détruit après l'extraction.
+  - Crochet : `__calendrier.instantane(day, w = 800, h = 600)`. Vérifié sur les cases 1, 6, 9, 15, 20, 24
+    (script perso dans mon brouillon, `npm run capture` ne sait pas faire d'instantané).
+  - Reste : brancher dans `App.tsx` (chef) et dans `downloadSouvenirs` (Backend).
+  - Prochaine étape : liste du brief terminée → demander la suite au chef dans #29.

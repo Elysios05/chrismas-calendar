@@ -1,5 +1,5 @@
 // Scène PixiJS : terrain continu isométrique, caméra liée au défilement, ambiance, personnages
-import { Application, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
+import { Application, Container, Graphics, Rectangle, Sprite, Text, Texture } from "pixi.js";
 import { P, ZH, mix, poly, makePalette, type Palette, type Pt } from "./iso";
 import { buildTerrain, heightAt, key, type Cell, type DayNode, type PlacedProp, type Terrain } from "./terrain";
 import { drawProp, type AnimPart, type PropKind } from "./props";
@@ -268,6 +268,8 @@ export class Scene {
         incliner: (x: number, y = 0) => { this.inclinaison.simuler(x, y); return { x: this.inclinaison.x, y: this.inclinaison.y }; },
         scrollForDay: (day: number) => this.scrollForDay(day),
         playOpen: (day: number) => this.playOpen(day),
+        /** issue #61 : instantané du décor autour d'une case (data URL PNG) */
+        instantane: (day: number, w = 800, h = 600) => this.snapshotAround(day, w, h),
         /** bascule jour/nuit : reconstruction en cours ? et durée de la dernière (calcul pur et totale) */
         reconstruction: () => ({ enCours: !!this.pending, ...this.derniereReconstruction }),
         /** issue #14 : combien de lots du monde sont dessinés en ce moment, sur combien */
@@ -1365,40 +1367,7 @@ export class Scene {
     if (wo > 0.01) this.whiteout.rect(0, 0, innerWidth, innerHeight).fill({ color: 0xffffff, alpha: wo });
 
     // décors vivants : la grande roue tourne (nacelles toujours droites), la fumée monte des cheminées
-    for (const ch of this.charges.values()) for (const a of ch.anims) {
-      if (a.kind === "wheel") {
-        a.hub.rotation += 0.0045 * dt;
-        for (const car of a.cars) car.rotation = -a.hub.rotation;
-      } else if (a.kind === "belt") {
-        // les jouets défilent sur le tapis, apparaissent à une bouche et disparaissent à l'autre
-        const n = a.items.length;
-        a.items.forEach((it, i) => {
-          const u = (((this.time * 0.0035 + a.phase + i / n) % 1) + 1) % 1;
-          it.x = a.a.x + (a.b.x - a.a.x) * u;
-          it.y = a.a.y + (a.b.y - a.a.y) * u;
-          it.alpha = Math.min(1, u * 10, (1 - u) * 10);
-        });
-      } else if (a.kind === "bob") {
-        a.node.rotation = Math.sin(this.time * 0.035 + a.phase) * 0.12;
-        a.node.y = a.y0 + Math.sin(this.time * 0.05 + a.phase) * 1.5;
-      } else if (a.kind === "takeoff") {
-        // le traîneau s'arrache du sol une fois, puis file dans le ciel en se balançant
-        a.t = Math.min(1, a.t + 0.004 * dt);
-        const e = a.t * a.t * (3 - 2 * a.t);
-        a.node.x = e * 110;
-        a.node.y = -e * 140 + Math.sin(this.time * 0.03) * 6 * e;
-        a.node.rotation = -e * 0.22;
-        a.node.scale.set(1 - e * 0.18);
-      } else {
-        a.puffs.forEach((puff, i) => {
-          const t = (((this.time * 0.012 + a.phase + i * 0.9) % 3) / 3);
-          puff.y = -8 - t * 58;
-          puff.x = Math.sin(t * 3.4 + a.phase) * 9 * t;
-          puff.alpha = 0.9 * (1 - t) * (1 - t * 0.5);
-          puff.scale.set(0.55 + t * 1.1);
-        });
-      }
-    }
+    for (const ch of this.charges.values()) for (const a of ch.anims) this.animerDecor(a, dt);
     for (let i = this.confetti.length - 1; i >= 0; i--) {
       const f = this.confetti[i];
       f.life -= dt;
@@ -1452,6 +1421,102 @@ export class Scene {
     this.penguin.update(dt);
     this.eclairerJoueur();
     this.guetterArrivee();
+  }
+
+  /** Largeur du monde (px du monde) montrée par un instantané : un peu plus qu'un écran de téléphone */
+  static LARGEUR_INSTANTANE = 640;
+
+  /**
+   * Issue #61 : image (data URL PNG) du décor centré sur la case `day`, pour le PDF des souvenirs.
+   * Dessinée à part, hors écran et toujours de jour : ni interface (étiquettes), ni personnages, ni habitants,
+   * ni brouillard, ni banc de nuages ; le cadeau du jour est ouvert. Elle reprend le décor actuel (rien de figé).
+   * Le dessin se fait lot par lot en rendant la main entre deux, pour ne pas geler l'écran.
+   */
+  async snapshotAround(day: number, width: number, height: number): Promise<string> {
+    const n = this.terrain.nodes[day - 1];
+    if (!n || width < 1 || height < 1) return "";
+    const pal = makePalette(false);
+    const W = Scene.LARGEUR_INSTANTANE, H = (W * height) / width;
+    const o = P(n.x + 0.5, n.y + 0.5, heightAt(this.terrain, n.x + 0.5, n.y + 0.5));
+    // le cadeau un peu sous le milieu : on voit davantage le décor qui le domine
+    const cadre = new Rectangle(o.x - W / 2, o.y - H * 0.55, W, H);
+    const racine = new Container();
+    const ciel = ZONES[this.terrain.path.find((c) => c.x === n.x && c.y === n.y)?.zone ?? 0].bgDay;
+    const fond = new Graphics().rect(cadre.x, cadre.y, W, H).fill(ciel);
+    const ground = new Container(), objects = new Container();
+    ground.sortableChildren = objects.sortableChildren = true;
+    racine.addChild(fond, ground, objects);
+    const cible: Cible = { pal, flying: this.wantsFlying(), ground, objects, charges: new Map() };
+    const anims: AnimPart[] = [];
+    // on rend la main toutes les ~30 ms de dessin : assez pour que l'écran respire, sans traîner
+    const laMain = () => new Promise<void>((r) => setTimeout(r, 0));
+    let t0 = performance.now();
+    try {
+      for (let i = 0; i < this.lots.length; i++) {
+        const lot = this.lots[i];
+        if (lot.max < cadre.top || lot.min > cadre.bottom) continue;
+        for (const _ of this.chargerLot(i, cible, new Container())) void _;
+        const ch = cible.charges.get(i);
+        if (ch) anims.push(...ch.anims);
+        if (performance.now() - t0 > 30) { await laMain(); t0 = performance.now(); }
+      }
+      // les décors animés dans une pose naturelle (sans cela, les jouets du tapis attendent à l'origine)
+      for (const a of anims) {
+        if (a.kind === "takeoff") a.t = 0.55;
+        this.animerDecor(a, 0);
+      }
+      // les cadeaux : ceux de la carte dans leur état actuel, celui du jour ouvert
+      const etats = new Map(this.states);
+      etats.set(day, "opened");
+      const faux = { pal, states: etats, labels: new Container(), gifts: new Map<number, Container>() } as unknown as Built;
+      for (const m of this.terrain.nodes) {
+        const g = P(m.x + 0.5, m.y + 0.5).y;
+        if (g < cadre.top - 80 || g > cadre.bottom + 80) continue;
+        const cont = this.makeGift(m, faux);
+        cont.eventMode = "none";
+        objects.addChild(cont);
+      }
+      faux.labels.destroy({ children: true });
+      return await this.app.renderer.extract.base64({ target: racine, frame: cadre, resolution: width / W, format: "png" });
+    } finally {
+      racine.destroy({ children: true });
+    }
+  }
+
+  /** Une image d'un décor animé : grande roue, tapis roulant, renne, traîneau, fumée */
+  animerDecor(a: AnimPart, dt: number) {
+    if (a.kind === "wheel") {
+      a.hub.rotation += 0.0045 * dt;
+      for (const car of a.cars) car.rotation = -a.hub.rotation;
+    } else if (a.kind === "belt") {
+      // les jouets défilent sur le tapis, apparaissent à une bouche et disparaissent à l'autre
+      const n = a.items.length;
+      a.items.forEach((it, i) => {
+        const u = (((this.time * 0.0035 + a.phase + i / n) % 1) + 1) % 1;
+        it.x = a.a.x + (a.b.x - a.a.x) * u;
+        it.y = a.a.y + (a.b.y - a.a.y) * u;
+        it.alpha = Math.min(1, u * 10, (1 - u) * 10);
+      });
+    } else if (a.kind === "bob") {
+      a.node.rotation = Math.sin(this.time * 0.035 + a.phase) * 0.12;
+      a.node.y = a.y0 + Math.sin(this.time * 0.05 + a.phase) * 1.5;
+    } else if (a.kind === "takeoff") {
+      // le traîneau s'arrache du sol une fois, puis file dans le ciel en se balançant
+      a.t = Math.min(1, a.t + 0.004 * dt);
+      const e = a.t * a.t * (3 - 2 * a.t);
+      a.node.x = e * 110;
+      a.node.y = -e * 140 + Math.sin(this.time * 0.03) * 6 * e;
+      a.node.rotation = -e * 0.22;
+      a.node.scale.set(1 - e * 0.18);
+    } else {
+      a.puffs.forEach((puff, i) => {
+        const t = (((this.time * 0.012 + a.phase + i * 0.9) % 3) / 3);
+        puff.y = -8 - t * 58;
+        puff.x = Math.sin(t * 3.4 + a.phase) * 9 * t;
+        puff.alpha = 0.9 * (1 - t) * (1 - t * 0.5);
+        puff.scale.set(0.55 + t * 1.1);
+      });
+    }
   }
 
   /** Le halo suit son personnage ; presque rien de jour, une vraie lanterne la nuit */
