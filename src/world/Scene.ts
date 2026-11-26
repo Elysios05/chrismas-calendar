@@ -8,7 +8,8 @@ import { weatherAt } from "./weather";
 import { Aurora } from "./aurora";
 import { PLAYERS, Person, Penguin, type Who } from "./actors";
 import { makeGround, poke, spawnLife, updateCritter, type Critter, type LifeEnv } from "./life";
-import type { CouleursJoueur, JoueurSalon, SoundApi } from "../core/contracts";
+import type { CouleursJoueur, JoueurSalon, SoundApi, ZoneId } from "../core/contracts";
+import { Survol, ZOOM_SURVOL, marquerPresente, mondesPresentes, oublierPresentations } from "./presentation";
 
 export type NodeState = "locked" | "available" | "opened";
 export type SceneCallbacks = {
@@ -156,6 +157,16 @@ export class Scene {
   /** Ordonnée, dans le monde, du banc de nuages qui ferme la carte (null = carte entière ouverte) */
   yFin: number | null = null;
   focus: { x: number; y: number; zoom: number } | null = null;
+  /** Présentation d'un monde à la première arrivée (issue #12) : survol de la route en cours */
+  survol: Survol | null = null;
+  /** Mondes déjà présentés au joueur qui tient la caméra (relus si le joueur change) */
+  presentes: { who: Who; zones: Set<string> } | null = null;
+  /** Dernier défilement vu, et depuis quand il n'a pas bougé : on n'arrive dans un monde qu'à l'arrêt */
+  reposScroll = { y: -1, depuis: 0 };
+  /** Crochet de test : instant figé du survol (ms depuis son début), pour le photographier */
+  survolFige: number | null = null;
+  /** Le monde d'où l'on vient (-1 au chargement) : décide du sens du survol */
+  zoneAvant = -1;
   confetti: { g: Graphics; vx: number; vy: number; rot: number; life: number }[] = [];
   confettiLayer = new Container();
   time = 0;
@@ -251,6 +262,12 @@ export class Scene {
         /** issue #14 : combien de lots du monde sont dessinés en ce moment, sur combien */
         lots: () => ({ total: this.lots.length, dessines: this.charges.size, enAttente: this.aPrecharger.length + (this.prechargement ? 1 : 0) }),
         joueurs: (j: Record<Who, JoueurSalon> | null) => this.setJoueurs(j),
+        /** issue #12 : présenter un monde tout de suite (index dans ZONES), ou tout oublier pour revoir les survols */
+        presenter: (zone: number) => this.presenterMonde(zone),
+        oublierPresentations: () => { oublierPresentations(this.leader); this.presentes = null; },
+        survol: () => (this.survol ? { zone: this.survol.zone, ...this.survol.etat(performance.now()) } : null),
+        /** fige le survol à `ms` depuis son début (null = il reprend le temps réel) */
+        figerSurvol: (ms: number | null) => { this.survolFige = ms; },
         personnageEcran: (who: Who) => { const p = this.people[who]; const g = p.getGlobalPosition(); return { x: g.x, y: g.y, couleurs: p.couleurs }; },
         /** habitants visibles à l'écran : espèce, position du milieu du corps, réaction en cours */
         life: () => this.life.filter((cr) => cr.visible).map((cr) => {
@@ -1120,6 +1137,7 @@ export class Scene {
     // --- glisser à la souris : on attrape le paysage et on le tire ---
     let tireur = false, departY = 0, departScroll = 0, bouge = false;
     const bas = (e: PointerEvent) => {
+      this.survol?.couper(performance.now());
       if (e.pointerType !== "mouse" || e.button !== 0) return;
       tireur = true; bouge = false; departY = e.clientY; departScroll = scrollY;
     };
@@ -1138,7 +1156,10 @@ export class Scene {
     addEventListener("pointercancel", haut);
 
     // --- clavier : on saute de date en date ---
+    const coupe = () => this.survol?.couper(performance.now());
+    addEventListener("wheel", coupe, { passive: true });
     const touche = (e: KeyboardEvent) => {
+      coupe();
       const vers = e.key === "ArrowUp" || e.key === "ArrowLeft" ? -1 : e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : 0;
       if (!vers) return;
       // on laisse le clavier tranquille dès qu'on écrit ou qu'une fenêtre est ouverte
@@ -1156,6 +1177,7 @@ export class Scene {
       removeEventListener("pointerup", haut);
       removeEventListener("pointercancel", haut);
       removeEventListener("keydown", touche);
+      removeEventListener("wheel", coupe);
     };
   }
 
@@ -1226,18 +1248,20 @@ export class Scene {
       this.world.scale.set(this.scale);
       this.world.x = this.camX;
       this.world.y = -this.scrollY + this.padTop - this.minY * this.scale;
+      if (this.survol) this.cameraSurvol(this.survol);
     }
 
-    // on ne dessine que les tranches de décor qui touchent l'écran
-    const topY = (-this.world.y) / this.scale - 80;
-    const botY = (innerHeight - this.world.y) / this.scale + 80;
+    // on ne dessine que les tranches de décor qui touchent l'écran (à l'échelle réelle : le survol recule)
+    const ech = this.world.scale.x;
+    const topY = (-this.world.y) / ech - 80;
+    const botY = (innerHeight - this.world.y) / ech + 80;
     // les décors s'arrêtent un peu avant le banc de nuages : sinon un toit émerge de la brume
     const limiteDecor = this.limiteDepth === Infinity ? Infinity : this.limiteDepth - 4;
     // (issue #14) : seul ce qui entoure l'écran est dessiné. Une bande de sol commence à `k` et court
     // sur 10 : celle qui contient la limite reste visible, juste assez pour porter le banc de nuages
     this.diffuser(topY, botY, limiteDecor);
     // habitants : seuls ceux qui sont à l'écran vivent ; les autres attendent, figés
-    const leftX = (-this.world.x) / this.scale - 60, rightX = (innerWidth - this.world.x) / this.scale + 60;
+    const leftX = (-this.world.x) / ech - 60, rightX = (innerWidth - this.world.x) / ech + 60;
     for (const cr of this.life) {
       // les pylônes du télésiège portent leur câble loin au-dessus de leur pied : marge plus large
       const m = cr.species === "pylon" ? 240 : cr.species === "chair" ? 120 : 60;
@@ -1259,7 +1283,7 @@ export class Scene {
     const za = ZONES[zm.a], zb = ZONES[zm.b];
     const lerp = (a: number, b: number) => a + (b - a) * zm.t;
     const zi = zm.t < 0.5 ? zm.a : zm.b;
-    if (zi !== this.zoneNow) { this.zoneNow = zi; this.cb.onZone(zi); }
+    if (zi !== this.zoneNow) { this.zoneAvant = this.zoneNow; this.zoneNow = zi; this.cb.onZone(zi); }
     // aurores boréales, seulement au pôle Nord : rubans glissés entre le sol et le décor (aurora.ts)
     const polarForce = (ZONES[zm.a].id === "pole-nord" ? 1 - zm.t : 0) + (ZONES[zm.b].id === "pole-nord" ? zm.t : 0);
     {
@@ -1404,5 +1428,92 @@ export class Scene {
     this.placeActors();
     for (const who of ["alexandre", "flavie"] as Who[]) this.people[who].update(dt);
     this.penguin.update(dt);
+    this.guetterArrivee();
+  }
+
+  /* ------------------- présentation des mondes (issue #12) ------------------- */
+  /** Centre de l'écran visé par la caméra : là où `focusWorldY` regarde */
+  private static readonly CENTRE_Y = 0.55;
+
+  /** Mélange la caméra normale (posée par le défilement) et celle du survol */
+  private cameraSurvol(sv: Survol) {
+    const now = this.survolFige !== null ? sv.t0 + this.survolFige : performance.now();
+    const e = sv.etat(now);
+    if (e.fini) {
+      this.survol = null;
+      if (!sv.interrompu) this.retenirPresente(sv.zone);
+      return;
+    }
+    const sc0 = this.scale, cy = innerHeight * Scene.CENTRE_Y;
+    // point du monde au centre de l'écran avec la caméra normale
+    const c0x = (innerWidth / 2 - this.world.x) / sc0, c0y = (cy - this.world.y) / sc0;
+    const x = c0x + (e.x - c0x) * e.poids, y = c0y + (e.y - c0y) * e.poids;
+    const sc = sc0 * e.zoom;
+    this.world.scale.set(sc);
+    this.world.x = innerWidth / 2 - x * sc;
+    this.world.y = cy - y * sc;
+  }
+
+  private retenirPresente(zone: number) {
+    const id = ZONES[zone]?.id;
+    if (!id) return;
+    marquerPresente(this.leader, id);
+    this.dejaPresentes().add(id);
+  }
+
+  private dejaPresentes() {
+    if (!this.presentes || this.presentes.who !== this.leader) this.presentes = { who: this.leader, zones: mondesPresentes(this.leader) };
+    return this.presentes.zones;
+  }
+
+  /** Arrivée dans un monde jamais présenté : la caméra s'est posée dedans depuis un moment, rien d'autre ne se passe */
+  private guetterArrivee() {
+    const now = performance.now();
+    if (Math.abs(this.scrollY - this.reposScroll.y) > 1) {
+      this.reposScroll = { y: this.scrollY, depuis: now };
+      // le défilement a bougé sans geste du joueur (bouton « aujourd'hui », ouverture d'une case…) : on rend la main
+      this.survol?.couper(now, false);
+      return;
+    }
+    // l'ouverture d'une case prend la caméra : le survol s'efface, il reviendra plus tard
+    if (this.focus && this.survol) this.survol = null;
+    // navigateur piloté (captures, tests de bout en bout) : jamais de survol surprise au milieu d'une photo ;
+    // la Qualité le déclenche à la demande avec `__calendrier.presenter(zone)`
+    if (navigator.webdriver) return;
+    if (this.survol || this.focus || this.marcheScriptee || this.zoneNow < 0 || !this.states.size) return;
+    if (now - this.reposScroll.depuis < 1200) return;
+    const id = ZONES[this.zoneNow]?.id;
+    if (!id || this.dejaPresentes().has(id)) return;
+    // une fenêtre ouverte, un onglet caché : ce sera pour plus tard
+    if (document.visibilityState !== "visible" || document.querySelector("[role=dialog], dialog[open]")) return;
+    this.presenterMonde(this.zoneNow);
+  }
+
+  /** Lance le survol du monde `zone` (index dans ZONES) depuis l'endroit que l'on regarde */
+  presenterMonde(zone: number) {
+    const id = ZONES[zone]?.id;
+    if (!id) return;
+    this.sound?.playJingle(id as ZoneId);
+    if (document.documentElement.dataset.animations === "non") { this.retenirPresente(zone); return; }
+    const L = this.terrain.path;
+    const pt = (c: (typeof L)[number]) => P(c.x + 0.5, c.y + 0.5, c.z);
+    // le bout de la route visible : la fin du monde, sans passer derrière le banc de nuages
+    // (on s'arrête quand le banc de nuages atteint le bas de l'écran : un écran de nuages ne présente rien)
+    const yMax = this.yFin === null ? Infinity : this.yFin - (innerHeight * (1 - Scene.CENTRE_Y) * 0.7) / (this.scale * ZOOM_SURVOL);
+    let debut = L.findIndex((c) => c.zone === zone), fin = debut;
+    if (debut < 0) return;
+    while (fin + 1 < L.length && L[fin + 1].zone === zone && pt(L[fin + 1]).y <= yMax) fin++;
+    // départ : la case de la route la plus proche de ce que l'on regarde
+    const fy = this.focusWorldY();
+    let ici = debut, bd = Infinity;
+    let finZone = debut;
+    while (finZone + 1 < L.length && L[finZone + 1].zone === zone) finZone++;
+    for (let i = debut; i <= finZone; i++) { const d = Math.abs(pt(L[i]).y - fy); if (d < bd) { bd = d; ici = i; } }
+    // arrivé par le haut (cas normal, ou au chargement) : on file vers la suite, s'il y en a ;
+    // revenu par le bas (on remonte la carte) : on remonte jusqu'à l'entrée du monde
+    const indices: number[] = [];
+    if (this.zoneAvant > zone) for (let i = ici; i >= debut; i--) indices.push(i);
+    else for (let i = ici; i <= Math.max(ici, fin); i++) indices.push(i);
+    this.survol = new Survol(zone, indices.map((i) => pt(L[i])), performance.now());
   }
 }
