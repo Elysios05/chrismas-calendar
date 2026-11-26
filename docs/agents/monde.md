@@ -550,3 +550,16 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     - Vérifié : build, oxlint, `npm run capture -- --jour=24` (jour et nuit, mobile et ordinateur) et `--jour=23`,
       0 erreur. La vue « descendue tout en bas » a été prise avec un script de mon brouillon (`npm run capture` ne défile pas).
     - **À redemander à Alexandre** : faut-il déplacer le traîneau sur la piste pour qu'il décolle de là le 24 ?
+
+- 26 nov (nuit, suite) — **vraie voûte de glace à l'entrée et à la sortie de la grotte** (choix d'Alexandre parmi :
+  performance téléphone / relecture du monde / entrée de la grotte). Branche `monde/voute-grotte`.
+  - `props.ts`, décor `caveMouth` réécrit : tunnel arrondi qui enjambe le chemin (masse de glace bombée, ouverture
+    en plein cintre bordée de 9 claveaux, clé claire, chapeau de neige, stalactites sous l'arche). Intérieur sombre,
+    autre bouche claire au fond ; la nuit, lueur bleue dans le tunnel. Repère local a (le long du chemin) / b (en
+    travers) ; seules les faces tournées vers la caméra sont dessinées.
+  - `terrain.ts`, placement : l'ancien porche était posé 3 pas après les cases 16 et 20 et **cachait le cadeau 20**
+    (les cases sont espacées de 4 pas, le cône `devant` en fait 5). Les voûtes sont maintenant 6 pas après la case 16
+    (entrée) et la case 20 (sortie), sur une ligne droite. Toujours 2 tirages de `R()` : le reste du monde est identique.
+  - Vérifié : build, oxlint, `npm run capture` jours 16, 17, 20, 21 (jour et 21:00, mobile et ordinateur), 0 erreur.
+  - **Prochaine étape** : options B (relecture) ou C (performance téléphone) de #29, selon Alexandre ou le chef.
+

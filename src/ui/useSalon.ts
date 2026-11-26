@@ -37,3 +37,20 @@ export function contenuDuJour(salon: Salon | null, day: number): unknown {
 export function usePrenoms(backend: BackendApi): Record<Who, string> {
   return prenomsDuSalon(useSalon(backend)) ?? PRENOMS_PAR_DEFAUT;
 }
+
+/** Titre générique de `index.html`, remis quand on quitte la carte (déconnexion) ou sans salon. */
+export const TITRE_GENERIQUE = "Calendrier de l'Avent";
+
+/**
+ * Titre de l'onglet d'après le salon (#110) : « Calendrier de l'Avent — Prénom & Prénom ».
+ * Sans salon (ou avant son chargement), on garde le titre générique : jamais les prénoms de repli,
+ * qui seraient faux pour un autre couple.
+ */
+export function useTitreDuSalon(salon: Salon | null): void {
+  const prenoms = prenomsDuSalon(salon);
+  const titre = prenoms ? `${TITRE_GENERIQUE} — ${prenoms.alexandre} & ${prenoms.flavie}` : TITRE_GENERIQUE;
+  useEffect(() => {
+    document.title = titre;
+  }, [titre]);
+  useEffect(() => () => { document.title = TITRE_GENERIQUE; }, []);
+}

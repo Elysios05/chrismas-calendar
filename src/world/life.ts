@@ -670,7 +670,8 @@ export function spawnLife(t: Terrain, pal: Palette): Critter[] {
   {
     const z = zoneIdx("pole-nord");
     const ws = t.props.find((p) => p.kind === "workshop" && p.zone === z);
-    const sl = t.props.find((p) => p.kind === "sleigh" && p.zone === z);
+    // le traîneau est parti sur la piste d'envol : les lutins apportent les cadeaux à son ancienne place
+    const sl = t.depot ?? t.props.find((p) => p.kind === "sleigh" && p.zone === z);
     if (ws && sl) {
       // on part devant la porte de la fabrique (côté +y) jusqu'à côté du traîneau
       const a = { x: ws.x + 0.5, y: ws.y + 2.1 }, b = { x: sl.x + 0.5, y: sl.y + 1.2 };

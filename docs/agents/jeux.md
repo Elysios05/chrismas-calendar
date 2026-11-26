@@ -34,7 +34,7 @@ Faits : 1, 2, 3, **5, 6** (PR #83 en attente de fusion), 7, 11, 15, 17. Restent 
 4. ~~Jour **10** (score à battre)~~ — fait le 26 nov (PR #102, fusionnée)
 5. ~~Jour **13** (en direct)~~ — fait le 26 nov (PR #107, fusionnée)
 6. ~~Jour **14** (activité synchronisée)~~ — fait le 26 nov, branche `jeux/biscuits-jour14`
-7. Jour **18** (en direct)
+7. ~~Jour **18** (en direct)~~ — fait le 26 nov, branche `jeux/boules-neige-jour18`
 8. Jour **19** (défi photo)
 9. ~~Jour 21~~ → **confié à l'équipe Monde** (26 nov, #29)
 10. ~~Jour 22~~ → **confié à l'équipe Monde** (26 nov, #29)
@@ -52,6 +52,37 @@ Avant de poser une question, relire les issues ouvertes (y compris celles des au
 du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
+
+### 26 novembre 2026 — jour 18, bataille de boules de neige : le duel des forts (branche `jeux/boules-neige-jour18`)
+
+**Décidé avec Alexandre :** « duel des forts » (parmi 3 options : duel des forts / coop contre les lutins / duel aux
+cibles). Vu de côté, chacun derrière son fort au pied de la cascade gelée ; **lance-pierre** (glisser le doigt vers
+l'arrière, lâcher ; début de trajectoire en pointillés dorés) ; **« Se baisser »** maintenu (ou Espace / ↓) ;
+boule sur l'autre = +1 ; boule sur un fort = une rangée de neige en moins (3 rangées) ; baissé, le fort se refait
+(1 rangée / 2 s) ; 3 manches de 45 s, vent 0 → moyen → fort. Absent : 20 s puis **fantôme** (ses tirs et sa posture
+rejoués) s'il a joué la manche ; sinon un **lutin d'entraînement** te bombarde (ses boules ne comptent pas) et ton
+score reste **provisoire** : il est recalculé quand l'autre joue contre ton fantôme.
+
+**Décisions techniques prises seul :**
+- `boules/regles.ts` = la bataille sans affichage, en pas fixes de 10 ms (que des + et ×) ; le vent de chaque boule
+  est **enregistré avec le tir** (pas de `Math.sin` recalculé chez l'autre) → même résultat sur les deux appareils.
+- Coup `manche:<qui>:<m>` = `{ tirs: {t,v,a,w}[], trace }` (posture tous les 100 ms, 1 = baissé). Score d'une manche
+  = `decompter()` des deux coups ; une seule partie jouée → contre `PERSONNE(m)` (debout, sans tirer).
+- **Baissé, on se plaque contre son fort** (`X_BAISSE`) : sinon les cloches retombaient sur un joueur caché
+  (balayage : 45 touches sur 918 tirs → 11 sur 837). Lutin : vitesse calculée puis ±14 % (≈ 1 tir sur 2 touche).
+- Terrain 640 unités (Alexandre 70, Flavie 570), **vue en miroir pour Flavie** : chacun se voit à gauche.
+- En direct : `emit("tir")` et `emit("pose")` ; l'aperçu à l'écran peut différer d'un poil, le score qui compte
+  vient des coups déposés.
+- `ctx.say([])` au début de chaque manche : la bulle de Pingou cachait le bouton « Se baisser ».
+- Classes `duel-*` du jour 6 : `friandises.css` est **importé** par le jour 18 (piège du jour 13).
+- Pas de schéma de salon (jeu d'adresse). Réglages : `src/data/games/boules-jour18.ts`.
+
+**Vérifié :** `npm run build` OK ; `npm run capture -- --jour=18 --case=18` (la case s'ouvre, 0 erreur) ; atelier
+`jeux.html?jour=18` joué par Playwright en 390×844 et 1280×800 (visée, vol, baissé, fin de manche, 0 erreur) ;
+**à deux onglets en direct** : Flavie se voit à gauche, même score des deux côtés (4–0), 0 erreur.
+
+**Prochaine étape :** jour 19 (défi photo croisé « ta déco de Noël ») : reprendre le jour 3. Demander d'abord ses
+règles à Alexandre.
 
 ### 26 novembre 2026 — issue #109 (suite), la vraie cause de `reading 'clear'` (branche `jeux/clear-jour10-109`)
 

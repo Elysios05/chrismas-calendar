@@ -2,6 +2,7 @@
 //   --jour=N            jour simulé 1-24 (défaut 1)         --heure=HH:MM  heure simulée (défaut 12:00 ; 21:00 = nuit)
 //   --case=N            ouvre la fenêtre de la case N       --joueur=alexandre|flavie (défaut alexandre)
 //   --appareils=mobile,ordinateur (défaut les deux)         --attente=ms  délai avant la photo (défaut 1500)
+//   --prenoms=Sam,Camille  salon de démo aux prénoms différents (prouve que rien n'est écrit en dur ; contrôle le texte visible)
 //   --sortie=dossier    défaut /tmp/captures                --sans-build  n'automatise pas le build (échoue si dist/ absent)
 // Connexion démo passée, carte vérifiée, bulle de Pingou fermée, caméra sur la case du jour, puis photo.
 // Sans --sans-build : construit seulement si dist/ est absent ou plus ancien que src/.
@@ -11,7 +12,7 @@ import path from "node:path";
 import * as C from "./commun.mjs";
 
 const opt = Object.fromEntries(process.argv.slice(2).map((a) => { const m = a.match(/^--([^=]+)(?:=(.*))?$/); return m ? [m[1], m[2] ?? true] : [a, true]; }));
-const connues = ["jour", "heure", "case", "joueur", "appareils", "attente", "sortie", "sans-build"];
+const connues = ["jour", "heure", "case", "joueur", "appareils", "attente", "sortie", "sans-build", "prenoms"];
 const inconnues = Object.keys(opt).filter((k) => !connues.includes(k));
 if (inconnues.length) { console.error(`Option inconnue : --${inconnues.join(", --")}. Options : ${connues.map((k) => "--" + k).join(" ")}`); process.exit(2); }
 
@@ -23,6 +24,8 @@ const appareils = String(opt.appareils ?? "mobile,ordinateur").split(",").map((s
 const attente = Number(opt.attente ?? 1500);
 const sortie = path.resolve(String(opt.sortie ?? "/tmp/captures"));
 const sansBuild = opt["sans-build"] === true;
+const prenoms = opt.prenoms !== undefined ? String(opt.prenoms).split(",").map((s) => s.trim()) : null;
+if (opt.prenoms !== undefined && (prenoms.length !== 2 || prenoms.some((p) => !p))) { console.error("--prenoms : deux prénoms séparés par une virgule (ex. --prenoms=Sam,Camille)."); process.exit(2); }
 const hm = heure.match(/^(\d{1,2}):(\d{2})$/);
 if (!(jour >= 1 && jour <= 24) || (caseN !== null && !(caseN >= 1 && caseN <= 24))) { console.error("--jour et --case : nombre de 1 à 24."); process.exit(2); }
 if (!hm) { console.error("--heure : format HH:MM (ex. 21:00)."); process.exit(2); }
@@ -49,7 +52,7 @@ try {
     const page = await ctx.newPage();
     const msgs = C.collecterConsole(page);
     try {
-      await C.ouvrirDemo(page, { jour, moi: joueur }); // connexion démo + carte vérifiée (échoue clairement sinon)
+      await C.ouvrirDemo(page, { jour, moi: joueur, prenoms }); // connexion démo + carte vérifiée (échoue clairement sinon)
       await C.fermerPingou(page);
       const cible = caseN ?? jour;
       await page.evaluate((j) => window.scrollTo({ top: globalThis.__calendrier?.scrollForDay(j) ?? scrollY, behavior: "instant" }), cible);
@@ -68,8 +71,14 @@ try {
       await page.waitForTimeout(attente);
       await C.fermerPingou(page); // il peut reparler après le défilement
       if (await page.locator(".mascot").count()) throw new Error("la bulle de Pingou n'a pas pu être fermée");
+      if (prenoms) { // contrôle du texte visible : aucun prénom du salon par défaut ne doit rester
+        const t = await page.evaluate(() => [document.body.innerText, ...[...document.querySelectorAll("[title],[aria-label]")].flatMap((e) => [e.title, e.getAttribute("aria-label")])].join("\n"));
+        const reste = t.match(/Alexandre|Flavie/g);
+        if (reste) throw new Error(`prénom écrit en dur dans le texte visible : ${[...new Set(reste)].join(", ")}`);
+        if (!t.includes(prenoms[0])) throw new Error(`le prénom ${prenoms[0]} n'apparaît nulle part : le salon n'a pas été pris en compte`);
+      }
       await C.renduActif(page, false); // image figée : la photo ne dépend plus du rendu lent de SwiftShader
-      const nom = `${app}-j${String(jour).padStart(2, "0")}-${hm[1].padStart(2, "0")}h${hm[2]}${caseN !== null ? `-case${caseN}` : ""}-${joueur}.png`;
+      const nom = `${app}-j${String(jour).padStart(2, "0")}-${hm[1].padStart(2, "0")}h${hm[2]}${caseN !== null ? `-case${caseN}` : ""}-${joueur}${prenoms ? "-" + prenoms.join("-").toLowerCase() : ""}.png`;
       const f = path.join(sortie, nom);
       await page.screenshot({ path: f });
       fichiers.push(f);
