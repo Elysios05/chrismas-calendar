@@ -9,6 +9,14 @@
   `Scene.ts` rendu, caméra liée au défilement, brouillard, nuages, neige, mode nuit.
 
 ## À faire (par priorité) — mis à jour par le chef le 24 nov
+**🆕 Renfort Jeux (choix d'Alexandre du 26 nov, #29)** : le chef te confie par écrit, en plus de `src/world/` :
+1. **Jour 22** « Tri des cadeaux » (score à battre, PixiJS) → `src/games/tri-cadeaux/` + son contenu dans `src/data/games/`
+   (contenu **générique** par défaut + schéma ; s'il y a du contenu propre à Alexandre & Flavie, il va dans
+   `src/data/salons/alexandre-flavie.ts`, géré par l'équipe Jeux : demande-lui par #84).
+2. Puis **jour 21** « Décorer le sapin à deux » (en direct, `joinLive`, voir #56) → `src/games/sapin/`.
+3. Les lignes de ces deux jours dans `src/games/registry.ts` (conflit d'une ligne possible avec les Jeux : garder les deux).
+Règles : `src/games/README.md`, `ctx.prenoms`, aucun accord de genre, règles validées par Alexandre avant de coder.
+
 Méthode : prends le **premier point non fait** de cette liste, une branche et une PR par point, `npm run build`,
 `npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
 **avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
