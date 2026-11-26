@@ -44,7 +44,7 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
    - A (erreurs #75 sur vrai Supabase) : **après le 27**, Alexandre donnera URL + clé anonyme dans `.env.local` (jamais commité).
    - ~~C : #110 côté React~~ — fait (PR `interface/titre-salon`).
    - **B** : lister les défauts de **tous les jeux** sur 390×844, corriger ce qui est dans `src/ui/`, issue [Jeux] pour le reste.
-   - **D** : jour 19 (défi photo, proche du jeu photo du jour 3) **à faire valider par Alexandre** ; s'il dit oui, les Jeux le retirent de leur liste.
+   - **D** : jour 19 (défi photo, proche du jeu photo du jour 3) — **Alexandre a dit oui (26 nov)**, annoncé dans #116. À faire après B ; attendre que le chef confirme dans #116 les fichiers de `src/games/` qu'il me confie.
 
 ## Journal
 
@@ -57,7 +57,7 @@ dans `Calendar` (`App.tsx`), puisque le chef m'a confié ce point. Vérifié en 
 « … — Alexandre & Flavie » dans la carte. Remarque laissée au chef : l'écran de connexion affiche
 « Alexandre & Flavie » en sous-titre (prénoms par défaut, le salon n'est pas encore connu à ce moment-là).
 
-**Prochaine tâche** : D (jour 19), demander l'accord d'Alexandre ; puis B (défauts des jeux sur téléphone).
+**Prochaine tâche** : B (défauts de tous les jeux sur 390×844, correctifs dans `src/ui/`, issue [Jeux] pour le reste), puis D (jour 19, accord d'Alexandre obtenu ; fichiers à confirmer par le chef dans #116).
 
 ### 📍 Où j'en suis — 26 novembre 2026 (tard)
 
