@@ -62,6 +62,18 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 **Prochaine tâche** : le 27 nov, une fois Supabase branché, vérifier les messages d'erreur de #75 avec de vraies erreurs
 (mauvais mot de passe, réseau coupé, e-mail non confirmé, trop d'essais). Puis lire la réponse du chef dans #113.
 
+### 📍 Où j'en suis — 26 novembre 2026 (nuit)
+
+**Arbitrage du chef (#84) : « Les questions des jeux » réservé au créateur** (branche `interface/questions-createur`, PR ouverte).
+- Place 1 (`me === "alexandre"`) : entrée inchangée. Place 2 : carte 🎁 inactive (un `<p>`, pas de flèche) avec
+  `PINGOU_SALON.contenuSurprise(prénom du créateur)` : « {prénom} a préparé les questions des jeux. C'est une surprise 🤫 »
+  — **texte choisi par Alexandre le 26 nov** (préféré à « Motus » et « je garde l'enveloppe »).
+- Protection d'interface seulement : la config reste lisible par les deux (RLS inchangée, décision du chef).
+- Maquette : `maquettes.html?vue=reglages-salon&moi=flavie` pour voir la place 2.
+- Captures : place 2 téléphone et ordinateur, place 1 téléphone, 0 erreur console.
+
+**Prochaine tâche** : point 6 (à partir du 27 nov, vérification complète en vrai avec Supabase).
+
 ### 📍 Où j'en suis — 26 novembre 2026 (soir)
 
 **Point 5 : nom du monde tronqué sur téléphone** (branche `interface/nom-du-monde`, PR ouverte).

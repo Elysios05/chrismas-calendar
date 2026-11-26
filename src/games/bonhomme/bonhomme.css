@@ -1,0 +1,73 @@
+/* Jour 13 — Bonhomme de neige à deux */
+
+/* phase 1 : la place du marché vue de dessus */
+.bh-terrain { background: #8e98a6; border-radius: 0 0 18px 18px; overflow: hidden; }
+.bh-terrain canvas { z-index: 0; }
+.bh-terrain .bh-decompte { position: absolute; z-index: 2; pointer-events: none; }
+.bh-terrain .jeu-flash { z-index: 3; }
+.bh-autre, .bh-rondeur {
+  position: absolute; z-index: 2; pointer-events: none;
+  background: rgba(27, 39, 71, .72); color: #fff; border-radius: 12px; padding: 4px 10px;
+  font-weight: 700; font-size: 13px;
+}
+.bh-autre { left: 10px; top: 10px; }
+.bh-rondeur { right: 10px; top: 10px; }
+
+/* phase 2 : décoration */
+.bh-deco, .bh-fin { -webkit-user-select: none; user-select: none; }
+.bh-deco { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 8px; padding: 8px 10px 10px; }
+.bh-scene-boite { position: relative; flex: 1; min-height: 0; display: flex; justify-content: center; }
+.bh-scene { height: 100%; max-width: 100%; border-radius: 18px; touch-action: none; user-select: none; display: block; }
+.bh-objet.moi { cursor: grab; }
+.bh-objet:not(.moi) { pointer-events: none; }
+.bh-retirer {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  background: rgba(217, 53, 75, .9); color: #fff; border-radius: 12px; padding: 4px 12px;
+  font-weight: 700; font-size: 13px; pointer-events: none;
+}
+.bh-plateau {
+  display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto); gap: 6px;
+  overflow-x: auto; padding-bottom: 2px; justify-content: start;
+}
+@media (min-width: 700px) { .bh-plateau { grid-template-rows: none; grid-auto-flow: row; grid-template-columns: repeat(12, 1fr); } }
+.bh-piece {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 62px;
+  background: #fff; border: 0; border-radius: 14px; padding: 6px 4px 4px; touch-action: none;
+  box-shadow: 0 3px 0 rgba(27, 39, 71, .12); cursor: grab; font: inherit;
+}
+.bh-piece svg { width: 34px; height: 34px; overflow: visible; }
+.bh-piece span { font-size: 11px; font-weight: 600; color: var(--ink-soft, #5b6680); }
+.bh-piece:disabled { opacity: .45; cursor: default; }
+.bh-compte { text-align: center; font-size: 13px; font-weight: 600; color: var(--ink-soft, #5b6680); }
+.bh-btn-barre { padding: 6px 12px; font-size: 14px; white-space: nowrap; }
+
+/* fin : le souvenir */
+.bh-fin {
+  display: flex; gap: 14px; align-items: center; justify-content: center; height: 100%;
+  padding: 10px; overflow-y: auto;
+}
+.bh-fin-scene { flex: 0 1 380px; align-self: stretch; min-height: 0; display: flex; justify-content: center; }
+.bh-fin-scene .bh-scene { height: 100%; max-height: 560px; align-self: center; }
+.bh-fin-panneau { flex: 0 1 380px; }
+.bh-detail { gap: 6px; margin: 10px 0; }
+.bh-detail b { font-size: 18px; }
+.bh-liste { list-style: none; padding: 0; margin: 10px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; text-align: left; font-size: 13px; color: var(--ink-soft, #5b6680); }
+.bh-liste li { margin: 2px 0; font-size: 13px; }
+.bh-liste li::before { content: none; }
+.bh-liste li.ok { color: var(--ink, #1b2747); font-weight: 600; }
+@media (max-width: 699px) {
+  .bh-fin { flex-direction: column; justify-content: flex-start; }
+  .bh-fin-scene { flex: 0 0 auto; height: 46vh; align-self: center; }
+  .bh-fin-panneau { flex: 0 0 auto; }
+}
+
+/* décompte et « prêt ? » (mêmes réglages que le duel du jour 6, dont le CSS n'est pas chargé ici) */
+.bh-decompte {
+  inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 96px; font-weight: 700; color: var(--ink, #1b2747); text-shadow: 0 5px 0 #fff;
+  animation: bhCompte 1s ease-out;
+}
+@keyframes bhCompte { from { transform: scale(1.6); opacity: 0; } }
+.bh-pret { display: flex; gap: 10px; justify-content: center; margin: 0 0 16px; }
+.bh-pret span { background: #fff; border-radius: 14px; padding: 8px 12px; font-weight: 700; color: var(--ink-soft, #5b6680); box-shadow: 0 3px 0 rgba(27, 39, 71, .1); }
+.bh-pret span.ok { color: var(--green, #2fa37a); }

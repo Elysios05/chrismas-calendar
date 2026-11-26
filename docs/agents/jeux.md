@@ -31,13 +31,13 @@ Faits : 1, 2, 3, **5, 6** (PR #83 en attente de fusion), 7, 11, 15, 17. Restent 
 1. ~~Jour **3** (défi photo croisé)~~ — fait le 24 nov (PR #77, fusionnée)
 2. ~~Jours **5** et **6** (en direct)~~ — faits le 24 nov, branche `jeux/direct-jours-5-6` (PR #83)
 3. ~~Jour **9** (dessin à deviner)~~ — fait le 25 nov, branche `jeux/dessin-jour9`
-4. ~~Jour **10** (score à battre)~~ — fait le 26 nov, branche `jeux/flocons-jour10`
-5. Jour **13** (en direct)
+4. ~~Jour **10** (score à battre)~~ — fait le 26 nov (PR #102, fusionnée)
+5. ~~Jour **13** (en direct)~~ — fait le 26 nov, branche `jeux/bonhomme-jour13`
 6. Jour **14** (activité synchronisée)
 7. Jour **18** (en direct)
 8. Jour **19** (défi photo)
-9. Jour **21** (en direct)
-10. Jour **22** (score à battre)
+9. ~~Jour 21~~ → **confié à l'équipe Monde** (26 nov, #29)
+10. ~~Jour 22~~ → **confié à l'équipe Monde** (26 nov, #29)
 11. Jour **23** (activité synchronisée)
 Les règles de chaque jeu sont dans `src/data/planning.ts` et `docs/cahier-des-charges.md`.
 
@@ -52,6 +52,39 @@ Avant de poser une question, relire les issues ouvertes (y compris celles des au
 du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
+
+### 26 novembre 2026 — jour 13, bonhomme de neige à deux (branche `jeux/bonhomme-jour13`)
+
+**Décisions prises avec Alexandre :** deux phases. 1) **Rouler** (adresse, 30 s) : chacun roule sa boule
+au doigt — place 2 le corps, place 1 la tête ; Pingou note l'empilement (taille, tailles assorties, boules rondes).
+2) **Décorer à deux** le même bonhomme, en direct (on voit les objets de l'autre arriver). Fin : le bonhomme en
+souvenir (image PNG à enregistrer) + un **score commun** sur 1 000.
+**Absent :** 20 s d'attente puis **chacun sa moitié** : on roule sa boule et on décore ; l'autre trouve le
+bonhomme commencé (sa boule en pointillés « ? ») et le termine.
+
+**Décisions techniques prises seul :**
+- Rouler = vue de dessus de la place du marché en **Canvas 2D** (une texture de neige qu'on gomme, les pavés
+  réapparaissent) : Pixi n'apportait rien ici. Neige comptée en part du champ → mêmes tailles sur téléphone et
+  ordinateur (vérifié : balayage parfait ≈ 60 cm des deux côtés, plafond 62).
+- **Rondeur** = neige ramassée par direction (4 axes) : en ligne droite la boule devient un boudin (dessinée
+  aplatie, Pingou prévient), en tournant elle reste ronde.
+- La tête voit un **cercle pointillé** = 2/3 du corps (en direct, la taille du corps arrive en continu) ; le corps
+  ne vise une taille que si la tête est déjà finie (différé).
+- Objets posés **relatifs à leur boule** (`sur`, `u`, `v` en rayons) : en différé, la déco faite sur la boule
+  « ? » suit la vraie boule quand elle arrive. 14 objets par personne, on reprend les siens pour les déplacer,
+  lâchés hors de la scène = enlevés. Brouillon gardé dans `brouillon:<qui>` (survit à un rechargement).
+- Points : taille 150 (corps, plein à 48 cm) + assortiment 200 (tête/corps ≈ 0,66) + rondeur 150 + 7 éléments
+  vérifiés **à leur place** × 60 (yeux, nez, sourire, couvre-chef, écharpe, boutons, bras) + 80 si décoré à deux.
+- Coups `boule:<qui>` et `deco:<qui>` ; en direct, `taille` et `deco` passent par `live.emit`.
+- Pas de schéma de salon (jeu d'adresse). Réglages et objets : `src/data/games/bonhomme-jour13.ts`.
+
+**Vérifié :** à deux onglets en direct (salon, départ commun, tailles en direct, déco vue des deux côtés, score
+commun identique), en différé (Alexandre seul → rechargement en pleine déco → Flavie termine plus tard), 390×844 et
+1280×800, `npm run capture -- --jour=14 --case=13` (la case s'ouvre), aucune erreur console.
+Défauts vus et corrigés : neige en damier, boule trop petite sur téléphone, « C'est bon ! » caché par la bulle de
+Pingou (monté dans la barre), décompte blanc sur neige blanche, classes CSS empruntées au jour 6 (non chargées).
+
+**Prochaine étape :** jour 14 (biscuits + minuteur partagé, synchronisé). Demander d'abord ses règles à Alexandre.
 
 ### 26 novembre 2026 — jour 10, attrape-flocons dans la tempête (branche `jeux/flocons-jour10`)
 
