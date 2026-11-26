@@ -108,7 +108,7 @@ export function DayWindow({
       <section
         ref={panneau}
         tabIndex={-1}
-        className="sheet-panel"
+        className={etape === "jeu" && !estPreparee && game ? "sheet-panel sheet-panel--jeu" : "sheet-panel"}
         role="dialog"
         aria-modal="true"
         aria-labelledby="case-titre"

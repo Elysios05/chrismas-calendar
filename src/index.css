@@ -189,6 +189,19 @@ button { font-family: inherit; cursor: pointer; }
 .sheet-intro-text { margin: 0 0 16px; color: var(--ink-soft); font-size: 15px; line-height: 1.4; }
 .sheet-cta { width: 100%; max-width: 280px; }
 .sheet-game { min-height: 180px; }
+
+/* Pendant une partie : la fenêtre prend toute la hauteur, l'en-tête tient sur une ligne,
+   le jeu occupe ce qui reste et Pingou se range dessous sans rien recouvrir.
+   Plus de double défilement (fenêtre puis jeu) ni de bulle cachée sous le pli. */
+.sheet-panel--jeu { height: min(100dvh, 900px); max-height: none; overflow: hidden; gap: 10px; padding-top: 14px; }
+.sheet-panel--jeu .sheet-head { align-items: center; }
+.sheet-panel--jeu .sheet-emoji { font-size: 28px; }
+.sheet-panel--jeu .sheet-day { display: none; }
+.sheet-panel--jeu .sheet-title { margin: 0; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sheet-panel--jeu .sheet-body { flex: 1; min-height: 0; }
+.sheet-panel--jeu .sheet-game { flex: 1; min-height: 0; overflow: auto; border-radius: 18px; }
+.sheet-panel--jeu .sheet-game > .jeu-boite { min-height: 0; }
+.sheet-panel--jeu > .mascot--inline { flex: none; }
 .sheet-vide { text-align: center; color: var(--ink-soft); }
 .sheet-sceau { font-size: 46px; }
 .sheet-fini-text { margin: 6px 0 16px; font-size: 18px; font-weight: 600; }
@@ -486,6 +499,7 @@ html[data-nuit="oui"] body {
 @media (min-width: 700px) {
   .sheet { place-items: center; padding: 20px; }
   .sheet-panel { border-radius: 30px; animation: pop .45s cubic-bezier(.2,1.5,.4,1); }
+  .sheet-panel--jeu { height: min(calc(100dvh - 40px), 820px); }
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
