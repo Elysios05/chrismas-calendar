@@ -2,7 +2,7 @@
  * Jour 1 — Quiz « Est-ce que tu me connais ? »
  *
  * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
- * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ * (éditeur du salon ; contenu propre à un couple : jamais dans le dépôt, voir docs/salons.md).
  *
  * ALEXANDRE : c'est ici que tu remplaces tout. Rien d'autre à toucher.
  *  - `surMoi`    : la question telle qu'on te la pose à toi (« … toi ? »)

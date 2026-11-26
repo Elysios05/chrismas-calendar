@@ -2,7 +2,7 @@
  * Jour 9 — Dessin à deviner : vos souvenirs dessinés (en différé).
  *
  * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
- * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ * (éditeur du salon ; contenu propre à un couple : jamais dans le dépôt, voir docs/salons.md).
  *
  * ALEXANDRE : tout se remplace ici.
  *  - `themes`    : les sujets proposés. Pour chaque dessin, on en choisit un (pas deux fois le même),

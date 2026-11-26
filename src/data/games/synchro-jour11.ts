@@ -2,7 +2,7 @@
  * Jour 11 — Quiz « Sommes-nous synchro ? » (en direct, ou chacun son tour).
  *
  * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
- * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ * (éditeur du salon ; contenu propre à un couple : jamais dans le dépôt, voir docs/salons.md).
  *
  * Ce n'est pas un quiz de connaissances : vous répondez tous les deux à la même question,
  * sans voir l'autre, et **même réponse = +1 synchro**.

@@ -2,7 +2,7 @@
  * Jour 5 — Pictionary de Noël (en direct, ou chacun son tour).
  *
  * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
- * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ * (éditeur du salon ; contenu propre à un couple : jamais dans le dépôt, voir docs/salons.md).
  *
  * ALEXANDRE : tout se remplace ici.
  *  - `noel`  : mots de Noël, faciles à dessiner.
@@ -62,7 +62,7 @@ export const PICTIONARY_JOUR5: PictionaryContent = {
 };
 
 const CHAMPS_MOT: SchemaContenu["champs"] = [
-  { type: "texte", cle: "mot", label: "Mot à dessiner", max: 40, exemple: "Train de nuit" },
+  { type: "texte", cle: "mot", label: "Mot à dessiner", max: 40, exemple: "Notre premier rendez-vous" },
   { type: "textes", cle: "variantes", label: "Autres réponses acceptées", aide: "Facultatif. Accents, majuscules et articles sont déjà pardonnés.", min: 0, max: 6, maxLongueur: 40, exemple: "train" },
 ];
 

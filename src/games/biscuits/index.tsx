@@ -2,7 +2,7 @@
  * Jour 14 — Biscuits de Noël, chacun chez soi (activité synchronisée).
  *
  * Règles décidées avec Alexandre (26 nov) :
- *  - chacun choisit SA recette (avec ou sans four : Alexandre n'a pas de four) ;
+ *  - chacun choisit SA recette (avec ou sans four, pour qui n'en a pas) ;
  *  - on cuisine en même temps, étape par étape, et on voit où en est l'autre (étape, minuteur en cours) ;
  *  - si les deux sont là, on peut démarrer pile au même moment (« prêt » des deux côtés, 3-2-1) ;
  *  - à la fin, photo de sa fournée ; on découvre celle de l'autre après avoir posté la sienne,

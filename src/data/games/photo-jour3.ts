@@ -2,7 +2,7 @@
  * Jour 3 — Défi photo croisé : la vue de ta fenêtre.
  *
  * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
- * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ * (éditeur du salon ; contenu propre à un couple : jamais dans le dépôt, voir docs/salons.md).
  *
  * ALEXANDRE : tout se remplace ici.
  *  - `consigne`   : ce que Pingou demande de photographier
