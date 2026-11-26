@@ -11,12 +11,15 @@ import { PINGOU_SALON, type PingouLine } from "../pingou/lines";
 import { useDialog } from "../useDialog";
 import { useSalon } from "../useSalon";
 import { ChoixCouleurs, EcranPingou, Personnage, messageErreur } from "./EcranPingou";
+import { EditeurCase, ListeCasesContenu } from "./EditeurContenu";
 
 const PRENOM_MAX = 20;
 const PLACES: Who[] = ["alexandre", "flavie"];
 
 type Vue =
   | { etape: "accueil" }
+  | { etape: "jeux" }
+  | { etape: "case"; jour: number }
   | { etape: "prenom" | "manteau"; qui: Who; prenom: string; couleurs: CouleursJoueur };
 
 /** Lien dans son enveloppe + bouton Copier (sélection du texte si le presse-papiers est refusé). */
@@ -64,10 +67,14 @@ export function ReglagesSalon({ backend, me, onFermer }: { backend: BackendApi; 
 
   // Échap et le retour : on revient d'abord à l'accueil des réglages, puis on ferme.
   const retour = useRef(() => {});
+  const retourCase = useRef(() => {});
+  const [ligneJeux, setLigneJeux] = useState<PingouLine | undefined>(undefined);
   retour.current = () => {
     if (busy) return;
     setErreur(null);
-    if (vue.etape === "manteau") setVue({ ...vue, etape: "prenom" });
+    if (vue.etape === "case") retourCase.current();
+    else if (vue.etape === "jeux") { setVue({ etape: "accueil" }); setLigne(PINGOU_SALON.reglages()); }
+    else if (vue.etape === "manteau") setVue({ ...vue, etape: "prenom" });
     else if (vue.etape === "prenom") { setVue({ etape: "accueil" }); setLigne(PINGOU_SALON.reglages()); }
     else onFermer();
   };
@@ -135,7 +142,13 @@ export function ReglagesSalon({ backend, me, onFermer }: { backend: BackendApi; 
   };
 
   let ecran;
-  if (vue.etape === "prenom") {
+  if (vue.etape === "jeux") {
+    ecran = <ListeCasesContenu salon={salon} ligne={ligneJeux} onRetour={() => retour.current()}
+      onChoisir={(jour) => setVue({ etape: "case", jour })} />;
+  } else if (vue.etape === "case") {
+    ecran = <EditeurCase key={vue.jour} backend={backend} salon={salon} jour={vue.jour} retourRef={retourCase}
+      onFini={(enregistre) => { setLigneJeux(enregistre ? PINGOU_SALON.contenuEnregistre() : undefined); setVue({ etape: "jeux" }); }} />;
+  } else if (vue.etape === "prenom") {
     const pret = vue.prenom.trim().length > 0;
     ecran = (
       <EcranPingou ligne={erreur ? PINGOU_SALON.souci() : PINGOU_SALON.changerPrenom(vue.qui === me, joueurs[vue.qui].prenom)}
@@ -178,6 +191,13 @@ export function ReglagesSalon({ backend, me, onFermer }: { backend: BackendApi; 
             </li>
           ))}
         </ul>
+
+        <button type="button" className="salon-joueur ed-entree" onClick={() => { setLigneJeux(undefined); setVue({ etape: "jeux" }); }}>
+          <span className="ed-entree-icone" aria-hidden="true">🎁</span>
+          <span className="salon-joueur-nom">Les questions des jeux
+            <span className="ed-entree-note">Remplace celles de Pingou par les vôtres</span></span>
+          <span aria-hidden="true" className="ed-entree-fleche">›</span>
+        </button>
 
         <BlocLien id="reg-lien-moi" titre="Ton lien de connexion" lien={lienMoi}
           note="Garde-le : il ouvre votre calendrier sur n'importe quel appareil."

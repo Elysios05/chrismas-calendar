@@ -33,8 +33,8 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 3. ~~Relire les issues `[Interface]`~~ — fait le 24 nov : aucune ouverte. Suite demandée au chef dans **#81**
    (avec le signalement de `npm run capture` cassé). PR `interface/nettoyage-entete` en attente de fusion.
 4. ~~Réponse du chef dans #81~~ : reçue (25 nov), PR #82 fusionnée.
-**🆕 Salons** — ✅ maquettes (piste B choisie), assistant de création et invitation faits (25 nov). Restent :
-réglages du salon, éditeur de contenu générique. ~~Ancien texte :~~
+**🆕 Salons** — ✅ maquettes (piste B choisie), assistant de création, invitation, réglages du salon (25 nov),
+éditeur de contenu des jeux (26 nov, PR `interface/editeur-contenu`). Reste : faire valider les répliques de l'éditeur. ~~Ancien texte :~~
 **Salons (décision d'Alexandre du 25 nov, avant le 30)** — lire `docs/salons.md`. Dès que le chef annonce dans **#84** la fusion du contrat `SalonApi`, ce point passe **avant tous les autres** : accueil « Créer notre calendrier », assistant de création, page du lien à envoyer, première connexion par lien, connexion par salon, éditeur de contenu générique. Avant cela, tu peux déjà proposer à Alexandre 2–3 maquettes de ces écrans.
 
 5. ~~**Nom du monde tronqué sur téléphone**~~ — fait le 26 nov (nom court, PR `interface/nom-du-monde`).
@@ -54,8 +54,35 @@ réglages du salon, éditeur de contenu générique. ~~Ancien texte :~~
   le nom complet s'affiche à nouveau → revérifier sur téléphone. Le nom complet reste lu par le lecteur d'écran.
 - Captures : jour 6 nuit et jour 10 (téléphone), jour 10 (ordinateur), 0 erreur console.
 
-**Prochaine tâche** : point 6 (à partir du 27 nov, vérification complète en vrai avec Supabase). PR #100 toujours
-à fusionner par le chef.
+**Prochaine tâche** : point 6 (à partir du 27 nov, vérification complète en vrai avec Supabase). PR #100 fusionnée par le chef
+(26 nov).
+
+### 📍 Où j'en suis — 26 novembre 2026
+
+**Salons, étape 5 : éditeur de contenu des jeux** (branche `interface/editeur-contenu`, PR en brouillon).
+- **Décidé avec Alexandre (26 nov)** : une page par case, chaque élément d'une liste est une **carte repliable**
+  (résumé emoji + premier texte, ▸ pour déplier), et **rien ne part avant « Enregistrer »** (confirmation
+  « Partir sans enregistrer / Enregistrer » si on quitte avec des changements). Écartés : un écran plein par élément
+  (trop d'allers-retours pour 30 questions), tout déplié (page interminable), enregistrement automatique (écrasements).
+- `src/ui/salons/EditeurContenu.tsx` : `ListeCasesContenu` (cases qui ont un schéma, « ✎ Vos questions » si le salon
+  a un contenu pour ce jour) et `EditeurCase` (champs génériques `texte`, `nombre`, `case`, `choix`, `textes`, `liste`
+  d'après `schemasDesJeux()` ; ↑ ↓ pour réordonner, « Retirer de la liste », « ＋ Ajouter … » depuis `modele`).
+- Stockage (règles Jeux, #84) : seuls les champs du schéma **qui diffèrent du défaut** vont dans
+  `salon.config.contenu["<jour>"]` ; tout redevenu par défaut → la clé est supprimée. Le salon est **relu juste
+  avant** `modifierSalon` pour ne pas écraser une autre case modifiée par l'autre entre-temps.
+- Départ = `lireContenu(contenu du salon, défaut, schéma)` : l'éditeur montre exactement ce que le jeu jouera.
+- Erreurs (champ vide, motif, nombre hors bornes, trop peu d'éléments) affichées au premier « Enregistrer » ;
+  les cartes à corriger passent en rouge avec ⚠.
+- Entrée : bouton « 🎁 Les questions des jeux » dans l'accueil de `ReglagesSalon` ; Échap / ‹ remontent d'un écran.
+- Répliques `PINGOU_SALON.contenuListe / contenuCase / contenuEnregistre / contenuOriginal / contenuQuitter /
+  contenuIncomplet` : **validées telles quelles par Alexandre le 26 nov** (préférées à une version plus sobre).
+- Captures : `maquettes.html?vue=reglages-salon` puis « Les questions des jeux » (Playwright jetable, hors dépôt).
+
+**PR #100 complète**, en attente de relecture et de fusion par le chef. Aucune issue `[Interface]` ouverte (vérifié le 26 nov).
+
+**Prochaine tâche** : point 5 de la liste (nom du monde tronqué sur téléphone), avec 2–3 options et des captures à montrer à Alexandre.
+À signaler au chef si besoin : l'éditeur montre les réponses (rébus, pendu…) à celui qui l'ouvre — normal pour
+celui qui prépare, mais l'autre peut aussi l'ouvrir.
 
 ### 📍 Où j'en suis — 25 novembre 2026 (soir)
 
