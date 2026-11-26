@@ -122,6 +122,7 @@ Ce qui ne suit pas d'un compte à l'autre : les conversations, les agents en cou
 | 30 nov | Mise en ligne finale |
 
 ## Journal
+- 26 nov (19 h 45) : **Supabase branché** (projet `idjyuhrrlopjdttbjjej`, eu-west-1) : migrations 0001–0004 appliquées (intégration GitHub), fonctions `salons` et `rappel-veille` déployées (sans vérif JWT), tâches pg_cron des rappels créées, secrets des fonctions et secrets GitHub posés par Alexandre, réglages Auth/Realtime faits. Testé depuis la base (pg_net) : `salons` et `rappel-veille` répondent. Dépôt passé en public, GitHub Pages réactivé, historique réécrit sans liens de session. Reste : Brevo (mot de passe oublié), checklist §11 avec deux appareils, import du contenu d'Alexandre & Flavie dans leur salon.
 - 25 nov (12 h 45) : PR #85 (contrat des salons + démo) fusionnée, annoncée sur #84 ; #59 → option A (mot de passe obligatoire à la 1re connexion). Backend (lot 2 Supabase, `opus`) et Qualité (sélecteurs `.entete`, `sonnet`) relancés après la limite des 5 h. Reste dans les briefs : `DayWindow` doit remplir `ctx.content` et `ctx.prenoms` (Interface).
 - 25 nov (0 h 30) : décision « salons » (`docs/salons.md`, #84) ; Backend lancé sur le contrat `SalonApi` + DemoBackend.
 - 24 nov (soir) : Alexandre refuse toutes les coupes ; Audio, Backend, Qualité lancés ; PR #74 fusionnée.
