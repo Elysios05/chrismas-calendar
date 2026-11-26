@@ -32,7 +32,7 @@ Faits : 1, 2, 3, **5, 6** (PR #83 en attente de fusion), 7, 11, 15, 17. Restent 
 2. ~~Jours **5** et **6** (en direct)~~ — faits le 24 nov, branche `jeux/direct-jours-5-6` (PR #83)
 3. ~~Jour **9** (dessin à deviner)~~ — fait le 25 nov, branche `jeux/dessin-jour9`
 4. ~~Jour **10** (score à battre)~~ — fait le 26 nov (PR #102, fusionnée)
-5. ~~Jour **13** (en direct)~~ — fait le 26 nov, branche `jeux/bonhomme-jour13`
+5. ~~Jour **13** (en direct)~~ — fait le 26 nov (PR #107, fusionnée)
 6. Jour **14** (activité synchronisée)
 7. Jour **18** (en direct)
 8. Jour **19** (défi photo)
@@ -52,6 +52,21 @@ Avant de poser une question, relire les issues ouvertes (y compris celles des au
 du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
+
+### 26 novembre 2026 — issue #109, fin de partie du jour 10 (branche `jeux/flocons-fin-109`)
+
+**Ce qui change :** `src/games/shared/scene.ts` (socle des jeux d'adresse : luge 2, friandises 6, flocons 10).
+Si `detruire()` est appelé **pendant une image** (fin de partie déclenchée depuis `surImage`), on arrête le
+ticker et on détruit l'application juste après (`setTimeout 0`) au lieu de la détruire au milieu de l'image.
+Les rappels sont parcourus sur une copie et s'arrêtent dès que la scène est détruite ; `detruire()` est idempotent.
+
+**Non reproduit ici :** ni dans l'atelier (WebGL, Canvas forcé, ticker avancé à la main façon `avancerCamera`),
+ni avant ni après la correction → la correction est **défensive**. Piste signalée dans #109 : le crochet
+`__PIXI_APP_INIT__` des tests garde la **dernière** application créée dans `__qaApp`, donc celle du jeu une fois
+la partie lancée ; tout appel de rendu sur `__qaApp` après la fin de partie vise une application détruite.
+Demandé à la Qualité de relancer son parcours du jour 10 sans la tolérance.
+
+**Prochaine étape :** jour 14 (biscuits + minuteur partagé, synchronisé). Demander d'abord ses règles à Alexandre.
 
 ### 26 novembre 2026 — jour 13, bonhomme de neige à deux (branche `jeux/bonhomme-jour13`)
 
