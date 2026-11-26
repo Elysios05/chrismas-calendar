@@ -35,6 +35,10 @@ export async function creerScene(hote: HTMLElement): Promise<ScenePixi | null> {
 
   const rappelsImage: ((dt: number) => void)[] = [];
   const rappelsTaille: ((l: number, h: number) => void)[] = [];
+  // Vrai pendant les rappels d'une image : détruire l'application à ce moment-là casse
+  // le rendu qui suit dans la même image (issue #109), on reporte donc la destruction.
+  let dansImage = false;
+  let detruite = false;
 
   const scene: ScenePixi = {
     app, monde,
@@ -43,15 +47,28 @@ export async function creerScene(hote: HTMLElement): Promise<ScenePixi | null> {
     surImage: (cb) => { rappelsImage.push(cb); },
     surTaille: (cb) => { rappelsTaille.push(cb); },
     detruire: () => {
+      if (detruite) return;
+      detruite = true;
       rappelsImage.length = 0;
       rappelsTaille.length = 0;
-      try { app.destroy(true, { children: true }); } catch { /* déjà détruite */ }
+      const detruireApp = () => {
+        try { app.destroy(true, { children: true }); } catch { /* déjà détruite */ }
+      };
+      if (dansImage) {
+        // Plus d'image suivante ; celle en cours se termine (rendu compris), puis on détruit.
+        app.ticker.stop();
+        setTimeout(detruireApp, 0);
+      } else detruireApp();
     },
   };
 
   app.ticker.add((t) => {
     const dt = Math.min(t.deltaMS, 50) / 1000;
-    for (const cb of rappelsImage) cb(dt);
+    dansImage = true;
+    try {
+      // Copie : un rappel peut vider la liste (fin de partie) pendant le parcours.
+      for (const cb of [...rappelsImage]) { if (detruite) break; cb(dt); }
+    } finally { dansImage = false; }
   });
 
   app.renderer.on("resize", (l: number, h: number) => {
