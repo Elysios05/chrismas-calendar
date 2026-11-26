@@ -33,7 +33,7 @@ Faits : 1, 2, 3, **5, 6** (PR #83 en attente de fusion), 7, 11, 15, 17. Restent 
 3. ~~Jour **9** (dessin à deviner)~~ — fait le 25 nov, branche `jeux/dessin-jour9`
 4. ~~Jour **10** (score à battre)~~ — fait le 26 nov (PR #102, fusionnée)
 5. ~~Jour **13** (en direct)~~ — fait le 26 nov (PR #107, fusionnée)
-6. Jour **14** (activité synchronisée)
+6. ~~Jour **14** (activité synchronisée)~~ — fait le 26 nov, branche `jeux/biscuits-jour14`
 7. Jour **18** (en direct)
 8. Jour **19** (défi photo)
 9. ~~Jour 21~~ → **confié à l'équipe Monde** (26 nov, #29)
@@ -52,6 +52,33 @@ Avant de poser une question, relire les issues ouvertes (y compris celles des au
 du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
+
+### 26 novembre 2026 — jour 14, biscuits chacun chez soi (branche `jeux/biscuits-jour14`)
+
+**Décisions prises avec Alexandre :** « cuisine à deux + photo ». Chacun choisit **sa** recette : Alexandre n'a
+pas de four, donc une recette **avec four pour Flavie** (sablés de Noël) et **sans four pour lui** (truffes au
+chocolat ; recettes choisies par moi, remplaçables dans le salon). On cuisine étape par étape en voyant où en est
+l'autre et ses minuteurs ; photo de la fournée à la fin, celle de l'autre se découvre après avoir posté la sienne,
+Pingou décerne un titre à chacun. **Absent :** chacun son tour (même journal, lu plus tard).
+
+**Décisions techniques prises seul :**
+- Journal de coups (`shared/partie.ts`) : `depart:<qui>`, `etape:<qui>:<i>`, `minuteur:<qui>:<i>` (heure de fin),
+  `photo:<qui>`. Un rechargement reprend à la bonne étape avec le minuteur en cours.
+- Si l'autre est en ligne et n'a pas commencé : écran « Top départ » (`live.setReady`, 3-2-1), ou « Commencer sans attendre ».
+- Minuteur = étape finissant par « [30 min] » (pas de liste imbriquée pour l'éditeur). Il sonne chez les deux
+  (son + Pingou), sauf s'il avait fini avant l'ouverture.
+- Titres : deux différents, tirés d'après les heures des deux photos → identiques des deux côtés.
+- `Polaroid` est maintenant exporté de `photo/index.tsx` (réutilisé).
+- Schéma `SCHEMA_BISCUITS_JOUR14` (intro, recettes, titres, idées de légende), `facultatif: true`.
+  Salon A & F : seulement la phrase d'accueil (« Flavie au four, Alexandre au frigo… »).
+
+**Vérifié :** à deux onglets (choix, top départ, minuteurs vus des deux côtés, photos, titres), seul, rechargement
+en pleine cuisine, 390×844 et 1280×800, `npm run capture -- --jour=14 --case=14` (case ouverte, 0 erreur).
+
+**Reste / à signaler :** le titre de la case dans `planning.ts` dit encore « Même recette de biscuits » alors que
+les recettes diffèrent (fichier du chef : signalé dans la PR).
+
+**Prochaine étape :** jour 18 (bataille de boules de neige, en direct). Demander d'abord ses règles à Alexandre.
 
 ### 26 novembre 2026 — issue #109, fin de partie du jour 10 (branche `jeux/flocons-fin-109`)
 
