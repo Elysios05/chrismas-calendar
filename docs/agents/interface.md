@@ -54,8 +54,8 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 titre de l'onglet « Calendrier de l'Avent — Prénom & Prénom » d'après le salon, titre générique sans salon ou avant
 son chargement (jamais les prénoms de repli), et remis en générique quand on quitte la carte. Un seul appel ajouté
 dans `Calendar` (`App.tsx`), puisque le chef m'a confié ce point. Vérifié en démo : générique sur l'écran de connexion,
-« … — Alexandre & Flavie » dans la carte. Remarque laissée au chef : l'écran de connexion affiche encore
-« Alexandre & Flavie » en dur (sous-titre).
+« … — Alexandre & Flavie » dans la carte. Remarque laissée au chef : l'écran de connexion affiche
+« Alexandre & Flavie » en sous-titre (prénoms par défaut, le salon n'est pas encore connu à ce moment-là).
 
 **Prochaine tâche** : D (jour 19), demander l'accord d'Alexandre ; puis B (défauts des jeux sur téléphone).
 
