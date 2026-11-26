@@ -523,3 +523,17 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     Mes scripts sont restés dans mon brouillon (`npm run capture` ne sait ni jouer ni injecter le sapin).
   - **Prochaine étape** : liste Renfort Jeux terminée. Relire #29 pour la suite (relecture du monde ou
     performance téléphone, options B et C du 26 nov).
+
+- 26 nov (nuit) — **#113, un habitant devant un cadeau empêchait de l'ouvrir** (case 10 au jour 10 : un patineur
+  passait devant le paquet et recevait le toucher). Branche `monde/toucher-cadeaux`, PR #117.
+  - Correction (option 1 de l'Interface, confirmée par la Qualité, décision technique) : quand on touche un habitant,
+    `Scene.cadeauSous(x, y)` refait le test de toucher en rendant les habitants intouchables le temps du test ;
+    si un cadeau ou son étiquette est dessous, c'est la case qui s'ouvre, sinon l'habitant est chatouillé comme avant.
+    La forme exacte du cadeau compte (pas de rayon arbitraire), et les trajets des habitants ne changent pas.
+  - Vérifié : build, oxlint, `npm run capture -- --jour=10 --case=10` (la case s'ouvre, 0 erreur, mobile et
+    ordinateur), et un patineur loin des cadeaux fait toujours sa pirouette (script dans mon brouillon).
+    Les e2e Playwright ne se lancent pas dans ce conteneur (navigateur attendu introuvable) ; la Qualité a proposé
+    d'ajouter un e2e « habitant devant le cadeau ».
+  - Reste signalé dans #113, hors correction : au jour 24 la nuit, une bande bleu foncé en dents de scie en bas de
+    l'écran du téléphone (bord du monde ?). **Prochaine étape** : regarder cette bande, puis option C (performance
+    téléphone) si le chef la confirme dans #29.
