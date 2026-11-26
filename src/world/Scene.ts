@@ -1,7 +1,7 @@
 // Scène PixiJS : terrain continu isométrique, caméra liée au défilement, ambiance, personnages
 import { Application, Container, Graphics, Rectangle, Sprite, Text, Texture } from "pixi.js";
 import { P, ZH, mix, poly, makePalette, type Palette, type Pt } from "./iso";
-import { buildTerrain, heightAt, key, type Cell, type DayNode, type PlacedProp, type Terrain } from "./terrain";
+import { buildTerrain, heightAt, key, type Cell, type DayNode, type PathCell, type PlacedProp, type Terrain } from "./terrain";
 import { drawProp, type AnimPart, type PropKind } from "./props";
 import { ZONES } from "./zones";
 import { weatherAt } from "./weather";
@@ -73,7 +73,7 @@ const ECRANS_GARDES = 1;
 /** Hauteur maximale d'un décor au-dessus de son pied (px) : sert à placer une tranche jamais dessinée.
  *  Large exprès : une tranche chargée un peu tôt ne coûte rien, une tranche qui apparaît en retard se voit.
  *  En développement, la console signale un décor plus haut que prévu. */
-const HAUTEUR_DECOR: Partial<Record<PropKind, number>> = { mountain: 520, ridge: 400, wheel: 260, workshop: 220, bigTree: 260, caveMouth: 260 };
+const HAUTEUR_DECOR: Partial<Record<PropKind, number>> = { mountain: 520, ridge: 400, wheel: 260, workshop: 220, bigTree: 260 };
 
 /** Un morceau du monde (bande de sol, tronçon de route ou tranche de décors) que l'on sait placer sans
  *  le dessiner. `min` / `max` : étendue verticale dans le monde, estimée puis mesurée au premier dessin. */
@@ -120,6 +120,9 @@ export class Scene {
   ground = new Container();
   objects = new Container();
   tint = new Graphics();
+  /** « sous la montagne » : dans la grotte, tout ce qui est dehors (avant l'entrée, après la sortie) est plongé dans le noir */
+  dehors = new Container();
+  private dehorsVoiles: Sprite[] = [];
   // aurores en voiles (choix d'Alexandre, issue #48)
   aurora = new Aurora();
   fog = new Sprite();
@@ -242,7 +245,7 @@ export class Scene {
     this.playerLight.blendMode = "add";
     this.playerLight.tint = 0xffe2a8;
     this.overlay.addChild(this.playerLight, this.giftLight, this.labels);
-    app.stage.addChild(this.world, this.tint, this.fog, this.cloudLayer, this.overlay, this.whiteout, this.confettiLayer, this.snowLayer);
+    app.stage.addChild(this.world, this.tint, this.dehors, this.fog, this.cloudLayer, this.overlay, this.whiteout, this.confettiLayer, this.snowLayer);
     const flakeTex = app.renderer.generateTexture(new Graphics().circle(6, 6, 6).fill(0xffffff));
     for (let i = 0; i < 260; i++) {
       const s = new Sprite(flakeTex);
@@ -734,8 +737,28 @@ export class Scene {
   }
 
   /** Une case de terrain : deux triangles éclairés selon leur pente */
+  /** couleurs de sol et de roche fondues le long du chemin, autour de la grotte (indexées par case du chemin) */
+  private fondu?: { ground: number; rock: number }[];
+  couleursSol(pi: number, zone: number) {
+    if (!this.fondu) {
+      const path = this.terrain.path, R = 6;
+      const avg = (cols: number[]) => {
+        const s = [0, 0, 0];
+        for (const c of cols) { s[0] += (c >> 16) & 255; s[1] += (c >> 8) & 255; s[2] += c & 255; }
+        return (Math.round(s[0] / cols.length) << 16) | (Math.round(s[1] / cols.length) << 8) | Math.round(s[2] / cols.length);
+      };
+      this.fondu = path.map((_, i) => {
+        const win = path.slice(Math.max(0, i - R), i + R + 1).map((p) => ZONES[p.zone]);
+        if (!win.some((z) => z.id === "grotte")) return { ground: ZONES[path[i].zone].ground, rock: ZONES[path[i].zone].atmo.rock };
+        return { ground: avg(win.map((z) => z.ground)), rock: avg(win.map((z) => z.atmo.rock)) };
+      });
+    }
+    return this.fondu[pi] ?? { ground: ZONES[zone].ground, rock: ZONES[zone].atmo.rock };
+  }
+
   dessinerCase(g: Graphics, cell: Cell, pal: Palette) {
     const { cells } = this.terrain;
+    const fondu = this.couleursSol(cell.pi, cell.zone);
     const c = pal.c;
     const V = this.terrain.V;
     const hv = (x: number, y: number) => V.get(key(x, y)) ?? 0;
@@ -768,13 +791,13 @@ export class Scene {
         // roche : seuil franc sur la pente, sans tache au hasard.
         // juste au-dessus du seuil, un liseré de neige poudreuse accroche l'arête
         const dust = Math.max(0, 1 - (steep - ROCK_T) / 0.09);
-        const base = mix(zdef.atmo.rock, 0xe9edf8, dust * 0.5);
+        const base = mix(fondu.rock, 0xe9edf8, dust * 0.5);
         col = bright < 0
           ? mix(base, ROCK_SHADOW, Math.min(0.5, -bright * 1.7))
           : mix(base, 0xffffff, Math.min(0.55, bright * 1.9));
       } else {
         // neige : modelé très doux, elle doit rester lisse
-        const base = zdef.ground;
+        const base = fondu.ground;
         col = bright < 0
           ? mix(base, SHADOW, Math.min(0.42, -bright * 1.5))
           : mix(base, 0xffffff, Math.min(0.35, bright * 1.2));
@@ -1369,6 +1392,61 @@ export class Scene {
     return ys.length;
   }
 
+  /** Dans la grotte, le dehors disparaît (choix d'Alexandre, 27 nov) : avant l'entrée et après la sortie, l'écran
+   *  passe au noir, avec un fondu sur le seuil. Le seuil suit la frontière des mondes, perpendiculaire au chemin
+   *  sur la carte (donc en biais à l'écran) : un voile par seuil, tourné dans ce sens. `force` (0 à 1) suit la
+   *  proximité de la grotte : en ressortant, le dehors se rallume. */
+  dessinerDehors(force: number) {
+    const L = this.terrain.path, caveZ = ZONES.findIndex((z) => z.id === "grotte");
+    const i0 = L.findIndex((p) => p.zone === caveZ);
+    let i1 = -1;
+    for (let i = L.length - 1; i >= 0; i--) if (L[i].zone === caveZ) { i1 = i; break; }
+    const t = Math.max(0, Math.min(1, (force - 0.15) / 0.45));
+    const alpha = 0.97 * t * t * (3 - 2 * t);
+    this.dehors.visible = alpha > 0.01 && i0 > 0 && i1 > 0 && i1 < L.length - 1;
+    if (!this.dehors.visible) return;
+    if (!this.dehorsVoiles.length) {
+      // texture blanche : opaque en haut, fondu sur le dernier seizième (le seuil), teintée ensuite
+      const cv = document.createElement("canvas");
+      cv.width = 4; cv.height = 1024;
+      const ctx = cv.getContext("2d");
+      if (!ctx) return;
+      const grad = ctx.createLinearGradient(0, 0, 0, 1024);
+      grad.addColorStop(0, "rgba(255,255,255,1)");
+      grad.addColorStop(15 / 16, "rgba(255,255,255,1)");
+      grad.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 4, 1024);
+      const tex = Texture.from(cv);
+      for (let k = 0; k < 2; k++) {
+        const v = new Sprite(tex);
+        v.anchor.set(0.5, 1);
+        this.dehors.addChild(v);
+        this.dehorsVoiles.push(v);
+      }
+    }
+    const sc = this.world.scale.x, FONDU = 150 * sc;
+    const seuils: [PathCell, PathCell][] = [[L[i0], L[i0 - 1]], [L[i1], L[i1 + 1]]]; // [dedans, dehors]
+    seuils.forEach(([a, b], k) => {
+      const v = this.dehorsVoiles[k];
+      const pa = P(a.x + 0.5, a.y + 0.5, a.z), pb = P(b.x + 0.5, b.y + 0.5, b.z);
+      // vers le dehors, à l'écran, et la frontière perpendiculaire sur la carte
+      const out = { x: pb.x - pa.x, y: pb.y - pa.y };
+      const ligne = b.x !== a.x ? P(0, 1) : P(1, 0);
+      let rot = Math.atan2(ligne.y, ligne.x);
+      if (Math.sin(rot) * out.x - Math.cos(rot) * out.y < 0) rot += Math.PI; // le haut du voile regarde dehors
+      const n = Math.hypot(out.x, out.y) || 1;
+      // le fondu est presque tout entier dans la grotte : le dehors est noir dès le seuil
+      const m = { x: (pa.x + pb.x) / 2 - (out.x / n) * 120, y: (pa.y + pb.y) / 2 - (out.y / n) * 120 };
+      v.position.set(this.world.x + m.x * sc, this.world.y + m.y * sc);
+      v.rotation = rot;
+      v.width = 8000;
+      v.height = FONDU * 16;
+      v.tint = this.pal.night ? 0x02060f : 0x0a1a2c;
+      v.alpha = alpha;
+    });
+  }
+
   zoneMix(wy: number) {
     for (let i = 0; i < this.boundaries.length; i++) {
       const b = this.boundaries[i];
@@ -1441,6 +1519,8 @@ export class Scene {
     if (zi !== this.zoneNow) { this.zoneAvant = this.zoneNow; this.zoneNow = zi; this.cb.onZone(zi); }
     // aurores boréales, seulement au pôle Nord : rubans glissés entre le sol et le décor (aurora.ts)
     const polarForce = (ZONES[zm.a].id === "pole-nord" ? 1 - zm.t : 0) + (ZONES[zm.b].id === "pole-nord" ? zm.t : 0);
+    const caveForce = (ZONES[zm.a].id === "grotte" ? 1 - zm.t : 0) + (ZONES[zm.b].id === "grotte" ? zm.t : 0);
+    this.dessinerDehors(caveForce);
     {
       // le calque vit dans le monde (pour passer sous le décor) mais se dessine en coordonnées d'écran
       const sc = this.world.scale.x;
@@ -1481,7 +1561,8 @@ export class Scene {
     }
     // neige
     const density = wx.snow, wind = wx.wind, speed = wx.speed;
-    const active = Math.floor(Math.min(1, density / 1.6) * this.flakes.length);
+    // sous la montagne, il ne neige presque plus
+    const active = Math.floor(Math.min(1, density / 1.6) * this.flakes.length * (1 - caveForce * 0.85));
     this.inclinaison.update(dt);
     const tilt = this.inclinaison;
     this.flakes.forEach((f, i) => {

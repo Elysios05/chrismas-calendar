@@ -30,6 +30,8 @@ export function heightAt(t: Terrain, x: number, y: number) {
 
 export const key = (x: number, y: number) => `${x},${y}`;
 const SEG = 4, TRANSITION = 6, LEAD = 4;
+/** Maquettes d'entrée de grotte (choix d'Alexandre en cours) : bouche creusée dans la falaise, ou gorge qui se resserre */
+
 /** Longueur du passage d'un monde au suivant. Entre le lac et le marché il est bien plus long :
  *  la forêt doit avoir le temps de s'éteindre avant que le marché commence. Entre le marché et la
  *  grotte aussi : la voûte d'entrée tombait juste à côté du cadeau 16 (issue #50). */
@@ -92,6 +94,16 @@ export function buildTerrain(seed = 2026): Terrain {
   }
   for (const n of nodes) n.z = path[n.idx].z;
 
+  /* ---------- parois de la grotte ----------
+   * Pas de porche (choix d'Alexandre, 27 nov) : les parois montent doucement depuis le marché et
+   * redescendent vers le pôle Nord, sur RAMPE pas. C'est l'assombrissement de l'écran (Scene) qui fait
+   * sentir qu'on passe sous la montagne. */
+  const caveZ = ZONES.findIndex((z) => z.id === "grotte");
+  const cavePath = path.filter((p) => p.zone === caveZ);
+  const rocheDebut = cavePath.length ? cavePath[0].i : -1;
+  const rocheFin = cavePath.length ? cavePath[cavePath.length - 1].i : -2;
+  const RAMPE = 5;
+
   /* ---------- cellules ---------- */
   const byRow = new Map<number, PathCell[]>();
   path.forEach((c) => { const k = c.x + c.y; if (!byRow.has(k)) byRow.set(k, []); byRow.get(k)!.push(c); });
@@ -123,10 +135,11 @@ export function buildTerrain(seed = 2026): Terrain {
         const wall = Math.max(0, bd - 1.6);
         h += front ? Math.min(wall * 0.25, 1.2) : wall * (0.32 + n * 0.3);
         h = Math.min(h, best.z + 5.5);
-      } else if (zdef.id === "grotte") {
+      } else if (best.i >= rocheDebut && best.i <= rocheFin) {
         // parois resserrées : le passage se referme sur la route, mais ses abords restent plats
         // plafonnée : depuis que le terrain est plus large, les parois lointaines montaient sans fin
-        const wall = Math.min(7, Math.max(0, bd - 2));
+        const sp = Math.min(best.i - rocheDebut, rocheFin - best.i);
+        const wall = Math.min(7, Math.max(0, bd - 2)) * Math.min(1, (sp + 1) / RAMPE);
         h += front ? Math.min(Math.pow(wall, 1.3) * 0.5, 2) : Math.pow(wall, 1.3) * 0.95;
       } else {
         h += bd > 3 ? (n - 0.5) * 0.35 : 0;
@@ -510,21 +523,8 @@ export function buildTerrain(seed = 2026): Terrain {
     place(p.kind, alt, o.r);
   }
 
-  // voûtes d'entrée et de sortie de la grotte, à cheval sur le chemin. Elles sont hautes : posées juste
-  // après une case, elles passeraient devant son cadeau (cône `devant`, 5 pas). On les met donc 6 pas après
-  // la case 16 (entrée) et la case 20 (sortie), là où le chemin file encore tout droit.
-  const caveZone = ZONES.findIndex((z) => z.id === "grotte");
-  if (caveZone >= 0) {
-    const jours = nodes.filter((n) => n.zone === caveZone).map((n) => n.day);
-    if (jours.length) for (const d of [Math.min(...jours) - 1, Math.max(...jours)]) {
-      const n = nodes.find((m) => m.day === d);
-      if (!n) continue;
-      const p = path[Math.min(path.length - 2, n.idx + 6)];
-      // la voûte est percée dans le sens de la marche : on lit la direction sur le chemin
-      const nxt = path[p.i + 1];
-      props.push({ kind: "caveMouth", x: p.x, y: p.y, z: p.z, zone: caveZone, seed: Math.floor(R() * 1e6), drop: 0, alongX: nxt.x !== p.x });
-    }
-  }
+  // les deux tirages des anciennes voûtes de la grotte sont gardés : le décor du reste du monde ne change pas
+  if (rocheDebut >= 0) { R(); R(); }
 
   /* ---------- lisière sud ----------
    * Au jour 24, la caméra descend sous la fin de la route : sur un téléphone haut, on voyait le bord du monde
