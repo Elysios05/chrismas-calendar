@@ -318,6 +318,12 @@ export class Scene {
   }
   private get maxScrollVoulu() {
     const d = Math.min(24, this.lastOpenDay);
+    // tout est ouvert : on peut descendre voir la place du pôle Nord et la piste d'envol (choix d'Alexandre),
+    // jusqu'à ce que le bout de la piste soit aux trois quarts de l'écran (au-delà, ce n'est plus que la forêt)
+    if (this.lastOpenDay >= 24 && this.terrain.bout) {
+      const yBout = P(this.terrain.bout.x, this.terrain.bout.y).y;
+      return Math.max(this.scrollForDay(24) + innerHeight * 0.15, (yBout - this.minY) * this.scale + this.padTop - innerHeight * 0.75);
+    }
     if (this.yFin === null) return Math.max(0, this.scrollForDay(d) + innerHeight * 0.15);
     // on s'arrête juste sous la case du jour (choix d'Alexandre), et jamais au-delà du moment où
     // la barrière de nuages touche le bas de l'écran : pas de vide derrière elle
@@ -582,6 +588,8 @@ export class Scene {
     let kBas = -Infinity;
     for (const c of this.terrain.cells.values()) if (c.x + c.y > kBas) kBas = c.x + c.y;
     this.basY = P((kBas + 1) / 2, (kBas + 1) / 2).y;
+    // au jour 24, on peut descendre jusqu'au bas du monde : la hauteur de page doit le permettre
+    this.maxY = Math.max(this.maxY, this.basY);
     this.resize();
     this.placeActors();
   }
@@ -777,7 +785,35 @@ export class Scene {
     const C: [number, number, number] = [x + 1, y + 1, hv(x + 1, y + 1)], D: [number, number, number] = [x, y + 1, hv(x, y + 1)];
     face([A, B, C]);
     face([A, C, D]);
+    if (cell.sol) this.dessinerSol(g, cell, pal);
     if (cell.lake && (x + y) % 3 === 0) poly(g, [P(x + 0.2, y + 0.3, 0), P(x + 0.6, y + 0.1, 0), P(x + 0.65, y + 0.18, 0), P(x + 0.25, y + 0.38, 0)], c(0xeaf8fd));
+  }
+
+  /** Place du pôle Nord (dalles de glace) et piste d'envol (neige damée balisée), posées sur la case */
+  dessinerSol(g: Graphics, cell: Cell, pal: Palette) {
+    const c = pal.c, T = this.terrain, { x, y } = cell;
+    const quad = (pts: [number, number][], col: number, alpha = 1) => poly(g, pts.map(([a, b]) => P(a, b, heightAt(T, a, b) + 0.01)), c(col), alpha);
+    const rect = (x0: number, x1: number, y0: number, y1: number, col: number, alpha = 1) => quad([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], col, alpha);
+    const meme = (dx: number, dy: number) => T.cells.get(key(x + dx, y + dy))?.sol === cell.sol;
+    if (cell.sol === "place") {
+      // dalles de glace claires, un liseré plus soutenu sur le pourtour
+      rect(x, x + 1, y, y + 1, 0xb9c8dc);
+      const m = 0.04;
+      for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+        const v = Math.sin((x * 2 + i) * 12.9 + (y * 2 + j) * 78.2) * 43758.5;
+        rect(x + i / 2 + m, x + (i + 1) / 2 - m, y + j / 2 + m, y + (j + 1) / 2 - m, [0xe4ebf5, 0xdbe4f0, 0xd2dcea][Math.floor((v - Math.floor(v)) * 3)]);
+      }
+      if (!meme(-1, 0)) rect(x, x + 0.08, y, y + 1, 0x8fa6c4);
+      if (!meme(1, 0)) rect(x + 0.92, x + 1, y, y + 1, 0x8fa6c4);
+      if (!meme(0, -1)) rect(x, x + 1, y, y + 0.08, 0x8fa6c4);
+      if (!meme(0, 1)) rect(x, x + 1, y + 0.92, y + 1, 0x8fa6c4);
+    } else {
+      // piste : neige damée, bords bleus, tirets au milieu
+      rect(x, x + 1, y, y + 1, 0xd7e1ee);
+      if (!meme(-1, 0)) rect(x, x + 0.1, y, y + 1, 0x6f8fb8);
+      if (!meme(1, 0)) rect(x + 0.9, x + 1, y, y + 1, 0x6f8fb8);
+      if (meme(-1, 0) && meme(1, 0) && y % 2 === 0) rect(x + 0.44, x + 0.56, y + 0.15, y + 0.85, 0xffffff, 0.9);
+    }
   }
 
   /** Un tronçon de route posé sur le relief, des pas i0 à i1 (exclu) */
