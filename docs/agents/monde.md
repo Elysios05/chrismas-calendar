@@ -13,7 +13,7 @@
 1. ~~**Jour 22**~~ fait le 26 nov (branche `monde/jeu-22`). « Tri des cadeaux » (score à battre, PixiJS) → `src/games/tri-cadeaux/` + son contenu dans `src/data/games/`
    (contenu **générique** par défaut + schéma ; s'il y a du contenu propre à Alexandre & Flavie, il va dans
    `src/data/salons/alexandre-flavie.ts`, géré par l'équipe Jeux : demande-lui par #84).
-2. Puis **jour 21** « Décorer le sapin à deux » (en direct, `joinLive`, voir #56) → `src/games/sapin/`.
+2. ~~**Jour 21**~~ fait le 26 nov (branche `monde/jeu-21`). « Décorer le sapin à deux » (en direct, `joinLive`, voir #56) → `src/games/sapin/`.
 3. Les lignes de ces deux jours dans `src/games/registry.ts` (conflit d'une ligne possible avec les Jeux : garder les deux).
 Règles : `src/games/README.md`, `ctx.prenoms`, aucun accord de genre, règles validées par Alexandre avant de coder.
 
@@ -493,3 +493,33 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     `npm run capture` ne sait pas jouer une partie : mon script est resté dans mon brouillon.
   - **Prochaine étape** : jour 21 « Décorer le sapin à deux » (en direct, `joinLive`, voir #56 et les jours 5 et 6
     de l'équipe Jeux), dans `src/games/sapin/`. Proposer d'abord 2–3 règles à Alexandre.
+
+- 26 nov (soir, suite) — **jour 22 fusionné** (PR #108). **Jour 21, le sapin à deux**, branche `monde/jeu-21` :
+  - **Choix d'Alexandre** (les trois recommandations) : **déco libre** sans score ni chrono (contre « missions de
+    Pingou » et « chacun sa moitié ») ; **miniature sur la carte** à côté du cadeau 21 jusqu'au 24 ;
+    **fin = étoile tenue à deux** en même temps (contre un bouton « Allumer » ou pas de fin).
+  - Panier : boule, guirlande (tracée au doigt), sucre d'orge, cœur, clochette, nœud, cadeau (au pied seulement),
+    7 couleurs sans vert. Au doigt, la déco flotte au-dessus du doigt pour rester visible. « Annuler » enlève
+    sa dernière déco. Limites : 40 décos et 6 guirlandes par personne.
+  - Direct : la main de l'autre (avec la déco qu'il tient et son prénom) passe par `live.emit("main")`, et
+    « je tiens l'étoile » par `live.emit("etoile")`. Rien de cela n'est enregistré. Les décos passent par le
+    journal (`shared/partie.ts`, clé `sapin`), et l'arrivée d'une déco de l'autre fait un éclat avec son prénom.
+  - Étoile : elle apparaît quand chacun a posé 6 décos. À deux, il faut la tenir 1,5 s ensemble. Seul, on la
+    « tient en veille » (coup `veille`), et elle monte quand l'autre la tient à son tour. Ensuite viennent les
+    lumières, le ciel de nuit, le feu d'artifice et `markCompleted`. La tenue se compte **en temps réel** : avec
+    le `dt` plafonné, elle ne finissait jamais sur une machine lente.
+  - Le liseré « qui a posé quoi », montré dans l'aperçu à Alexandre, a été remplacé par l'éclat et le prénom à
+    l'arrivée, plus lisible. À lui redemander s'il y tient.
+  - Fichiers : `src/games/sapin/` (index.tsx habillage, moteur.ts PixiJS, regles.ts pur, carte.ts, sapin.css),
+    `src/data/games/sapin-jour21.ts` (pas de schéma : rien à personnaliser), 3 lignes dans `registry.ts`,
+    et `src/world/Scene.ts` : `setSapin(SapinCarte | null)` dessine le petit sapin derrière le cadeau 21
+    (il grandit avec le nombre de décos, et ses décos restent vives la nuit une fois allumé), crochet `__calendrier.sapin`.
+  - **À brancher par le chef** dans `App.tsx` : `lireSapinCarte(backend).then((s) => scene.setSapin(s))`
+    (`src/games/sapin/carte.ts`) au démarrage et à la fermeture de la case 21. Demandé dans #29.
+  - Vérifié : build, oxlint (seuls les avertissements « only-export-components » communs à tous les jeux),
+    `npm run capture -- --jour=21 --case=21` (0 erreur), deux parties jouées à deux onglets dans l'atelier
+    (390×844 et 1280×800 : direct, main de l'autre, guirlande, étoile à deux, lumières), une partie en différé
+    (veille puis étoile au retour, rechargement), et la miniature sur la carte de jour et de nuit.
+    Mes scripts sont restés dans mon brouillon (`npm run capture` ne sait ni jouer ni injecter le sapin).
+  - **Prochaine étape** : liste Renfort Jeux terminée. Relire #29 pour la suite (relecture du monde ou
+    performance téléphone, options B et C du 26 nov).
