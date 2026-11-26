@@ -1,7 +1,7 @@
 // Scène PixiJS : terrain continu isométrique, caméra liée au défilement, ambiance, personnages
 import { Application, Container, Graphics, Rectangle, Sprite, Text, Texture } from "pixi.js";
 import { P, ZH, mix, poly, makePalette, type Palette, type Pt } from "./iso";
-import { buildTerrain, heightAt, key, type Cell, type DayNode, type PathCell, type PlacedProp, type Terrain } from "./terrain";
+import { buildTerrain, heightAt, key, type Cell, type DayNode, type PlacedProp, type Terrain } from "./terrain";
 import { drawProp, type AnimPart, type PropKind } from "./props";
 import { ZONES } from "./zones";
 import { weatherAt } from "./weather";
@@ -123,6 +123,7 @@ export class Scene {
   /** « sous la montagne » : dans la grotte, tout ce qui est dehors (avant l'entrée, après la sortie) est plongé dans le noir */
   dehors = new Container();
   private dehorsVoiles: Sprite[] = [];
+  private couvercle = new Graphics();
   // aurores en voiles (choix d'Alexandre, issue #48)
   aurora = new Aurora();
   fog = new Sprite();
@@ -1392,59 +1393,89 @@ export class Scene {
     return ys.length;
   }
 
-  /** Dans la grotte, le dehors disparaît (choix d'Alexandre, 27 nov) : avant l'entrée et après la sortie, l'écran
-   *  passe au noir, avec un fondu sur le seuil. Le seuil suit la frontière des mondes, perpendiculaire au chemin
-   *  sur la carte (donc en biais à l'écran) : un voile par seuil, tourné dans ce sens. `force` (0 à 1) suit la
-   *  proximité de la grotte : en ressortant, le dehors se rallume. */
+  /** La grotte et le dehors ne se voient jamais en même temps (choix d'Alexandre, 27 nov). Dans la grotte, ce qui
+   *  est avant l'entrée et après la sortie passe au noir ; dehors, c'est la grotte qui est recouverte. Les seuils
+   *  suivent la frontière des mondes, perpendiculaire au chemin sur la carte (donc en biais à l'écran).
+   *  `force` (0 à 1) dit à quel point la caméra est dans la grotte : les deux voiles se relaient en fondu. */
   dessinerDehors(force: number) {
     const L = this.terrain.path, caveZ = ZONES.findIndex((z) => z.id === "grotte");
     const i0 = L.findIndex((p) => p.zone === caveZ);
     let i1 = -1;
     for (let i = L.length - 1; i >= 0; i--) if (L[i].zone === caveZ) { i1 = i; break; }
-    const t = Math.max(0, Math.min(1, (force - 0.15) / 0.45));
-    const alpha = 0.97 * t * t * (3 - 2 * t);
-    this.dehors.visible = alpha > 0.01 && i0 > 0 && i1 > 0 && i1 < L.length - 1;
+    this.dehors.visible = i0 > 0 && i1 > 0 && i1 < L.length - 1;
     if (!this.dehors.visible) return;
+    const lisse = (x: number) => { const t = Math.max(0, Math.min(1, x)); return t * t * (3 - 2 * t); };
+    const aDehors = 0.97 * lisse((force - 0.5) / 0.3), aGrotte = 0.97 * lisse((0.5 - force) / 0.3);
     if (!this.dehorsVoiles.length) {
-      // texture blanche : opaque en haut, fondu sur le dernier seizième (le seuil), teintée ensuite
-      const cv = document.createElement("canvas");
-      cv.width = 4; cv.height = 1024;
-      const ctx = cv.getContext("2d");
-      if (!ctx) return;
-      const grad = ctx.createLinearGradient(0, 0, 0, 1024);
-      grad.addColorStop(0, "rgba(255,255,255,1)");
-      grad.addColorStop(15 / 16, "rgba(255,255,255,1)");
-      grad.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 4, 1024);
-      const tex = Texture.from(cv);
-      for (let k = 0; k < 2; k++) {
-        const v = new Sprite(tex);
+      // textures blanches teintées ensuite : « voile » opaque avec un fondu sur le dernier seizième, « bord » tout en fondu
+      const texture = (debutFondu: number) => {
+        const cv = document.createElement("canvas");
+        cv.width = 4; cv.height = 1024;
+        const ctx = cv.getContext("2d")!;
+        const grad = ctx.createLinearGradient(0, 0, 0, 1024);
+        grad.addColorStop(0, "rgba(255,255,255,1)");
+        grad.addColorStop(debutFondu, "rgba(255,255,255,1)");
+        grad.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 4, 1024);
+        return Texture.from(cv);
+      };
+      const voile = texture(15 / 16), bord = texture(0);
+      for (let k = 0; k < 4; k++) {
+        const v = new Sprite(k < 2 ? voile : bord);
         v.anchor.set(0.5, 1);
         this.dehors.addChild(v);
         this.dehorsVoiles.push(v);
       }
+      this.dehors.addChild(this.couvercle);
     }
-    const sc = this.world.scale.x, FONDU = 150 * sc;
-    const seuils: [PathCell, PathCell][] = [[L[i0], L[i0 - 1]], [L[i1], L[i1 + 1]]]; // [dedans, dehors]
-    seuils.forEach(([a, b], k) => {
-      const v = this.dehorsVoiles[k];
+    const sc = this.world.scale.x, FONDU = 150 * sc, noir = this.pal.night ? 0x02060f : 0x0a1a2c;
+    const ecran = (q: { x: number; y: number }) => ({ x: this.world.x + q.x * sc, y: this.world.y + q.y * sc });
+    const seuils = ([[L[i0], L[i0 - 1]], [L[i1], L[i1 + 1]]] as const).map(([a, b]) => {
       const pa = P(a.x + 0.5, a.y + 0.5, a.z), pb = P(b.x + 0.5, b.y + 0.5, b.z);
-      // vers le dehors, à l'écran, et la frontière perpendiculaire sur la carte
-      const out = { x: pb.x - pa.x, y: pb.y - pa.y };
-      const ligne = b.x !== a.x ? P(0, 1) : P(1, 0);
+      const n = Math.hypot(pb.x - pa.x, pb.y - pa.y) || 1;
+      const out = { x: (pb.x - pa.x) / n, y: (pb.y - pa.y) / n }; // vers le dehors, à l'écran
+      const ligne = b.x !== a.x ? P(0, 1) : P(1, 0);              // la frontière, perpendiculaire sur la carte
       let rot = Math.atan2(ligne.y, ligne.x);
-      if (Math.sin(rot) * out.x - Math.cos(rot) * out.y < 0) rot += Math.PI; // le haut du voile regarde dehors
-      const n = Math.hypot(out.x, out.y) || 1;
-      // le fondu est presque tout entier dans la grotte : le dehors est noir dès le seuil
-      const m = { x: (pa.x + pb.x) / 2 - (out.x / n) * 120, y: (pa.y + pb.y) / 2 - (out.y / n) * 120 };
-      v.position.set(this.world.x + m.x * sc, this.world.y + m.y * sc);
-      v.rotation = rot;
-      v.width = 8000;
-      v.height = FONDU * 16;
-      v.tint = this.pal.night ? 0x02060f : 0x0a1a2c;
-      v.alpha = alpha;
+      if (Math.sin(rot) * out.x - Math.cos(rot) * out.y < 0) rot += Math.PI; // « haut » du sprite = dehors
+      return { mid: { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 }, out, rot };
     });
+    seuils.forEach(({ mid, out, rot }, k) => {
+      // dans la grotte : voile sur le dehors, son fondu presque tout entier côté grotte (le dehors est noir dès le seuil)
+      const v = this.dehorsVoiles[k];
+      v.visible = aDehors > 0.01;
+      v.position.copyFrom(ecran({ x: mid.x - out.x * 120, y: mid.y - out.y * 120 }));
+      v.rotation = rot;
+      v.width = 8000; v.height = FONDU * 16;
+      v.tint = noir; v.alpha = aDehors;
+      // dehors : bord du couvercle, qui s'efface vers l'extérieur sur la longueur du fondu
+      const b = this.dehorsVoiles[k + 2];
+      b.visible = aGrotte > 0.01;
+      b.position.copyFrom(ecran({ x: mid.x + out.x * 110, y: mid.y + out.y * 110 }));
+      b.rotation = rot + Math.PI;
+      b.width = 8000; b.height = FONDU;
+      b.tint = noir; b.alpha = aGrotte;
+    });
+    // les étiquettes des cases vivent dans un calque au-dessus des voiles : on les efface avec eux
+    for (const [day, cont] of this.gifts) {
+      const lab = (cont as Container & { meta?: { label?: Container } }).meta?.label;
+      const n = this.terrain.nodes[day - 1];
+      if (lab && n) lab.alpha = 1 - Math.min(1, (n.zone === caveZ ? aGrotte : aDehors) / 0.97);
+    }
+    // dehors : la grotte entière est recouverte, entre les deux seuils (parallèles : le chemin y va dans le même sens)
+    const g = this.couvercle;
+    g.clear();
+    g.visible = aGrotte > 0.01;
+    if (g.visible) {
+      // une seule direction pour les deux seuils, sinon le quadrilatère se croise
+      const d = { x: Math.cos(seuils[0].rot), y: Math.sin(seuils[0].rot) }, BIG = 6000 / sc;
+      const pts = seuils.flatMap(({ mid, out }, k) => {
+        const m = { x: mid.x + out.x * 110 - (out.x * FONDU) / sc, y: mid.y + out.y * 110 - (out.y * FONDU) / sc };
+        const s = k === 0 ? 1 : -1;
+        return [ecran({ x: m.x + d.x * BIG * s, y: m.y + d.y * BIG * s }), ecran({ x: m.x - d.x * BIG * s, y: m.y - d.y * BIG * s })];
+      });
+      g.poly(pts.flatMap((q) => [q.x, q.y])).fill({ color: noir, alpha: aGrotte });
+    }
   }
 
   zoneMix(wy: number) {
