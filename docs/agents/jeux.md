@@ -78,6 +78,7 @@ générique leur convient tel quel (à ajouter si Alexandre veut une touche pers
 jour 3 inchangé ; `npm run capture -- --jour=19 --case=19` mobile + ordinateur : 0 erreur console.
 
 **Prochaine étape :** jour 23 (film de Noël lancé au même moment, activité synchronisée) : demander d'abord ses
+règles à Alexandre.
 
 ### 26 novembre 2026 — issue #129, petites cibles tactiles sur téléphone (branche `jeux/cibles-tactiles-129`)
 
