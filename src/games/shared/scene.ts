@@ -17,6 +17,17 @@ export type ScenePixi = {
   detruire(): void;
 };
 
+/**
+ * Détruit une application sans toucher aux ressources globales de PixiJS (issue #109).
+ * Attention : `app.destroy(true)` passe `true` au moteur de rendu, ce qui vide aussi les réserves
+ * partagées par toutes les applications de la page (lots de dessin, textures temporaires…). La réserve
+ * des lots garde des références vers des lots encore utilisés par la carte : ils sont détruits, et la
+ * carte plante à l'image suivante (« Cannot read properties of null (reading 'clear') »).
+ */
+export function detruireApplication(app: Application): void {
+  app.destroy({ removeView: true }, { children: true });
+}
+
 export async function creerScene(hote: HTMLElement): Promise<ScenePixi | null> {
   const app = new Application();
   await app.init({
@@ -27,7 +38,7 @@ export async function creerScene(hote: HTMLElement): Promise<ScenePixi | null> {
     autoDensity: true,
   });
   // L'hôte peut avoir disparu pendant l'initialisation (jeu fermé très vite).
-  if (!hote.isConnected) { app.destroy(true, { children: true }); return null; }
+  if (!hote.isConnected) { detruireApplication(app); return null; }
   hote.appendChild(app.canvas);
 
   const monde = new Container();
@@ -35,8 +46,8 @@ export async function creerScene(hote: HTMLElement): Promise<ScenePixi | null> {
 
   const rappelsImage: ((dt: number) => void)[] = [];
   const rappelsTaille: ((l: number, h: number) => void)[] = [];
-  // Vrai pendant les rappels d'une image : détruire l'application à ce moment-là casse
-  // le rendu qui suit dans la même image (issue #109), on reporte donc la destruction.
+  // Vrai pendant les rappels d'une image : on reporte la destruction après le rendu de l'image en cours,
+  // pour ne pas rendre une scène à moitié détruite.
   let dansImage = false;
   let detruite = false;
 
@@ -52,7 +63,7 @@ export async function creerScene(hote: HTMLElement): Promise<ScenePixi | null> {
       rappelsImage.length = 0;
       rappelsTaille.length = 0;
       const detruireApp = () => {
-        try { app.destroy(true, { children: true }); } catch { /* déjà détruite */ }
+        try { detruireApplication(app); } catch { /* déjà détruite */ }
       };
       if (dansImage) {
         // Plus d'image suivante ; celle en cours se termine (rendu compris), puis on détruit.

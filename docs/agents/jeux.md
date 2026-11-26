@@ -53,6 +53,24 @@ du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
 
+### 26 novembre 2026 — issue #109 (suite), la vraie cause de `reading 'clear'` (branche `jeux/clear-jour10-109`)
+
+**Cause trouvée :** `app.destroy(true, …)` passe `true` au moteur de rendu, et PixiJS 8 comprend « libère aussi les
+ressources **globales** » (`GlobalResourceRegistry.release()`). La réserve globale des lots de dessin (`Batcher`) garde
+des références vers des lots **encore utilisés par la carte** : ils sont détruits (`textures = null`), et la carte
+plante à l'image suivante (`DefaultBatcher.break` → `textures.clear()`). Le report de la destruction (#112) ne pouvait
+donc rien y changer. Visible surtout en rendu Canvas.
+
+**Correctif :** `detruireApplication(app)` dans `src/games/shared/scene.ts` = `app.destroy({ removeView: true }, { children: true })`.
+Tous les jeux d'adresse (luge, friandises, flocons, tri-cadeaux, sapin) en profitent. **Règle : ne jamais écrire
+`app.destroy(true…)` pour une application PixiJS tant qu'une autre vit dans la page.**
+
+**Vérifié :** reproduction Playwright du jour 10 jouée jusqu'à la fin, WebGL coupé (`--disable-3d-apis`, rendu Canvas,
+~1 min) : `main` → 1 erreur (la pile de la Qualité), branche → 0 erreur, 3 passages. `npm run build` OK,
+`npm run capture -- --jour=10 --case=10` : 0 erreur.
+
+**Signalé au chef (#109) :** `src/App.tsx` l. 148 et 158 fait aussi `app.destroy(true…)` pour la carte (même piège).
+
 ### 26 novembre 2026 — jour 14, biscuits chacun chez soi (branche `jeux/biscuits-jour14`)
 
 **Décisions prises avec Alexandre :** « cuisine à deux + photo ». Chacun choisit **sa** recette : Alexandre n'a
