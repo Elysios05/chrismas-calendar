@@ -20,6 +20,10 @@ export type SceneCallbacks = {
   onWeather?: (label: string) => void;
 };
 
+/** Jour 21 : le sapin décoré à deux, dessiné en petit à côté du cadeau */
+const JOUR_SAPIN = 21;
+/** Résumé du sapin pour la carte (même forme que `ResumeCarte` de src/games/sapin/regles.ts) */
+export type SapinCarte = { points: { x: number; y: number; couleur: number }[]; guirlandes: number[]; etoile: boolean; total: number };
 const GIFT_COLORS = [0xd9354b, 0x2fa37a, 0x3f7fb5, 0xf0a33a, 0x8e4fb5, 0xe0607a];
 const ROAD = 0x3b3340;
 
@@ -190,6 +194,8 @@ export class Scene {
   sound: SoundApi | null = null;
   /** Reconstruction en cours, morceau par morceau, à raison de quelques millisecondes par image */
   pending: { b: Built; steps: Generator<void, void> } | null = null;
+  /** Jour 21 : le sapin décoré (null = pas encore de déco) */
+  sapin: SapinCarte | null = null;
   /** Anciens dessins à détruire, eux aussi par petits paquets : tout détruire d'un coup gelait l'image */
   trash: Container[] = [];
   /** Boucle de tâches qui fait avancer la reconstruction et le ménage, hors des images */
@@ -275,6 +281,8 @@ export class Scene {
         /** issue #14 : combien de lots du monde sont dessinés en ce moment, sur combien */
         lots: () => ({ total: this.lots.length, dessines: this.charges.size, enAttente: this.aPrecharger.length + (this.prechargement ? 1 : 0) }),
         joueurs: (j: Record<Who, JoueurSalon> | null) => this.setJoueurs(j),
+        /** jour 21 : dessine le petit sapin décoré à côté du cadeau (null = l'enlève) */
+        sapin: (sp: SapinCarte | null) => this.setSapin(sp),
         /** issue #12 : présenter un monde tout de suite (index dans ZONES), ou tout oublier pour revoir les survols */
         presenter: (zone: number) => this.presenterMonde(zone),
         oublierPresentations: () => { oublierPresentations(this.leader); this.presentes = null; },
@@ -329,6 +337,56 @@ export class Scene {
       if (this.pending?.b.people[who]) this.pending.b.people[who].habiller(c);
     }
   }
+  /**
+   * Jour 21 : le sapin que l'on décore à deux, en miniature à côté du cadeau, jusqu'au 24.
+   * Branché par App.tsx : `lireSapinCarte(backend).then((s) => scene.setSapin(s))` (src/games/sapin/carte.ts),
+   * à l'ouverture et à la fermeture de la case 21. null ou aucune déco = pas de sapin.
+   */
+  setSapin(s: SapinCarte | null) {
+    this.sapin = s && s.total > 0 ? s : null;
+    const c = this.gifts.get(JOUR_SAPIN);
+    if (c) this.dessinerSapin(c, this.pal);
+    const p = this.pending?.b.gifts.get(JOUR_SAPIN);
+    if (p && this.pending) this.dessinerSapin(p, this.pending.b.pal);
+  }
+
+  private dessinerSapin(cont: Container, pal: Built["pal"]) {
+    const ancien = cont.getChildByLabel("sapin");
+    if (ancien) { cont.removeChild(ancien); ancien.destroy({ children: true }); }
+    const s = this.sapin;
+    if (!s) return;
+    const pos = (cont as Container & { meta: { sapinPos: { x: number; y: number; u: number } } }).meta.sapinPos;
+    const c = pal.c;
+    const g = new Graphics();
+    g.label = "sapin";
+    // il grandit un peu à mesure qu'on le décore
+    const H = pos.u * (1.9 + 0.6 * Math.min(1, s.total / 16)), W = H * 0.72;
+    const X = (x: number) => pos.x + x * W / 2;
+    const Y = (y: number) => pos.y - H + y * H;
+    g.ellipse(pos.x, pos.y + 2, W * 0.45, W * 0.16).fill({ color: 0x1b2340, alpha: 0.18 });
+    g.rect(X(-0.1), Y(0.86), W * 0.1, H * 0.16).fill(c(0x7a4a2c));
+    const etages: [number, number, number][] = [[0.5, 1.0, 0.9], [0.27, 0.72, 0.68], [0, 0.45, 0.46]];
+    for (const [a, b, w] of etages) {
+      g.poly([X(0), Y(a), X(w), Y(b), X(-w), Y(b)]).fill(c(0x2f8a55));
+      g.poly([X(0), Y(a), X(w), Y(b), X(0), Y(b)]).fill(c(0x22693f));
+      g.ellipse(X(0), Y(b), w * W / 2, H * 0.025).fill(c(0xf4f8fd));
+    }
+    // sapin allumé : les décos gardent leur vraie couleur la nuit, comme des lumières
+    const lum = s.etoile ? pal.lit : c;
+    s.guirlandes.forEach((couleur, i) => {
+      const y0 = 0.3 + i * 0.17;
+      g.moveTo(X(-0.35 - i * 0.1), Y(y0)).quadraticCurveTo(X(0), Y(y0 + 0.12), X(0.4 + i * 0.1), Y(y0 + 0.05))
+        .stroke({ width: Math.max(1, H * 0.025), color: lum(couleur) });
+    });
+    for (const p of s.points) g.circle(X(p.x * 0.95), Y(p.y * 0.92 + 0.04), Math.max(1.3, H * 0.035)).fill(lum(p.couleur));
+    if (s.etoile) {
+      // allumé : un halo doux et l'étoile au sommet
+      g.circle(X(0), Y(0.42), H * 0.55).fill({ color: 0xffd66b, alpha: pal.night ? 0.2 : 0.08 });
+      g.star(X(0), Y(-0.02), 5, H * 0.11, H * 0.05).fill(0xffd25e).stroke({ width: 1, color: 0xc98a12 });
+    }
+    cont.addChild(g);
+  }
+
   /** Ne redessine que les cases dont l'état a changé : reconstruire toute la scène gelait l'image */
   setStates(states: Map<number, NodeState>) {
     const before = this.states;
@@ -952,7 +1010,11 @@ export class Scene {
     cont.eventMode = "static";
     cont.cursor = "pointer";
     cont.on("pointertap", () => this.cb.onNodeTap(n.day));
-    (cont as Container & { meta: object }).meta = { inner, glow, lid, st, wx: o.x, wy: cont.y, label, labelY };
+    // jour 21 : la place du petit sapin décoré, derrière le cadeau à droite (u = hauteur du cadeau en pixels)
+    const pied = rel(P(n.x + 1.0, n.y + 0.2));
+    const sapinPos = { x: pied.x, y: pied.y, u: o.y - P(n.x + 0.5, n.y + 0.5, h).y };
+    (cont as Container & { meta: object }).meta = { inner, glow, lid, st, wx: o.x, wy: cont.y, label, labelY, sapinPos };
+    if (n.day === JOUR_SAPIN) this.dessinerSapin(cont, b?.pal ?? this.pal);
     (b?.gifts ?? this.gifts).set(n.day, cont);
     return cont;
   }
