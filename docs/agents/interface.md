@@ -43,8 +43,8 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 7. ~~Issue au chef pour la suite~~ : réponse reçue dans **#116** (26 nov) :
    - A (erreurs #75 sur vrai Supabase) : **après le 27**, Alexandre donnera URL + clé anonyme dans `.env.local` (jamais commité).
    - ~~C : #110 côté React~~ — fait (PR `interface/titre-salon`).
-   - **B** : lister les défauts de **tous les jeux** sur 390×844, corriger ce qui est dans `src/ui/`, issue [Jeux] pour le reste.
-   - **D** : jour 19 (défi photo, proche du jeu photo du jour 3) — **Alexandre a dit oui (26 nov)**, annoncé dans #116. À faire après B ; attendre que le chef confirme dans #116 les fichiers de `src/games/` qu'il me confie.
+   - ~~**B**~~ : revue des 15 jeux sur 390×844 — fait le 26 nov (PR `interface/revue-jeux-mobile`, issue [Jeux] **#129** pour les petites cibles tactiles).
+   - **D** (prochaine tâche) : jour 19 (défi photo, proche du jeu photo du jour 3) — **Alexandre a dit oui (26 nov)**, annoncé dans #116. À faire après B ; attendre que le chef confirme dans #116 les fichiers de `src/games/` qu'il me confie.
 
 ## Journal
 
@@ -449,3 +449,17 @@ Tickets #17 et #25.
   De 166 px à 135 px de haut.
 - Fond de page de nuit : écrit sous `html[data-nuit="oui"]`. Le chef a posé la ligne qui manquait
   dans `App.tsx` ; c'est en place.
+
+### Revue des jeux sur téléphone (branche `interface/revue-jeux-mobile`, 26 nov)
+Point B de #116. Les 15 jeux passés en 390×844 (script jetable hors dépôt, sur les aides de `tests/qa/commun.mjs`,
+accord d'Alexandre : `npm run capture` ne sait pas entrer dans un jeu).
+- **Bug corrigé** : « Revoir la case » passait directement à l'étape jeu sans relire le salon → prénoms « Joueur 2 »,
+  contenu par défaut au lieu du contenu du couple, et lettre déjà lue affichée vide. Le bouton repasse par `commencer()`.
+- **Fenêtre pendant une partie** (`.sheet-panel--jeu`), **validé par Alexandre** (option « titre sur 1 ligne ») :
+  pleine hauteur sur téléphone (820 px max sur ordinateur), en-tête d'une ligne sans la date ni le type (titre coupé
+  par « … » s'il est long), le jeu remplit le reste, Pingou se range dessous. Avant : clavier du pendu et bas des mots
+  croisés coupés, bulle de Pingou sous le pli, double défilement. `.jeu-boite` voit son `min-height` neutralisé
+  dans ce cadre (prévenu dans #129).
+- Pour les Jeux (#129) : cases des mots croisés 22 px, pastilles du sapin 30 px, touches du pendu 27 px de large.
+- Prochaine étape : **D, jour 19** (attendre que le chef confirme dans #116 les fichiers de `src/games/` confiés),
+  puis **A** après le 27 (erreurs #75 sur vrai Supabase).
