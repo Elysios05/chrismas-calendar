@@ -27,6 +27,7 @@ import { PICTIONARY_JOUR5, SCHEMA_PICTIONARY_JOUR5 } from "../data/games/piction
 import { FRIANDISES_JOUR6 } from "../data/games/friandises-jour6";
 import { DESSIN_JOUR9, SCHEMA_DESSIN_JOUR9 } from "../data/games/dessin-jour9";
 import { FLOCONS_JOUR10 } from "../data/games/flocons-jour10";
+import { TRI_CADEAUX_JOUR22 } from "../data/games/tri-cadeaux-jour22";
 
 type Chargeur = () => Promise<GameModule>;
 
@@ -42,6 +43,7 @@ const JEUX: Partial<Record<DayNumber, Chargeur>> = {
   11: () => import("./synchro/index").then((m) => m.synchroJour11),
   15: () => import("./pendu/index").then((m) => m.penduJour15),
   17: () => import("./motscroises/index").then((m) => m.motsCroisesJour17),
+  22: () => import("./tri-cadeaux/index").then((m) => m.triCadeauxJour22),
   // les autres jours : à venir (défis photo, en direct, pendu, mots croisés…)
 };
 
@@ -58,6 +60,7 @@ const CONTENU: Partial<Record<DayNumber, unknown>> = {
   11: SYNCHRO_JOUR11,
   15: PENDU_JOUR15,
   17: MOTSCROISES_JOUR17,
+  22: TRI_CADEAUX_JOUR22,
 };
 
 /** Ce qu'un couple peut personnaliser, par jour. Absent = rien à personnaliser (jeux d'adresse : 2, 6, 10). */
