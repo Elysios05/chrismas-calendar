@@ -6,6 +6,13 @@ import { RaceIndicator, course } from "./RaceIndicator";
 /** Couleurs de texte de la course (assombries : le rouge vif ne tient pas le contraste en 14 px). */
 const COULEUR_TEXTE: Record<Who, string> = { alexandre: "#2a5fb4", flavie: "#a3192f" };
 
+/** Noms courts des mondes sur téléphone, sinon ils sont coupés (choix d'Alexandre, 26 nov).
+ *  Les autres noms tiennent tels quels. Le lecteur d'écran lit toujours le nom complet. */
+const NOM_COURT: Record<string, string> = {
+  "Le Village de Saint-Nicolas": "Saint-Nicolas",
+  "La Forêt et le Lac gelé": "Forêt & Lac gelé",
+};
+
 export type HudProps = {
   me: Who;
   progress: Record<Who, Progress>;
@@ -72,7 +79,8 @@ export function Hud(p: HudProps) {
           </span>
           <span className="entete-monde" key={p.zoneKey}>
             {p.demo && <span className="entete-demo entete-demo--etroit">démo</span>}
-            {p.zoneName}
+            <span className="entete-monde-long">{p.zoneName}</span>
+            <span className="entete-monde-court" aria-hidden="true">{NOM_COURT[p.zoneName] ?? p.zoneName}</span>
           </span>
         </div>
 

@@ -551,6 +551,14 @@ html[data-nuit="oui"] .entete-ilot { background: #1b2747; color: #fff; box-shado
   animation: zoneIn .7s cubic-bezier(.2,1.5,.4,1);
 }
 html[data-nuit="oui"] .entete-monde { color: #c9d2ea; }
+/* sur téléphone, nom court (NOM_COURT dans Hud.tsx) ; le nom complet reste pour le lecteur d'écran */
+.entete-monde-court { display: none; }
+@media (max-width: 699px) {
+  .entete-monde-court { display: inline; }
+  .entete-monde-long {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+}
 
 .entete-droite { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
 .entete-capsule { display: flex; align-items: center; height: 52px; padding: 0 4px; }
