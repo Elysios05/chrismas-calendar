@@ -39,7 +39,7 @@ const cleDevine = (qui: Who) => `devine:${qui}`;
 
 /* ---------- polaroïd ---------- */
 
-function Polaroid({ url, legende, auteur, penche, vide }: {
+export function Polaroid({ url, legende, auteur, penche, vide }: {
   url?: string; legende?: string; auteur: string; penche: "g" | "d"; vide?: string;
 }) {
   return (

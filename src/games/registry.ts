@@ -28,6 +28,7 @@ import { FRIANDISES_JOUR6 } from "../data/games/friandises-jour6";
 import { DESSIN_JOUR9, SCHEMA_DESSIN_JOUR9 } from "../data/games/dessin-jour9";
 import { FLOCONS_JOUR10 } from "../data/games/flocons-jour10";
 import { BONHOMME_JOUR13 } from "../data/games/bonhomme-jour13";
+import { BISCUITS_JOUR14, SCHEMA_BISCUITS_JOUR14 } from "../data/games/biscuits-jour14";
 import { TRI_CADEAUX_JOUR22 } from "../data/games/tri-cadeaux-jour22";
 import { SAPIN_JOUR21 } from "../data/games/sapin-jour21";
 
@@ -44,6 +45,7 @@ const JEUX: Partial<Record<DayNumber, Chargeur>> = {
   10: () => import("./flocons/index").then((m) => m.floconsJour10),
   11: () => import("./synchro/index").then((m) => m.synchroJour11),
   13: () => import("./bonhomme/index").then((m) => m.bonhommeJour13),
+  14: () => import("./biscuits/index").then((m) => m.biscuitsJour14),
   15: () => import("./pendu/index").then((m) => m.penduJour15),
   17: () => import("./motscroises/index").then((m) => m.motsCroisesJour17),
   21: () => import("./sapin/index").then((m) => m.sapinJour21),
@@ -63,6 +65,7 @@ const CONTENU: Partial<Record<DayNumber, unknown>> = {
   10: FLOCONS_JOUR10,
   11: SYNCHRO_JOUR11,
   13: BONHOMME_JOUR13,
+  14: BISCUITS_JOUR14,
   15: PENDU_JOUR15,
   17: MOTSCROISES_JOUR17,
   21: SAPIN_JOUR21,
@@ -77,6 +80,7 @@ const SCHEMAS: Partial<Record<DayNumber, SchemaContenu>> = {
   7: SCHEMA_REBUS_JOUR7,
   9: SCHEMA_DESSIN_JOUR9,
   11: SCHEMA_SYNCHRO_JOUR11,
+  14: SCHEMA_BISCUITS_JOUR14,
   15: SCHEMA_PENDU_JOUR15,
   17: SCHEMA_MOTSCROISES_JOUR17,
 };

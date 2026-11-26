@@ -595,6 +595,9 @@ export const CONTENU_ALEXANDRE_FLAVIE: ContenuSalon = {
       }
     ]
   },
+  "14": {
+    "intro": "Flavie au four, Alexandre au frigo : même goûter, deux cuisines. On se raconte tout, étape par étape !"
+  },
   "15": {
     "motsParPartie": 3,
     "mots": [
