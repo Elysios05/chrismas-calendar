@@ -208,6 +208,7 @@ export const PINGOU_SALON = {
   contenuEnregistre: (): PingouLine => ({ text: "C'est rangé dans l'enveloppe ! Le jeu prendra vos mots à vous.", face: "content" }),
   contenuOriginal: (): PingouLine => ({ text: "Revoilà mes questions d'origine. Enregistre si tu veux les garder.", face: "clin" }),
   contenuQuitter: (): PingouLine => ({ text: "Tu pars sans enregistrer ? Tes changements vont fondre comme neige.", face: "surpris" }),
+  contenuSurprise: (prenom: string): PingouLine => ({ text: `${prenom} a préparé les questions des jeux. C'est une surprise 🤫`, face: "clin" }),
   contenuIncomplet: (): PingouLine => ({ text: "Presque ! Il reste un souci dans les cartes marquées en rouge.", face: "surpris" }),
   invitationInvalide: (): PingouLine => ({ text: "Ce lien ne marche plus. Demande un nouveau lien à la personne qui te l'a envoyé.", face: "triste" }),
 } as const;
