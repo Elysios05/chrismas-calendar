@@ -195,6 +195,7 @@ button { font-family: inherit; cursor: pointer; }
    Plus de double défilement (fenêtre puis jeu) ni de bulle cachée sous le pli. */
 .sheet-panel--jeu { height: min(100dvh, 900px); max-height: none; overflow: hidden; gap: 10px; padding-top: 14px; }
 .sheet-panel--jeu .sheet-head { align-items: center; }
+.sheet-panel--jeu .sheet-head > div { min-width: 0; } /* sinon le titre d'une ligne pousse la croix hors de l'écran */
 .sheet-panel--jeu .sheet-emoji { font-size: 28px; }
 .sheet-panel--jeu .sheet-day { display: none; }
 .sheet-panel--jeu .sheet-title { margin: 0; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
