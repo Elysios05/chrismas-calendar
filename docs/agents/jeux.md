@@ -12,6 +12,13 @@
 - **Synchronisé** : biscuits + minuteur partagé (14), film lancé ensemble (23).
 
 ## À faire (par priorité) — mis à jour par le chef le 24 nov
+**🎯 Plan final (chef, 27 nov — validé par Alexandre)** : à finir **samedi 28 au soir**.
+1. **PRIORITÉ ABSOLUE : contenu d'Alexandre & Flavie** dans `src/data/salons/alexandre-flavie.ts` + contenu par défaut
+   générique (voir le point juste en dessous). Le chef le chargera ensuite dans leur vrai salon Supabase.
+2. ~~#129 cibles tactiles~~ (PR #131, fusionnée).
+3. Le **jour 19 est confié à l'Interface**, le **jour 23 au Monde** : ne les fais pas.
+4. Ensuite : corrections remontées par la Qualité ; fermer #56 et #109 quand la Qualité confirme.
+
 **🆕 Contenu d'Alexandre & Flavie séparé du contenu générique (décision d'Alexandre, 25 nov — PRIORITÉ 1)** :
 - Copier **tout** le contenu actuel de `src/data/games/` (questions, mots, rébus, LJUBLJANA, « à vous deux »…) dans
   `src/data/salons/alexandre-flavie.ts` : un objet `CONTENU_ALEXANDRE_FLAVIE` indexé par jour (`{ "1": …, "7": … }`),

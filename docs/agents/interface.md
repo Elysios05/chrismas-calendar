@@ -24,6 +24,14 @@ et Pingou (répliques + 5 expressions).
 | `dev/maquettes.tsx` | page de maquettes, `maquettes.html?vue=…` (outil de travail) |
 
 ## À faire (par priorité) — mis à jour par le chef le 24 nov
+**🎯 Plan final (chef, 27 nov — validé par Alexandre)** : à finir **samedi 28 au soir**.
+1. **Jour 19 « défi photo »** (confié par le chef : `src/games/<dossier du jeu 19>/` + son contenu dans `src/data/games/`,
+   + sa ligne dans `src/games/registry.ts`) : reprend le jeu photo du jour 3 ; règles proposées à Alexandre avant de coder ;
+   contenu générique par défaut, schéma pour l'éditeur, `ctx.prenoms`, pas d'accord de genre.
+2. **Vérification en vrai sur Supabase** (site en ligne branché depuis le 26 nov) : création de salon, invitation, première
+   connexion, messages d'erreur de #75, abonnement aux notifications ; Alexandre te fournit l'accès si tu as besoin d'un `.env.local`.
+Dimanche 29 : tests et corrections seulement. Lundi 30 : rien de nouveau.
+
 Méthode : prends le **premier point non fait** de cette liste, une branche et une PR par point, `npm run build`,
 `npm run capture`, PR vers `main` (le chef fusionne), Journal à jour. Questions de goût : 2–3 options avec captures
 **avant** de coder. **On ne coupe rien** (décision d'Alexandre du 24 nov). Mise en ligne le 30 nov au soir.
