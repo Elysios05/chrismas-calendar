@@ -202,5 +202,12 @@ export const PINGOU_SALON = {
   reglagesEnregistres: (): PingouLine => ({ text: "C'est noté ! Tout le calendrier suit, jusqu'aux personnages sur la route.", face: "content" }),
   lienGarde: (): PingouLine => ({ text: "Copié ! Garde-le bien au chaud : il ouvre votre calendrier sur n'importe quel appareil.", face: "clin" }),
   nouveauLien: (prenom: string): PingouLine => ({ text: `Voilà un lien tout neuf pour ${prenom}. L'ancien ne marche plus.`, face: "content" }),
+  // Éditeur de contenu des jeux (Réglages → Notre calendrier → Les jeux)
+  contenuListe: (): PingouLine => ({ text: "Choisis une case : tu peux remplacer mes questions par les vôtres. Motus, je ne dirai rien 🤫", face: "clin" }),
+  contenuCase: (): PingouLine => ({ text: "Touche une carte pour l'ouvrir. Rien ne part avant « Enregistrer ».", face: "content" }),
+  contenuEnregistre: (): PingouLine => ({ text: "C'est rangé dans l'enveloppe ! Le jeu prendra vos mots à vous.", face: "content" }),
+  contenuOriginal: (): PingouLine => ({ text: "Revoilà mes questions d'origine. Enregistre si tu veux les garder.", face: "clin" }),
+  contenuQuitter: (): PingouLine => ({ text: "Tu pars sans enregistrer ? Tes changements vont fondre comme neige.", face: "surpris" }),
+  contenuIncomplet: (): PingouLine => ({ text: "Presque ! Il reste un souci dans les cartes marquées en rouge.", face: "surpris" }),
   invitationInvalide: (): PingouLine => ({ text: "Ce lien ne marche plus. Demande un nouveau lien à la personne qui te l'a envoyé.", face: "triste" }),
 } as const;

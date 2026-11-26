@@ -101,3 +101,89 @@
 .salon-enveloppe.petite span { font-size: 24px; }
 .salon-copier { flex: none; min-height: 44px; padding: 0 16px; }
 .salon-confirmer { display: flex; flex-direction: column; gap: 8px; }
+
+/* Éditeur de contenu des jeux (Notre calendrier → Les questions des jeux) — cartes repliables, 26 nov */
+.ed-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ed-entree { width: 100%; border: 0; font: inherit; cursor: pointer; padding: 10px 14px 10px 12px; min-height: 64px; }
+.ed-entree-icone { flex: none; width: 44px; text-align: center; font-size: 28px; }
+.ed-entree-note { display: block; font-size: 13px; font-weight: 500; color: var(--ink-soft); }
+.ed-entree-fleche, .ed-jour > span:last-child { flex: none; font-size: 24px; color: var(--ink-soft); }
+
+.ed-jours { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ed-jour {
+  width: 100%; display: flex; align-items: center; gap: 12px; border: 0; font: inherit; text-align: left; cursor: pointer;
+  background: var(--cream); color: var(--ink); border-radius: 18px; padding: 10px 14px 10px 10px; min-height: 60px;
+  box-shadow: 0 6px 0 rgba(12,20,48,.3);
+}
+.ed-jour-num {
+  flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+  background: var(--red-texte); color: #fff; font-weight: 800; font-size: 18px;
+}
+.ed-jour-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ed-jour-titre { font-weight: 700; font-size: 16px; line-height: 1.25; }
+.ed-jour-etat { font-size: 13px; color: var(--ink-soft); }
+.ed-jour-etat.perso { color: #1f7a57; font-weight: 700; }
+
+/* Page d'une case : une carte crème qui porte tous les champs */
+.ed-page {
+  background: var(--cream); color: var(--ink); border-radius: 22px; padding: 18px 16px; text-align: left;
+  box-shadow: 0 8px 0 rgba(12,20,48,.3); display: flex; flex-direction: column; gap: 14px; scroll-margin-top: 12px;
+}
+.ed-titre { margin: 0; font-size: 19px; line-height: 1.25; }
+.ed-intro { margin: -6px 0 0; font-size: 14px; line-height: 1.45; color: var(--ink-soft); }
+.ed-champ { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.ed-label { margin: 0; padding: 0; font-size: 14px; font-weight: 700; color: var(--ink); }
+.ed-facultatif, .ed-compte { font-weight: 500; color: var(--ink-soft); }
+.ed-aide { margin: 0; font-size: 13px; color: var(--ink-soft); }
+.ed-erreur { margin: 0; font-size: 13px; font-weight: 700; color: var(--red-texte); }
+.ed-input {
+  width: 100%; min-height: 44px; border: 2px solid #d9d2c4; border-radius: 12px; background: #fff; color: var(--ink);
+  padding: 8px 12px; font: inherit; font-size: 16px; /* 16 px : iOS ne zoome pas au focus */
+}
+textarea.ed-input { resize: vertical; line-height: 1.4; }
+.ed-input:focus { border-color: var(--ink); }
+.ed-input[aria-invalid="true"] { border-color: var(--red-texte); }
+.ed-nombre { width: 110px; }
+.ed-case { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; font-weight: 600; }
+.ed-case input { width: 22px; height: 22px; accent-color: var(--red); }
+.ed-texte-ligne { display: flex; gap: 6px; }
+.ed-mini {
+  flex: none; width: 44px; height: 44px; border: 2px solid #d9d2c4; border-radius: 12px; background: #fff;
+  color: var(--ink); font-size: 16px; font-weight: 700;
+}
+.ed-mini:disabled { opacity: .35; }
+.ed-ajouter {
+  align-self: flex-start; min-height: 44px; border: 2px dashed #b9b09f; border-radius: 12px; background: transparent;
+  color: var(--ink); padding: 0 14px; font: inherit; font-size: 15px; font-weight: 700;
+}
+
+.ed-cartes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ed-carte { border: 2px solid #e4ddcf; border-radius: 14px; background: #fff; }
+.ed-carte.ouverte { border-color: var(--ink); }
+.ed-carte.abimee { border-color: var(--red-texte); }
+.ed-carte-titre {
+  width: 100%; min-height: 48px; display: flex; align-items: center; gap: 8px; border: 0; background: transparent;
+  padding: 8px 12px; font: inherit; font-size: 15px; color: var(--ink); text-align: left; cursor: pointer;
+}
+.ed-chevron { flex: none; width: 14px; color: var(--ink-soft); }
+.ed-carte-texte { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ed-carte.ouverte .ed-carte-texte { white-space: normal; font-weight: 700; }
+.ed-alerte { flex: none; color: var(--red-texte); }
+.ed-carte-corps { display: flex; flex-direction: column; gap: 12px; padding: 4px 12px 12px; }
+.ed-carte-actions { display: flex; gap: 6px; align-items: center; }
+.ed-retirer {
+  margin-left: auto; min-height: 44px; border: 0; background: transparent; color: var(--red-texte);
+  font: inherit; font-size: 14px; font-weight: 700; text-decoration: underline;
+}
+.ed-retirer:disabled { opacity: .35; text-decoration: none; }
+.ed-original { color: var(--ink); align-self: flex-start; padding-left: 0; }
+
+/* Bouton Enregistrer collé en bas pendant qu'on fait défiler */
+.ed-pied {
+  position: sticky; bottom: calc(-20px - env(safe-area-inset-bottom)); z-index: 2; margin: 0 -8px;
+  padding: 12px 8px calc(14px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(58,90,146,0) 0, #3a5a92 30%); display: flex; flex-direction: column; gap: 8px;
+}
+.ed-pied-boutons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ed-pied .btn:disabled { opacity: .55; }
+.ed-pied-note { margin: 0; text-align: center; font-size: 14px; font-weight: 600; color: #fff; }
