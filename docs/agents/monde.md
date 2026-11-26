@@ -458,3 +458,11 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     (script perso dans mon brouillon, `npm run capture` ne sait pas faire d'instantané).
   - Reste : brancher dans `App.tsx` (chef) et dans `downloadSouvenirs` (Backend).
   - Prochaine étape : liste du brief terminée → demander la suite au chef dans #29.
+
+- 26 nov (après-midi) — **liste du brief terminée** (#12 fermée par le chef, survol de la route fait par lui).
+  Alexandre choisit d'**aider les Jeux** (contre relecture du monde ou performance téléphone).
+  Demandé au chef dans #29 : me confier le **jour 22** (tri des cadeaux, score à battre, PixiJS) puis le **jour 21**
+  (décorer le sapin à deux, en direct sur `joinLive`) et leurs lignes de `src/games/registry.ts`.
+  - **Prochaine étape** : relire #29. Si le chef a confié les jours par écrit → branche `monde/jeu-22`,
+    lire `src/games/README.md` et le jeu du jour 10 (`src/games/flocons/`, même genre), proposer 2–3 règles à
+    Alexandre avant de coder. Sinon, ne rien toucher dans `src/games/` et attendre.
