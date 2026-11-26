@@ -523,3 +523,15 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     Mes scripts sont restés dans mon brouillon (`npm run capture` ne sait ni jouer ni injecter le sapin).
   - **Prochaine étape** : liste Renfort Jeux terminée. Relire #29 pour la suite (relecture du monde ou
     performance téléphone, options B et C du 26 nov).
+
+- 26 nov (nuit, suite) — **#113, bande bleu foncé en dents de scie au jour 24 la nuit** (téléphone). Branche
+  `monde/bord-jour24`. C'était le **bord sud du monde** : le terrain s'arrêtait 16 rangées après la fin de la
+  route, et au jour 24 (plus de barrière de nuages) la caméra descend plus bas.
+  - Correction (décision technique) : `terrain.ts` ajoute `RANGEES_SUD` = 40 rangées de neige plate sous la fin,
+    **après** la génération du décor et avec leur propre tirage (`rng(seed + 24)`) : le décor du reste du monde
+    est tiré sur toutes les cases mélangées, en ajouter au milieu l'aurait entièrement rebattu. Ces rangées ont
+    la même lisière de forêt sur les côtés (#13) et quelques sapins et sucres d'orge épars.
+    Sécurité dans `Scene.ts` : `basY` (bas du terrain sans dents) borne `maxScroll` quel que soit l'écran.
+  - Vérifié : build, oxlint, `npm run capture -- --jour=24` à 12:00 et 21:00, mobile et ordinateur (0 erreur) :
+    plus de bande, caméra et décor existant inchangés.
+  - **Prochaine étape** : option C (performance téléphone) si le chef la confirme dans #29.
