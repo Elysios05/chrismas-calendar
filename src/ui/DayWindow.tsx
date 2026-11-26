@@ -161,7 +161,9 @@ export function DayWindow({
               </p>
               <div className="sheet-actions">
                 {/* Pingou se tait quand le jeu reprend la main : sa bulle ne doit rien recouvrir */}
-                <button className="btn ghost" type="button" onClick={() => { setLines([]); setResultat(null); setEtape("jeu"); }}>
+                {/* repasse par `commencer` : sans le salon relu, le jeu retomberait sur « Joueur 2 » et le contenu
+                    par défaut, et une lettre déjà lue s'afficherait vide (`prepared` jamais chargé) */}
+                <button className="btn ghost" type="button" onClick={() => { setResultat(null); void commencer(); }}>
                   Revoir la case
                 </button>
                 <button className="btn" type="button" onClick={onClose}>Retour à la route</button>
