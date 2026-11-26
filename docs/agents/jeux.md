@@ -13,7 +13,7 @@
 
 ## À faire (par priorité) — mis à jour par le chef le 24 nov
 **🎯 Plan final (chef, 27 nov — validé par Alexandre)** : à finir **samedi 28 au soir**.
-1. **PRIORITÉ ABSOLUE — retirer leur contenu du dépôt public** (décision d'Alexandre, 27 nov) : le chef a **déjà chargé**
+1. ✅ *(fait le 26 nov, branche `jeux/contenu-prive`)* **PRIORITÉ ABSOLUE — retirer leur contenu du dépôt public** (décision d'Alexandre, 27 nov) : le chef a **déjà chargé**
    `CONTENU_ALEXANDRE_FLAVIE` (jours 1, 3, 5, 7, 9, 11, 14, 15, 17) dans leur vrai salon Supabase.
    - Supprime `src/data/salons/alexandre-flavie.ts` et **toute mention** de leurs souvenirs perso dans le dépôt
      (imports, commentaires des `src/data/games/*`, atelier de dev…). Le contenu par défaut reste générique.
@@ -63,6 +63,25 @@ Avant de poser une question, relire les issues ouvertes (y compris celles des au
 du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
+
+### 26 novembre 2026 — contenu d'Alexandre & Flavie retiré du dépôt public (branche `jeux/contenu-prive`)
+
+- `src/data/salons/alexandre-flavie.ts` **supprimé** (le chef l'a déjà chargé dans leur salon Supabase).
+- Une copie JSON a été écrite dans `prive/contenu-alexandre-flavie.json` (ignoré par git, **pas** dans le dépôt).
+  Elle disparaît avec le conteneur : la source de vérité est désormais leur salon Supabase.
+- **Atelier** (`src/games/dev/atelier.tsx`) : le bouton « A & F » lit ce fichier privé via `import.meta.glob`
+  s'il existe ; sinon le bouton n'apparaît pas (vérifié dans les deux cas, 0 erreur console).
+- Commentaires des `src/data/games/*` : plus de lien vers le fichier supprimé. Retirés aussi : l'exemple
+  « Train de nuit » du schéma du jour 5 (→ « Notre premier rendez-vous ») et « Alexandre n'a pas de four ».
+- Le contenu par défaut restant est générique (raclette, valise, Venise en exemple… : rien de propre à eux).
+- **Hors de mon dossier, signalé dans la PR** : `src/backend/demo.ts` l. 78 (« Ljubljana est jolie… », déjà #111),
+  `docs/cahier-des-charges.md`, `docs/supabase.md`, `src/backend/config.ts` (mentions de Ljubljana), et
+  **l'historique git** contient toujours l'ancien fichier (le réécrire = décision du chef / d'Alexandre).
+- Règle pour la suite : un nouveau jeu avec du contenu à eux → `prive/contenu-alexandre-flavie.json`, puis
+  Alexandre l'envoie au chef.
+
+**Prochaine étape :** corrections remontées par la Qualité ; fermer #56 et #109 quand la Qualité confirme.
+(Jour 19 → Interface : notre PR #132 attend l'arbitrage du chef ; jour 23 → Monde.)
 
 ### 26 novembre 2026 — issue #129, petites cibles tactiles sur téléphone (branche `jeux/cibles-tactiles-129`)
 
