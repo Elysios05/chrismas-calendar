@@ -152,10 +152,7 @@ test("jour 10 : les flocons se jouent jusqu'au bout (sans bouger : les glaçons 
   await ouvrirCase(page, 10);
   await passerRegles(page, "C'est parti");
   await expect(page.locator(".jeu-canvas canvas")).toBeVisible();
-  // #109 : malgré la correction #112, l'erreur « reading 'clear' » arrive toujours en fin de partie (constaté le 26 nov) :
-  // seule cette erreur est tolérée, retirer `tolere` quand elle ne sort plus.
-  test.info().annotations.push({ type: "bug", description: "#109 : exception Pixi à la fin du jeu 10" });
-  await terminerEtVerifier(page, 10, { tolere: /reading 'clear'[\s\S]*RenderTargetSystem/ });
+  await terminerEtVerifier(page, 10);
 });
 
 test("jour 11 : Synchro se joue en solo jusqu'au bout (Flavie absente)", async ({ page }) => {
@@ -256,10 +253,7 @@ test("jour 21 : le sapin se décore en solo (6 décos posées, l'étoile attend 
   const d = await page.evaluate(() => JSON.parse(localStorage.getItem("cc-demo:data-v2") ?? "null"));
   const cles = Object.keys(d?.gameState ?? {}).filter((k) => k.startsWith("21:"));
   expect(cles.length, `clés du jeu 21 : ${Object.keys(d?.gameState ?? {})}`).toBeGreaterThan(0);
-  // même erreur Pixi que #109, à la fermeture du sapin (constaté le 26 nov) : seule celle-ci est tolérée
-  test.info().annotations.push({ type: "bug", description: "#109 : exception Pixi à la fermeture du jeu 21" });
-  const tolere = /reading 'clear'[\s\S]*RenderTargetSystem/;
-  expect(erreurs(tolere), JSON.stringify(erreurs(tolere), null, 1)).toEqual([]);
+  expect(erreurs(), JSON.stringify(erreurs(), null, 1)).toEqual([]);
 });
 
 test("jour 22 : le tri des cadeaux se joue jusqu'au bout (sans trier : les vies ou le temps mettent fin à la partie)", async ({ page }) => {
