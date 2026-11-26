@@ -36,8 +36,8 @@ Faits : 1, 2, 3, **5, 6** (PR #83 en attente de fusion), 7, 11, 15, 17. Restent 
 6. Jour **14** (activité synchronisée)
 7. Jour **18** (en direct)
 8. Jour **19** (défi photo)
-9. Jour **21** (en direct)
-10. Jour **22** (score à battre)
+9. ~~Jour 21~~ → **confié à l'équipe Monde** (26 nov, #29)
+10. ~~Jour 22~~ → **confié à l'équipe Monde** (26 nov, #29)
 11. Jour **23** (activité synchronisée)
 Les règles de chaque jeu sont dans `src/data/planning.ts` et `docs/cahier-des-charges.md`.
 
