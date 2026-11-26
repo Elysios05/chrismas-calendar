@@ -44,6 +44,20 @@ function socle(g: Graphics, x0: number, y0: number, w: number, d: number, drop: 
   }
 }
 
+/**
+ * Lumière d'une fenêtre éclairée qui tombe sur la neige devant la façade (+y) : une nappe en trapèze, plus
+ * vive contre le mur et qui s'élargit en s'effaçant. Plus la fenêtre est haute, plus la nappe va loin et pâlit.
+ */
+export const LUMIERE_SOL: "flaques" | "aucune" | "ellipse" = "flaques";
+export function windowSpill(g: Graphics, yWall: number, a: number, b: number, z0: number) {
+  const reach = 0.4 + z0 * 0.55, force = 1 / (1 + z0 * 1.2);
+  for (let i = 0; i < 4; i++) {
+    const t = 1 - i * 0.24; // de la nappe la plus large (pâle) à la plus serrée (vive)
+    const L = reach * t, spread = 0.06 + L * 0.55;
+    poly(g, [P(a + 0.02, yWall, 0), P(b - 0.02, yWall, 0), P(b + spread, yWall + L, 0), P(a - spread, yWall + L, 0)], 0xffc864, 0.1 * force);
+  }
+}
+
 /** Chaque monde a son architecture */
 type HouseStyle = "chalet" | "colombages" | "cabane" | "pignon";
 const HOUSE_STYLE: Record<string, HouseStyle> = {
@@ -75,6 +89,9 @@ function drawHouse(
   const h = dim.h * kh, rh = dim.rh * (0.9 + rnd(43) * 0.25), over = dim.over;
   const x0 = cx - w / 2, y0 = cy - d / 2;
   socle(g, x0, y0, w, d, drop, pal, rnd);
+  // fenêtres de la façade avant : on les retient pour poser leur lumière au sol la nuit
+  const wins: [number, number, number][] = [];
+  const fenetre = (a: number, b: number, z0: number, z1: number) => { onLeft(g, y0 + d, a, b, z0, z1, win); wins.push([a, b, z0]); };
 
   if (style === "chalet") {
     const wood = 0xb5763f;
@@ -87,7 +104,7 @@ function drawHouse(
     // fenêtres à volets rouges
     for (let i = 0; i < 2; i++) {
       const a = x0 + w * (0.2 + i * 0.4);
-      onLeft(g, y0 + d, a, a + 0.26, h * 0.46, h * 0.74, win);
+      fenetre(a, a + 0.26, h * 0.46, h * 0.74);
       onLeft(g, y0 + d, a - 0.1, a - 0.01, h * 0.45, h * 0.75, c(0xc8362f));
       onLeft(g, y0 + d, a + 0.27, a + 0.36, h * 0.45, h * 0.75, c(0xc8362f));
     }
@@ -124,8 +141,8 @@ function drawHouse(
     // fenêtres à petits carreaux + porte
     for (let i = 0; i < 2; i++) {
       const a = x0 + 0.16 + i * 0.5;
-      onLeft(g, y0 + d, a, a + 0.26, h * 0.58, h * 0.84, win);
-      onLeft(g, y0 + d, a, a + 0.26, h * 0.12, h * 0.38, win);
+      fenetre(a, a + 0.26, h * 0.58, h * 0.84);
+      fenetre(a, a + 0.26, h * 0.12, h * 0.38);
       onLeft(g, y0 + d, a + 0.12, a + 0.14, h * 0.12, h * 0.84, c(beam));
     }
     onRight(g, x0 + w, y0 + d * 0.35, y0 + d * 0.72, 0, h * 0.6, c(0x8a3a2a));
@@ -164,7 +181,7 @@ function drawHouse(
       const a = x0 + 0.04 + (i * (w - 0.08)) / 7;
       onLeft(g, y0 + d, a, a + 0.015, 0, h, c(shade(wood, -0.3)));
     }
-    onLeft(g, y0 + d, x0 + 0.22, x0 + 0.46, h * 0.46, h * 0.76, win);
+    fenetre(x0 + 0.22, x0 + 0.46, h * 0.46, h * 0.76);
     onRight(g, x0 + w, y0 + d * 0.3, y0 + d * 0.7, 0, h * 0.68, c(0x5a3c25));
     gableRoof(g, x0, y0, h, w, d, rh, c(SNOW.left), c(SNOW.top), c(shade(wood, -0.3)), over);
     // appentis et tas de bois
@@ -176,8 +193,8 @@ function drawHouse(
     box(g, x0, y0, 0, w, d, h, { top: c(walls), left: c(shade(walls, 0.1)), right: c(shade(walls, -0.2)) });
     for (let i = 0; i < 3; i++) {
       const z = h * (0.2 + i * 0.26);
-      onLeft(g, y0 + d, x0 + 0.18, x0 + 0.44, z, z + 0.2, win);
-      onLeft(g, y0 + d, x0 + 0.56, x0 + 0.78, z, z + 0.2, win);
+      fenetre(x0 + 0.18, x0 + 0.44, z, z + 0.2);
+      fenetre(x0 + 0.56, x0 + 0.78, z, z + 0.2);
     }
     onRight(g, x0 + w, y0 + d * 0.3, y0 + d * 0.7, 0, h * 0.42, c(0x6b3b22));
     // auvent rayé au-dessus de la porte
@@ -214,7 +231,8 @@ function drawHouse(
     hearth.extra.addChild(stack);
     hearth.anim.push({ kind: "smoke", puffs, phase: rnd(51) * 6 });
   }
-  if (pal.night) { const p = P(cx, y0 + d, h * 0.3); g.ellipse(p.x, p.y + 6, 44, 14).fill({ color: 0xffd46b, alpha: 0.18 }); }
+  if (pal.night && LUMIERE_SOL === "flaques") for (const [a, b, z0] of wins) windowSpill(g, y0 + d, a, b, z0);
+  if (pal.night && LUMIERE_SOL === "ellipse") { const p = P(cx, y0 + d, h * 0.3); g.ellipse(p.x, p.y + 6, 44, 14).fill({ color: 0xffd46b, alpha: 0.18 }); }
 }
 
 /** Traîneau du Père Noël. En vol, on lui attelle deux rennes et une traînée d'étoiles. */
@@ -786,6 +804,7 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
         onLeft(g, y0 + d + 0.012, a + 0.115, a + 0.145, z, z + 0.3, c(0xfbf3ea));
       };
       win(x0 + 0.25, 0.22); win(x0 + 1.55, 0.22);
+      if (pal.night && LUMIERE_SOL === "flaques") for (const [a, z] of [[x0 + 0.25, 0.22], [x0 + 1.55, 0.22], [x0 + 0.35, 0.86], [x0 + 0.9, 0.86], [x0 + 1.45, 0.86]]) windowSpill(g, y0 + d, a, a + 0.26, z);
       win(x0 + 0.35, 0.86); win(x0 + 0.9, 0.86); win(x0 + 1.45, 0.86);
       onRight(g, x0 + w + 0.008, y0 + 0.35, y0 + 0.62, 0.86, 1.14, 0xffd46b);
       onRight(g, x0 + w + 0.008, y0 + 0.88, y0 + 1.15, 0.86, 1.14, 0xffd46b);
@@ -803,7 +822,7 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       const ccx = x0 + w * 0.7, ccy = y0 + d * 0.3;
       box(g, ccx, ccy, h + 0.25, 0.22, 0.22, 0.55, { top: c(0x5b5f70), left: c(0x9a9286), right: c(0x7d7667) });
       chimneySmoke(extra, anim, P(ccx + 0.11, ccy + 0.11, h + 0.86), rnd(72) * 6);
-      if (pal.night) { const p = P(cx, y0 + d, 0.4); g.ellipse(p.x, p.y + 8, 60, 18).fill({ color: 0xffd46b, alpha: 0.2 }); }
+      if (pal.night && LUMIERE_SOL === "ellipse") { const p = P(cx, y0 + d, 0.4); g.ellipse(p.x, p.y + 8, 60, 18).fill({ color: 0xffd46b, alpha: 0.2 }); }
       break;
     }
     case "postOffice": {
