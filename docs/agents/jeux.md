@@ -53,6 +53,15 @@ du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
 
+### 26 novembre 2026 — jour 13, bonhomme de neige à deux (branche `jeux/bonhomme-jour13`, en cours)
+
+**Décisions prises avec Alexandre :** deux phases. 1) **Rouler** (adresse, 30 s) : chacun roule sa boule
+au doigt — place 2 le corps, place 1 la tête ; Pingou note l'empilement (tailles assorties, boule bien ronde).
+2) **Décorer à deux** le même bonhomme, en direct (carotte, écharpe, bonnet, boutons…), on voit les objets
+de l'autre arriver. Fin : le bonhomme en souvenir + un score commun.
+**Absent :** comme aux jours 5 et 6 (20 s d'attente) puis **chacun sa moitié** : on joue sa part (sa boule,
+ses décorations), l'autre trouve le bonhomme commencé et le termine ; le souvenir montre le travail des deux.
+
 ### 26 novembre 2026 — jour 10, attrape-flocons dans la tempête (branche `jeux/flocons-jour10`)
 
 **Décisions prises avec Alexandre :** Pingou glisse sur le lac gelé avec un **panier** au-dessus de la tête
