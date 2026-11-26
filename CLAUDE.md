@@ -39,9 +39,10 @@ On code contre ces interfaces. Besoin d'un changement de contrat → le demander
 5. **Pull request** vers `main` avec : ce qui change, captures, ce qui reste à faire. Le chef de projet relit et fusionne.
 6. Messages de commit en français, à l'impératif présent.
 7. Tenir à jour la section « Journal » de ton brief (`docs/agents/<equipe>.md`) : décisions prises avec Alexandre, et où tu en es.
-8. **N'utilise jamais `git stash`** : la pile est partagée entre toutes les copies de travail du dépôt. Fais un commit temporaire sur ta branche à la place.
-9. **Parler au chef de projet = ouvrir une issue GitHub.** C'est le seul canal : les équipes ne se voient pas entre elles.
-10. **Questions pour Alexandre** quand il n'est pas dans ta conversation (équipes en arrière-plan) : commente le ticket **#59 « Questions pour Alexandre »**, avec 2–3 options et ta recommandation. Dans une session directe avec lui, pose-lui la question directement.
+8. **Liens de session privés** : n'écris **jamais** de lien de session (`claude.ai/code/session_…`) ni de ligne `Claude-Session:` dans un commit, une PR, une issue ou un commentaire (décision d'Alexandre, 26 nov). Garde seulement `Co-Authored-By`.
+9. **N'utilise jamais `git stash`** : la pile est partagée entre toutes les copies de travail du dépôt. Fais un commit temporaire sur ta branche à la place.
+10. **Parler au chef de projet = ouvrir une issue GitHub.** C'est le seul canal : les équipes ne se voient pas entre elles.
+11. **Questions pour Alexandre** quand il n'est pas dans ta conversation (équipes en arrière-plan) : commente le ticket **#59 « Questions pour Alexandre »**, avec 2–3 options et ta recommandation. Dans une session directe avec lui, pose-lui la question directement.
 
 ## Parler au chef de projet
 Pour tout ce qui sort de ton dossier — changement de contrat dans `src/core/contracts.ts`, besoin qu'une autre

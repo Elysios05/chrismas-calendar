@@ -9,6 +9,7 @@ import { ZONES } from "./world/zones";
 import { PLAYERS } from "./world/actors";
 import { MascotDialog } from "./ui/Mascot";
 import { LoginScreen } from "./ui/LoginScreen";
+import { lireSapinCarte } from "./games/sapin/carte";
 import { CreerSalon } from "./ui/salons/CreerSalon";
 import { Invitation } from "./ui/salons/Invitation";
 import { PRENOMS_PAR_DEFAUT, prenomsDuSalon, useSalon } from "./ui/useSalon";
@@ -171,6 +172,12 @@ function Calendar({ backend, me }: { backend: BackendApi; me: Who }) {
 
   // salons (#84) : personnages aux couleurs du salon, mis à jour en direct (aussi après la bascule jour/nuit)
   useEffect(() => { if (ready) sceneRef.current?.setJoueurs(salon?.config.joueurs ?? null); }, [ready, salon]);
+  // jour 21 : miniature du sapin décoré sur la carte (#115), au démarrage et à la fermeture de la case 21
+  const sapinOuvert = open?.day === 21;
+  useEffect(() => {
+    if (!ready || sapinOuvert) return;
+    void lireSapinCarte(backend).then((s) => sceneRef.current?.setSapin(s)).catch(() => {});
+  }, [ready, sapinOuvert, backend]);
 
   // accueil : on descend jusqu'à la case du jour
   useEffect(() => {
