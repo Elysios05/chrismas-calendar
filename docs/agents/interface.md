@@ -39,10 +39,28 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 
 5. ~~**Nom du monde tronqué sur téléphone**~~ — fait le 26 nov (nom court, PR `interface/nom-du-monde`).
 6. **À partir du 27 nov** (Supabase branché) : vérification complète de l'interface en vrai — messages d'erreur de #75
-   avec de vraies erreurs, audit axe-core, revue des 24 jours (`--jour=1..24`, jour et nuit).
+   avec de vraies erreurs. ~~Audit axe-core, revue des 24 jours~~ : faits le 26 nov (bug de la case 10 → **#113**).
 7. Ensuite : issue au chef pour la suite (aide aux Jeux côté interface si besoin).
 
 ## Journal
+
+### 📍 Où j'en suis — 26 novembre 2026 (fin de soirée)
+
+**Point 6, partie sans Supabase : faite** (branche `interface/verification-24-jours`, journal seulement, aucun code changé).
+- **axe-core (WCAG 2.1 A/AA), jour et nuit, téléphone** : 0 violation sur l'assistant de création (12 étapes),
+  l'invitation, les réglages du salon (places 1 et 2), la liste et l'éditeur de contenu (carte dépliée, erreurs après
+  « Enregistrer »), l'en-tête, l'erreur de connexion, l'écran final, le rappel et la course. Le test e2e de la Qualité
+  (`tests/e2e/accessibilite.spec.ts`) passe aussi. Méthode : `npx vite` + `maquettes.html?vue=…`, axe injecté,
+  nuit via `document.documentElement.dataset.nuit = "oui"` (script jetable, hors dépôt).
+- **Revue des 24 jours** (`npm run capture`, téléphone, 12 h et 21 h, plus les 24 fenêtres de case) : 0 erreur console,
+  aucun défaut d'interface (en-tête, rappel de veille, course, 📜 le 24, pastille masquée le 24 : tout est conforme).
+- **Bug trouvé, hors de mon dossier → #113 (Monde)** : au jour 10, toucher le cadeau 10 n'ouvre rien, parce qu'un patineur
+  (zone de toucher ≥ 20 px) le recouvre et reçoit le toucher. Recommandé : les cadeaux passent avant les habitants.
+  Dans #113, j'ai aussi signalé « Préparée par vous deux » coupé sur deux lignes (Jeux) et une bande sombre en bas de la nuit du 24 (Monde).
+- Piège : deux `npm run capture` en parallèle se battent pour le port 4180. Mettre `QA_PORT=4181` sur le second.
+
+**Prochaine tâche** : le 27 nov, une fois Supabase branché, vérifier les messages d'erreur de #75 avec de vraies erreurs
+(mauvais mot de passe, réseau coupé, e-mail non confirmé, trop d'essais). Puis lire la réponse du chef dans #113.
 
 ### 📍 Où j'en suis — 26 novembre 2026 (nuit)
 
