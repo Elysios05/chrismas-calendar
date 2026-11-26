@@ -12,16 +12,19 @@
  *  - `vu:<qui>`     → true quand <qui> a découvert la photo de l'autre (fige celle de l'autre)
  *  - `devine:<qui>` → indice de l'option choisie par <qui> pour deviner l'autre
  *
- * En mode démo, si l'autre n'a rien posté, une vue de fenêtre dessinée par le jeu tient lieu de sa photo.
+ * En mode démo, si l'autre n'a rien posté, une image dessinée par le jeu tient lieu de sa photo
+ * (jour 3 : vue de fenêtre ; jour 19 : sapin décoré).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GameContext, GameModule, Who } from "../../core/contracts";
-import { PHOTO_JOUR3, SCHEMA_PHOTO_JOUR3, reparerPhoto } from "../../data/games/photo-jour3";
+import { PHOTO_JOUR3, SCHEMA_PHOTO_JOUR3, reparerPhoto, type PhotoContent } from "../../data/games/photo-jour3";
+import { PHOTO_JOUR19, SCHEMA_PHOTO_JOUR19 } from "../../data/games/photo-jour19";
+import type { SchemaContenu } from "../shared/contenu";
 import { prenomsDe, lireContenu } from "../shared/contenu";
 import { Cadre, PanneauRegles, Puce } from "../shared/ui";
 import { monterReact } from "../shared/monter";
-import { dessinerVueExemple } from "./exemple";
+import { dessinerSapinExemple, dessinerVueExemple } from "./exemple";
 import "./photo.css";
 
 const LETTRES = ["A", "B", "C", "D"];
@@ -57,8 +60,21 @@ export function Polaroid({ url, legende, auteur, penche, vide }: {
 
 /* ---------- jeu ---------- */
 
-function DefiPhoto({ ctx, titreJeu }: { ctx: GameContext; titreJeu: string }) {
-  const contenu = useMemo(() => lireContenu(ctx.content, PHOTO_JOUR3, SCHEMA_PHOTO_JOUR3, reparerPhoto), [ctx.content]);
+/** Ce qui change d'un défi photo à l'autre (jour 3, jour 19) */
+type ConfigDefiPhoto = {
+  defaut: PhotoContent;
+  schema: SchemaContenu;
+  /** mode démo : la « photo » de l'autre, dessinée au canevas (data URL) */
+  dessinerExemple: () => string;
+  /** pastille de l'écran final */
+  puceFin: string;
+};
+
+function DefiPhoto({ ctx, titreJeu, config }: { ctx: GameContext; titreJeu: string; config: ConfigDefiPhoto }) {
+  const contenu = useMemo(
+    () => lireContenu(ctx.content, config.defaut, config.schema, reparerPhoto),
+    [ctx.content, config],
+  );
   const PRENOMS = prenomsDe(ctx);
   const autre = PRENOMS[ctx.partner];
   const titre = `Jour ${ctx.day} · ${titreJeu}`;
@@ -112,12 +128,12 @@ function DefiPhoto({ ctx, titreJeu }: { ctx: GameContext; titreJeu: string }) {
     if (photo?.url) return { photo, exemple: false };
     if (ctx.backend.mode === "demo") {
       return {
-        photo: { ...contenu.exemple, url: dessinerVueExemple(), le: new Date().toISOString() },
+        photo: { ...contenu.exemple, url: config.dessinerExemple(), le: new Date().toISOString() },
         exemple: true,
       };
     }
     return { photo: null, exemple: false };
-  }, [ctx, contenu, lire]);
+  }, [ctx, contenu, lire, config]);
 
   useEffect(() => {
     let annule = false;
@@ -438,7 +454,7 @@ function DefiPhoto({ ctx, titreJeu }: { ctx: GameContext; titreJeu: string }) {
   const juste = sa && maDevinette !== null ? maDevinette === sa.reponse : null;
   const ilJuste = saDevinette !== null ? saDevinette === ma.reponse : null;
   return (
-    <Cadre titre={titre} barre={<Puce pale>Vos deux vues</Puce>}>
+    <Cadre titre={titre} barre={<Puce pale>{config.puceFin}</Puce>}>
       <div className="jeu-centre">
         <div className="photo-duo">
           <Polaroid url={ma.url} legende={ma.legende} auteur="Toi" penche="g" />
@@ -468,8 +484,14 @@ function DefiPhoto({ ctx, titreJeu }: { ctx: GameContext; titreJeu: string }) {
   );
 }
 
-export function creerDefiPhoto(id: string, titre: string): GameModule {
-  return { id, title: titre, mount: (el, ctx) => monterReact(el, <DefiPhoto ctx={ctx} titreJeu="Défi photo" />) };
+export function creerDefiPhoto(id: string, titre: string, config: ConfigDefiPhoto): GameModule {
+  return { id, title: titre, mount: (el, ctx) => monterReact(el, <DefiPhoto ctx={ctx} titreJeu="Défi photo" config={config} />) };
 }
 
-export const defiPhotoJour3 = creerDefiPhoto("photo-jour3", "Défi photo croisé : la vue de ta fenêtre");
+export const defiPhotoJour3 = creerDefiPhoto("photo-jour3", "Défi photo croisé : la vue de ta fenêtre", {
+  defaut: PHOTO_JOUR3, schema: SCHEMA_PHOTO_JOUR3, dessinerExemple: dessinerVueExemple, puceFin: "Vos deux vues",
+});
+
+export const defiPhotoJour19 = creerDefiPhoto("photo-jour19", "Défi photo croisé : ta déco de Noël", {
+  defaut: PHOTO_JOUR19, schema: SCHEMA_PHOTO_JOUR19, dessinerExemple: dessinerSapinExemple, puceFin: "Vos deux décos",
+});
