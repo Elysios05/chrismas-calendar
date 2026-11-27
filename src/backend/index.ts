@@ -4,7 +4,7 @@
  * - sinon le mode démo, entièrement dans le navigateur (version publique).
  * Le paquet Supabase n'est chargé (import dynamique) que si on en a besoin.
  */
-import type { BackendApi, Who } from "../core/contracts";
+import type { BackendApi, SalonApi, SalonCree, Who } from "../core/contracts";
 import { DemoBackend } from "./demo";
 import { registerOfflineShell } from "./offline";
 
@@ -28,6 +28,25 @@ export interface PasswordRecovery {
 
 export function hasPasswordRecovery(b: BackendApi): b is BackendApi & PasswordRecovery {
   return typeof (b as Partial<PasswordRecovery>).resetPassword === "function";
+}
+
+/**
+ * Méthodes EN PLUS du contrat, implémentées par les deux backends (audit de sécurité du 27 nov, en attendant
+ * leur entrée dans SalonApi) :
+ * - `supprimerSalon()` : supprime pour de bon le salon courant (membre connecté, l'une ou l'autre place) :
+ *   photos, lettres, jeux, réglages et les comptes des DEUX personnes. Ensuite plus personne n'est connecté et
+ *   il n'y a plus de salon courant (`salons.getSalon()` → null). Échec : SalonError NON_AUTORISE.
+ * - `creerSalonAvecCaptcha(input, captcha)` : comme `salons.creerSalon`, avec le jeton du widget anti-robot
+ *   (Cloudflare Turnstile) quand il est activé sur le serveur (sinon ignoré).
+ * Usage : `if (hasSalonSecurite(backend)) await backend.supprimerSalon()`.
+ */
+export interface SalonSecurite {
+  supprimerSalon(): Promise<void>;
+  creerSalonAvecCaptcha(input: Parameters<SalonApi["creerSalon"]>[0], captcha: string | undefined): Promise<SalonCree>;
+}
+
+export function hasSalonSecurite(b: BackendApi): b is BackendApi & SalonSecurite {
+  return typeof (b as Partial<SalonSecurite>).supprimerSalon === "function";
 }
 
 let instance: Promise<BackendApi> | null = null;

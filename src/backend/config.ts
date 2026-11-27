@@ -34,22 +34,6 @@ export const UPLOAD_URL_TTL_SECONDS = 60 * 24 * 3600;
 /** Durée de validité des URLs signées renvoyées par getPrepared (secondes). */
 export const READ_URL_TTL_SECONDS = 24 * 3600;
 
-/**
- * Adresses e-mail des deux comptes. JAMAIS en dur dans le dépôt : elles viennent des variables
- * VITE_EMAIL_ALEXANDRE / VITE_EMAIL_FLAVIE (.env.local en local, secrets GitHub au déploiement).
- * ⚠️ Elles restent lisibles dans le JavaScript publié de la version privée.
- */
-export const ACCOUNT_EMAILS: Record<Who, string | undefined> = {
-  alexandre: (import.meta.env.VITE_EMAIL_ALEXANDRE as string | undefined) || undefined,
-  flavie: (import.meta.env.VITE_EMAIL_FLAVIE as string | undefined) || undefined,
-};
-
-export function emailOf(who: Who): string {
-  const e = ACCOUNT_EMAILS[who];
-  if (!e) throw new Error(`Adresse e-mail de ${who} non configurée (variable VITE_EMAIL_${who.toUpperCase()}).`);
-  return e;
-}
-
 /** Message d'erreur quand l'auteur veut modifier une case que le destinataire a déjà ouverte. */
 export const FROZEN_MESSAGE = "Cette case a déjà été ouverte : elle ne peut plus être modifiée.";
 
@@ -80,7 +64,9 @@ export async function compressImage(file: Blob, maxDim: number, quality = 0.85):
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    return file; // format non décodable (ex. HEIC sur certains navigateurs) : on envoie tel quel
+    // Format non décodable (ex. HEIC sur certains navigateurs) : on n'envoie jamais l'original, qui garde
+    // ses métadonnées (position GPS, appareil…) — SEC-15
+    throw new Error("Format de photo non reconnu : enregistre-la en JPEG (ou fais une capture d'écran) puis réessaie.");
   }
   const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
   const w = Math.max(1, Math.round(bitmap.width * scale));
@@ -90,9 +76,15 @@ export async function compressImage(file: Blob, maxDim: number, quality = 0.85):
   canvas.height = h;
   canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
   bitmap.close();
-  const out = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", quality));
-  if (!out) return file;
-  return out.size < file.size || file.type !== "image/jpeg" ? out : file;
+  // Toujours la version ré-encodée : le canvas retire les métadonnées (EXIF : position GPS, appareil, date) — SEC-15.
+  // Si elle est trop lourde, on baisse la qualité.
+  let out: Blob | null = null;
+  for (const q of [quality, 0.7, 0.55, 0.4]) {
+    out = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", q));
+    if (!out || out.size <= MAX_PHOTO_BYTES) break;
+  }
+  if (!out) throw new Error("Préparation de la photo impossible : réessaie avec une autre photo.");
+  return out;
 }
 
 export function checkPhotoSize(b: Blob) {

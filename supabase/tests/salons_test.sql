@@ -55,6 +55,8 @@ reset role;
 select t.ok((select count(*) from public.salon_creations where salon_id is not null) = 1, 'création inscrite au journal (aucune trace des refus)');
 
 -- Limites : 5 par appareil et par heure, puis par jour pour tout le site
+-- (réglages de 0004 ; les valeurs de 0006 — 1 par heure, 2 par jour — sont testées dans securite_test.sql)
+update public.app_settings set salon_creations_par_heure = 5, salon_creations_par_ip_jour = 10;
 set role service_role;
 select public.salon_create(t.cfg('X', 'Y'), 'ipA') from generate_series(1, 4);
 select t.raises($$select public.salon_create(t.cfg('X', 'Y'), 'ipA')$$, 'LIMITE_CREATION', '6e salon dans l''heure depuis le même appareil refusé');
@@ -64,7 +66,7 @@ update public.app_settings set salon_creations_par_jour = 6;
 set role service_role;
 select t.raises($$select public.salon_create(t.cfg('X', 'Y'), 'ipC')$$, 'LIMITE_CREATION', 'plafond du jour pour tout le site');
 reset role;
-update public.app_settings set salon_creations_par_jour = 50;
+update public.app_settings set salon_creations_par_jour = 50, salon_creations_par_heure = 1, salon_creations_par_ip_jour = 2;
 
 -- Comptes du salon B (créés par l'Edge Function dans Auth, puis reliés)
 insert into auth.users values
@@ -88,8 +90,9 @@ select t.ok(not (public.salon_public((select v::uuid from t.ids where k = 'B')) 
 select t.ok(public.salon_public(gen_random_uuid()) is null, 'salon inconnu → null');
 select t.ok(public.salon_invitation_info((select v from t.ids where k = 'tokB')) ->> 'statut' = 'valide', 'jeton valide');
 select t.ok(public.salon_invitation_info('n-importe-quoi') ->> 'statut' = 'invalide', 'jeton inconnu → invalide');
-select t.ok(public.salon_login_email((select v::uuid from t.ids where k = 'B'), 'alexandre') = 'alexandre-b@salons.invalid',
-            'adresse de connexion d''une place');
+-- 0006 (SEC-05) : une adresse qui n'est pas <salon>-<place>@… n'est jamais donnée à un visiteur
+select t.ok(public.salon_login_email((select v::uuid from t.ids where k = 'B'), 'alexandre') is null,
+            'adresse non technique jamais révélée');
 select t.ok(public.salon_login_email((select v::uuid from t.ids where k = 'B'), 'flavie') is null, 'place libre → pas d''adresse');
 select t.raises($$select count(*) from public.salons$$, 'permission denied', 'anonyme : table salons fermée');
 select t.raises($$select count(*) from public.salon_invitations$$, 'permission denied', 'anonyme : jetons illisibles');
@@ -227,9 +230,9 @@ select t.ok(exists (select 1 from pg_publication_tables where pubname = 'supabas
 -- ---------- Rappels par salon, avec les prénoms ----------
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000bf', false);
-select public.save_push_subscription('https://push.example/ines', 'cle', 'auth', 'iPhone');
+select public.save_push_subscription('https://fcm.googleapis.com/fcm/send/ines', 'cle', 'auth', 'iPhone');
 reset role;
-select t.ok((select salon_id from public.push_subscriptions where endpoint = 'https://push.example/ines')
+select t.ok((select salon_id from public.push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/ines')
             = (select v::uuid from t.ids where k = 'B'), 'abonnement rangé dans le salon B');
 set role service_role;
 select t.ok((select prenom || '>' || prenom_autre from public.reminder_targets(16)
@@ -273,7 +276,7 @@ reset role;
 select t.ok(public.supprimer_salon((select v::uuid from t.ids where k = 'B')) = 1, 'salon B supprimé');
 select t.ok(not exists (select 1 from auth.users where id in ('00000000-0000-0000-0000-0000000000ba', '00000000-0000-0000-0000-0000000000bf'))
             and not exists (select 1 from public.progress where salon_id = (select v::uuid from t.ids where k = 'B'))
-            and not exists (select 1 from public.push_subscriptions where endpoint = 'https://push.example/ines'),
+            and not exists (select 1 from public.push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/ines'),
             'comptes, progression et appareils du salon B supprimés');
 select t.ok((select count(*) from public.profiles where salon_id = public.legacy_salon_id()) = 2, 'salon principal intact');
 

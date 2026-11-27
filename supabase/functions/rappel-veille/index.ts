@@ -14,11 +14,17 @@
 //   force : ignore l'heure et le journal des rappels déjà envoyés
 //   dry   : n'envoie rien, renvoie seulement qui serait prévenu
 import webpush from "npm:web-push@3.6.7";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 import { reminderMessage, type Kind, type Who } from "./message.ts";
 
 type Target = { day: number; who: Who; kind: Kind; endpoint: string; p256dh: string; auth: string;
   salon_id: string; prenom: string | null; prenom_autre: string | null };
+
+/** Envois simultanés, et délai maximal d'un envoi (SEC-04 : un service lent ne bloque pas les autres). */
+const LOT = 10;
+const DELAI_MS = 5000;
+/** Services de notification connus (même liste que push_endpoint_ok en SQL). */
+const SERVICE_PUSH = /^https:\/\/(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9.-]+\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com)(\/|$)/i;
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body, null, 2), { status, headers: { "Content-Type": "application/json" } });
@@ -41,34 +47,44 @@ Deno.serve(async (req) => {
   const { data, error } = await db.rpc("reminder_targets", {
     p_day: opts.day ?? null, p_force: opts.force ?? false, p_kind: opts.kind ?? null,
   });
-  if (error) return json(500, { error: error.message });
-  const targets = (data ?? []) as Target[];
+  if (error) { console.error("[rappel-veille]", error.message); return json(500, { error: "lecture des destinataires impossible" }); }
+  const targets = ((data ?? []) as Target[]).filter((t) => SERVICE_PUSH.test(t.endpoint) && t.endpoint.length <= 1000);
   if (!targets.length) return json(200, { sent: 0, message: "personne à prévenir maintenant" });
   if (opts.dry) return json(200, { dry: true, targets: targets.map((t) => ({ salon: t.salon_id, day: t.day, who: t.who, kind: t.kind })) });
 
+  // Un envoi de TEST (day ou force) ne s'inscrit pas au journal : sinon il bloquerait le vrai rappel du soir
+  const isTest = opts.force === true || opts.day != null;
   const perWho = new Map<string, number>();
   const report: unknown[] = [];
-  for (const t of targets) {
+
+  const envoyer = async (t: Target) => {
     const payload = JSON.stringify(reminderMessage(t.day, t.who, t.kind, { prenom: t.prenom, autre: t.prenom_autre, salonId: t.salon_id }));
     try {
       await webpush.sendNotification({ endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } }, payload,
-        { TTL: 12 * 3600, urgency: "high" });
+        { TTL: 12 * 3600, urgency: "high", timeout: DELAI_MS });
       const key = `${t.salon_id}:${t.day}:${t.who}:${t.kind}`;
       perWho.set(key, (perWho.get(key) ?? 0) + 1);
       report.push({ who: t.who, kind: t.kind, ok: true });
+      return key;
     } catch (e) {
       const code = (e as { statusCode?: number }).statusCode;
       // 404/410 : l'abonnement n'existe plus (appli désinstallée, autorisation retirée…)
       if (code === 404 || code === 410) await db.from("push_subscriptions").delete().eq("endpoint", t.endpoint);
-      report.push({ who: t.who, kind: t.kind, ok: false, code, error: String((e as Error).message ?? e) });
+      report.push({ who: t.who, kind: t.kind, ok: false, code, error: String((e as Error).message ?? e).slice(0, 200) });
+      return null;
     }
-  }
-  // Un envoi de TEST (day ou force) ne s'inscrit pas au journal : sinon il bloquerait le vrai rappel du soir
-  const isTest = opts.force === true || opts.day != null;
-  if (!isTest) {
-    for (const [k, devices] of perWho) {
+  };
+
+  // Par lots de LOT envois en parallèle ; le journal est écrit après chaque lot (si la fonction est coupée
+  // en route, ce qui est parti est noté et ne repartira pas)
+  for (let i = 0; i < targets.length; i += LOT) {
+    const keys = new Set((await Promise.all(targets.slice(i, i + LOT).map(envoyer))).filter((k): k is string => !!k));
+    if (isTest) continue;
+    for (const k of keys) {
       const [salon_id, day, who, kind] = k.split(":");
-      await db.from("reminder_log").upsert({ salon_id, day: Number(day), who, kind, devices, sent_at: new Date().toISOString() });
+      const { error: le } = await db.from("reminder_log").upsert(
+        { salon_id, day: Number(day), who, kind, devices: perWho.get(k), sent_at: new Date().toISOString() });
+      if (le) console.error("[rappel-veille] journal :", le.message);
     }
   }
   return json(200, { sent: [...perWho.values()].reduce((a, b) => a + b, 0), report });

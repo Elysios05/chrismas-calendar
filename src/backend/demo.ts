@@ -23,7 +23,7 @@ import type {
   BackendApi, DayNumber, InvitationInfo, PreparedContent, PreparedResult, Progress, RealtimeRoom, ReminderStatus,
   Salon, SalonApi, SalonConfig, SalonCree, SalonId, Who,
 } from "../core/contracts";
-import type { PasswordRecovery } from "./index";
+import type { PasswordRecovery, SalonSecurite } from "./index";
 import {
   DEMO_DAY_OUTSIDE_DECEMBER, DEMO_PHOTO_MAX_DIMENSION, DEMO_SALON_ID, FROZEN_MESSAGE, PREPARED_DAYS,
   SALON_CREATIONS_PAR_HEURE, SALON_DEMO_CONFIG, adventDayFor, checkMotDePasse, checkPhotoSize, checkSalonConfig,
@@ -187,7 +187,7 @@ function salonRecord(id: SalonId): DemoSalonRecord | null {
 
 /* ---------- backend ---------- */
 
-export class DemoBackend implements BackendApi, PasswordRecovery {
+export class DemoBackend implements BackendApi, PasswordRecovery, SalonSecurite {
   readonly mode = "demo" as const;
   private authListeners = new Set<(who: Who | null) => void>();
   private salonListeners = new Set<(salon: Salon | null) => void>();
@@ -487,6 +487,31 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
       return this.currentSalon();
     },
   };
+
+  /* ----- sécurité des salons (méthodes en plus du contrat, voir SalonSecurite dans index.ts) ----- */
+
+  async creerSalonAvecCaptcha(input: Parameters<SalonApi["creerSalon"]>[0], _captcha: string | undefined) {
+    return this.salons.creerSalon(input);   // pas de vérification anti-robot en démo
+  }
+
+  /**
+   * Supprime le salon courant : données, réglages, sessions. Le salon démo, lui, revient à son état de départ
+   * (il existe toujours : après, c'est lui le salon courant).
+   */
+  async supprimerSalon() {
+    const id = this.salonId();
+    if (!this.current()) throw salonError("NON_AUTORISE");
+    const all = loadSalons();
+    delete all[id];
+    saveSalons(all);
+    safe.del(dataKey(id));
+    safe.sset(sessionKey(id), null);
+    safe.del(sessionKey(id));
+    safe.sset(CURRENT_SALON_KEY, null);
+    safe.del(CURRENT_SALON_KEY);
+    this.emitAuth(null);
+    this.emitSalon();
+  }
 
   /* ----- rappels : simulés seulement avec ?rappels=… (aucune vraie notification en démo) ----- */
   private static REMINDER_STATES: readonly ReminderStatus[] = ["active", "off", "denied", "unsupported", "needs-install"];

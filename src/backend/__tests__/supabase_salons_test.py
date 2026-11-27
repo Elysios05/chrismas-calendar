@@ -10,6 +10,7 @@ Usage (depuis la racine du dépôt) :
 Les vraies règles (RLS, jetons, quotas) sont testées en SQL : supabase/tests/run_sql_tests.sh.
 Ici on vérifie seulement que le site appelle les bonnes fonctions et réagit bien à leurs réponses.
 """
+import base64
 import json
 import os
 import subprocess
@@ -36,6 +37,14 @@ class FakeSupabase:
         self.tokens = {}       # access_token -> email
         self.invitations = {}  # jeton -> {salon, used}
         self.requests = []
+
+    @staticmethod
+    def jwt(u):
+        """Jeton au format JWT (non signé) : setSession lit sa date d'expiration."""
+        b64 = lambda d: base64.urlsafe_b64encode(json.dumps(d).encode()).decode().rstrip("=")
+        return ".".join([b64({"alg": "HS256", "typ": "JWT"}),
+                         b64({"sub": u["id"], "exp": int(time.time()) + 3600, "role": "authenticated",
+                              "aud": "authenticated", "n": uuid.uuid4().hex}), "c2lnbmF0dXJl"])
 
     def user_of(self, req):
         auth = req.headers.get("authorization", "")
@@ -68,6 +77,23 @@ class FakeSupabase:
         # ----- Edge Function « salons » -----
         if path == "/functions/v1/salons":
             pw = body.get("motDePasse") or ""
+            if body.get("action") == "supprimer":
+                if not me:
+                    return reply(401, {"code": "NON_AUTORISE", "message": "Connecte-toi d'abord."})
+                sid = me["salon"]
+                self.salons.pop(sid, None)
+                for e in [e for e, u in self.users.items() if u["salon"] == sid]:
+                    del self.users[e]
+                return reply(200, {"ok": True})
+            if body.get("action") == "connexion":
+                for email, u in self.users.items():
+                    if u["salon"] == body.get("salonId") and u["who"] == body.get("place"):
+                        if u["password"] != pw:
+                            return reply(401, {"code": "NON_AUTORISE", "message": "Mot de passe incorrect."})
+                        tok = self.jwt(u)
+                        self.tokens[tok] = email
+                        return reply(200, {"session": {"access_token": tok, "refresh_token": "r-" + tok[-12:]}})
+                return reply(404, {"code": "SALON_INCONNU", "message": "Ce calendrier n'existe pas (ou plus)."})
             if len(pw) < 6:
                 return reply(400, {"code": "MOT_DE_PASSE_FAIBLE", "message": "Trop court."})
             if body.get("action") == "creer":
@@ -85,7 +111,7 @@ class FakeSupabase:
                 if inv["used"]:
                     return reply(409, {"code": "INVITATION_UTILISEE", "message": "Ce lien d'invitation a déjà servi."})
                 inv["used"] = True
-                email = f"{inv['salon']}-flavie@salons.invalid"
+                email = body.get("email") or f"{inv['salon']}-flavie@salons.invalid"
                 self.users[email] = {"id": str(uuid.uuid4()), "password": pw, "who": "flavie", "salon": inv["salon"]}
                 return reply(200, {"salonId": inv["salon"], "email": email})
 
@@ -101,6 +127,12 @@ class FakeSupabase:
                     "app_metadata": {}, "user_metadata": {}, "created_at": "2026-11-25T10:00:00Z"}
             return reply(200, {"access_token": tok, "token_type": "bearer", "expires_in": 3600,
                                "expires_at": int(time.time()) + 3600, "refresh_token": "r-" + tok, "user": user})
+        if path == "/auth/v1/user":
+            if not me:
+                return reply(401, {"code": 401, "msg": "invalid JWT"})
+            email = next(e for e, u in self.users.items() if u is me)
+            return reply(200, {"id": me["id"], "email": email, "aud": "authenticated", "role": "authenticated",
+                               "app_metadata": {}, "user_metadata": {}, "created_at": "2026-11-25T10:00:00Z"})
         if path == "/auth/v1/logout":
             return route.fulfill(status=204, headers=cors, body="")
 
@@ -138,11 +170,12 @@ class FakeSupabase:
                     return reply(200, {"statut": "invalide"})
                 return reply(200, {"statut": "utilisee" if inv["used"] else "valide", "jeton": body["p_token"],
                                    "salonId": inv["salon"], "joueurs": self.salons[inv["salon"]]["config"]["joueurs"]})
-            if fn == "salon_login_email":
+            if fn == "salon_connexion_info":
                 for email, u in self.users.items():
                     if u["salon"] == body["p_salon"] and u["who"] == body["p_place"]:
-                        return reply(200, email)
-                return reply(200, None)
+                        technique = email.startswith(f"{body['p_salon']}-{body['p_place']}@")
+                        return reply(200, {"existe": True, "email": email if technique else None})
+                return reply(200, {"existe": False, "email": None})
             if fn == "salon_invitation":
                 if not me or me["who"] != "alexandre":
                     return reply(400, {"code": "42501", "message": "NON_AUTORISE : seule la personne qui a créé le calendrier peut inviter"})
@@ -214,7 +247,8 @@ def main():
             check(call(b, f"backend.salons.accepterInvitation('{jeton}', 'abc')").get("err") == "MOT_DE_PASSE_FAIBLE",
                   "mot de passe de l'invitée vérifié")
             b.evaluate("window.salons = []; backend.salons.onSalonChange((s) => window.salons.push(s && s.id)); 0")
-            check("ok" in call(b, f"backend.salons.accepterInvitation('{jeton}', 'secret2')"), "invitation acceptée")
+            check("ok" in call(b, f"backend.salons.accepterInvitation('{jeton}', 'secret2', {{ email: 'ines@example.com' }})"),
+                  "invitation acceptée (avec une vraie adresse)")
             check(call(b, "backend.me()") == {"ok": "flavie"}, "invitée connectée à la place 2")
             sb = call(b, "backend.salons.getSalon()")["ok"]
             check(sb["id"] == sid and sb["inviteArrive"] and sb["config"]["contenu"]["1"], "invitée : salon complet ouvert")
@@ -232,8 +266,12 @@ def main():
                   "visiteur : prénoms sans le contenu")
             check(call(c, "backend.me()") == {"ok": None}, "pas connecté")
             check(call(c, "backend.signIn('flavie', 'mauvais')")["msg"] == "Mot de passe incorrect.", "mauvais mot de passe")
+            n_fn = sum(1 for r in fake.requests if r[1] == "/functions/v1/salons")
             check("ok" in call(c, "backend.signIn('flavie', 'secret2')") and call(c, "backend.me()") == {"ok": "flavie"},
-                  "connexion par place avec l'adresse du salon")
+                  "connexion par place, adresse réelle gardée par le serveur (Edge Function)")
+            check(sum(1 for r in fake.requests if r[1] == "/functions/v1/salons") > n_fn
+                  and not any(r[1] == "/auth/v1/token" and "password" in r[2] for r in fake.requests[-6:]),
+                  "connexion passée par l'Edge Function")
             check(call(c, "backend.salons.getSalon()")["ok"]["config"]["contenu"]["1"], "contenu lisible une fois connecté")
             r3 = call(c, "backend.salons.ouvrirSalon('00000000-0000-0000-0000-00000000dead')")
             check(r3.get("err") == "SALON_INCONNU" and call(c, "backend.salons.getSalon()")["ok"]["id"] == sid,
@@ -253,6 +291,14 @@ def main():
                   "progression : conflit sur (salon, place, jour)")
             check("ok" in call(a, "backend.signOut()") and call(a, "backend.me()") == {"ok": None}, "déconnexion")
             check(call(a, "backend.salons.getSalon()")["ok"]["config"]["contenu"] == {}, "après déconnexion : contenu plus lisible")
+
+            print("Suppression du salon (RGPD)")
+            check(call(a, "backend.supprimerSalon()").get("err") == "NON_AUTORISE", "pas connecté : suppression refusée")
+            check("ok" in call(c, "backend.supprimerSalon()"), "membre connecté : salon supprimé")
+            check(call(c, "backend.me()") == {"ok": None} and call(c, "backend.salons.getSalon()") == {"ok": None},
+                  "après suppression : plus connecté, plus de salon courant")
+            check(sid not in fake.salons and not any(u["salon"] == sid for u in fake.users.values()),
+                  "salon et comptes supprimés côté serveur")
             browser.close()
         print(f"Tous les tests des salons Supabase sont passés ({base.passed} vérifications).")
     finally:

@@ -33,8 +33,6 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || vars.VITE_SUPABASE_ANON_KEY || 'sb_publishable_OWfucaz2x0nO5TUi_Hm5Zw_GCmKDe2Q' }}
-          VITE_EMAIL_ALEXANDRE: ${{ secrets.VITE_EMAIL_ALEXANDRE }}
-          VITE_EMAIL_FLAVIE: ${{ secrets.VITE_EMAIL_FLAVIE }}
           VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY || vars.VITE_VAPID_PUBLIC_KEY || 'BDqHsPKRJgs9fVpARgKVwa1sUyEgY_6lx1ns7PoUjK5ig8q4ru6VZNu6ydfG3L1vRXrktt89uHkUu_pn7-UuQGo' }}
       # Version démo publique, sans backend, dans le sous-dossier /demo/
       - name: Build version démo

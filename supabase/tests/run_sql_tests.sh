@@ -21,7 +21,7 @@ PSQL=("$PGBIN/psql" -h "$TMP" -p "$PORT" -U postgres -d postgres -v ON_ERROR_STO
 for pass in 1 2; do  # 2e passage : les migrations doivent être ré-exécutables
   for m in "$ROOT"/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$m" >/dev/null; done
 done
-for t in rls_test rappels_test salons_test; do
+for t in rls_test rappels_test salons_test securite_test; do
   "${PSQL[@]}" -t -f "$HERE/$t.sql" | grep -E 'ok  |ÉCHEC|Tous les tests'
 done
 
@@ -31,5 +31,7 @@ LEG=("$PGBIN/psql" -h "$TMP" -p "$PORT" -U postgres -d legacy -v ON_ERROR_STOP=1
 "${LEG[@]}" -f "$HERE/stub_supabase.sql" >/dev/null 2>&1 || "${LEG[@]}" -f <(grep -v '^create role' "$HERE/stub_supabase.sql") >/dev/null
 for m in "$ROOT"/supabase/migrations/000[123]_*.sql; do "${LEG[@]}" -f "$m" >/dev/null; done
 "${LEG[@]}" -f "$HERE/legacy_seed.sql" >/dev/null
-for m in "$ROOT"/supabase/migrations/0004_*.sql "$ROOT"/supabase/migrations/0004_*.sql; do "${LEG[@]}" -f "$m" >/dev/null; done
+for pass in 1 2; do
+  for m in "$ROOT"/supabase/migrations/000[4-9]_*.sql; do "${LEG[@]}" -f "$m" >/dev/null; done
+done
 "${LEG[@]}" -t -f "$HERE/legacy_test.sql" | grep -E 'ok  |ÉCHEC|Tous les tests'
