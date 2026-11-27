@@ -25,11 +25,16 @@ et Pingou (répliques + 5 expressions).
 
 ## À faire (par priorité) — mis à jour par le chef le 24 nov
 **🎯 Plan final (chef, 27 nov — validé par Alexandre)** : à finir **samedi 28 au soir**.
-1. **Jour 19 « défi photo »** (confié par le chef : `src/games/<dossier du jeu 19>/` + son contenu dans `src/data/games/`,
-   + sa ligne dans `src/games/registry.ts`) : reprend le jeu photo du jour 3 ; règles proposées à Alexandre avant de coder ;
-   contenu générique par défaut, schéma pour l'éditeur, `ctx.prenoms`, pas d'accord de genre.
+1. ~~Jour 19~~ : finalement fait par les Jeux (PR #132, fusionnée).
 2. **Vérification en vrai sur Supabase** (site en ligne branché depuis le 26 nov) : création de salon, invitation, première
    connexion, messages d'erreur de #75, abonnement aux notifications ; Alexandre te fournit l'accès si tu as besoin d'un `.env.local`.
+3. **Ouverture au public, gratuite avec dons** (décision d'Alexandre, 27 nov) — après validation des textes par Alexandre :
+   - un bouton discret **« Soutenir le projet ☕ »** (Réglages + écran final + page d'accueil), lien vers la page de dons
+     d'Alexandre (lien lu dans une constante ou `import.meta.env.VITE_LIEN_DON` ; bouton caché si vide) ;
+   - une page **« Confidentialité & mentions »** (ce qu'on stocke : prénoms, textes, photos ; où : Supabase UE ; combien de
+     temps ; comment supprimer son salon ; contact) — brouillon à faire valider par Alexandre, ce n'est pas un avis juridique ;
+   - l'écran **« Complet pour cette année »** quand la création est refusée parce que le plafond de salons est atteint
+     (code d'erreur `LIMITE_CREATION` existant ou nouveau code donné par le Backend dans #84).
 Dimanche 29 : tests et corrections seulement. Lundi 30 : rien de nouveau.
 
 Méthode : prends le **premier point non fait** de cette liste, une branche et une PR par point, `npm run build`,
