@@ -54,7 +54,7 @@ export const LUGE_LIGNES = {
   depart: "Accroche-toi !",
   choc: ["Aïe !", "Attention aux sapins !", "Encore un comme ça et c'est fini…"],
   dernierChoc: "Plus de luge. Mais tu peux recommencer autant que tu veux 😊",
-  arrivee: "Tu es arrivé en bas entier, bravo ! 🎉",
+  arrivee: "Te voilà en bas sans une égratignure, bravo ! 🎉",
   depasse: "Tu viens de passer devant {autre} 😏",
   moitie: "Moitié de la descente ! Ça va vite, hein ?",
 };

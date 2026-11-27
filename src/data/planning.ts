@@ -14,7 +14,7 @@ export const PLANNING: { day: number; kind: DayKind; title: string; emoji: strin
   { day: 11, kind: "direct", title: "Quiz « Sommes-nous synchro ? »", emoji: "💞" },
   { day: 12, kind: "prepare", title: "Case préparée par vous deux", emoji: "💝" },
   { day: 13, kind: "direct", title: "Bonhomme de neige à deux", emoji: "⛄" },
-  { day: 14, kind: "synchro", title: "Même recette de biscuits, chacun chez soi", emoji: "🍪" },
+  { day: 14, kind: "synchro", title: "Même recette de biscuits, d'une cuisine à l'autre", emoji: "🍪" },
   { day: 15, kind: "jeu", title: "Pendu du bonhomme qui fond", emoji: "💧" },
   { day: 16, kind: "prepare", title: "Case préparée par vous deux", emoji: "💝" },
   { day: 17, kind: "jeu", title: "Mots croisés de votre histoire", emoji: "🔠" },
@@ -28,6 +28,6 @@ export const PLANNING: { day: number; kind: DayKind; title: string; emoji: strin
 ];
 
 export const KIND_LABEL: Record<DayKind, string> = {
-  jeu: "Mini-jeu", direct: "En direct à deux", differe: "Chacun son tour", prepare: "Préparée par vous deux",
+  jeu: "Mini-jeu", direct: "En direct à deux", differe: "À tour de rôle", prepare: "Préparée par vous deux",
   photo: "Défi photo", synchro: "Activité synchronisée", score: "Score à battre",
 };

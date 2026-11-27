@@ -51,7 +51,7 @@ export const PHOTO_JOUR3: PhotoContent = {
 export const SCHEMA_PHOTO_JOUR3: SchemaContenu = {
   jour: 3,
   titre: "Jour 3 — Défi photo croisé",
-  intro: "Chacun prend une photo, choisit une question et donne sa vraie réponse ; l'autre la devine en découvrant la photo. Choisis des questions dont la réponse ne se voit pas sur la photo.",
+  intro: "Chaque personne prend une photo, choisit une question et donne sa vraie réponse ; l'autre la devine en découvrant la photo. Choisis des questions dont la réponse ne se voit pas sur la photo.",
   champs: [
     { type: "texte", cle: "emoji", label: "Emoji", max: 8, exemple: "🪟" },
     { type: "texte", cle: "titre", label: "Titre du défi", max: 40, exemple: "La vue de ta fenêtre" },

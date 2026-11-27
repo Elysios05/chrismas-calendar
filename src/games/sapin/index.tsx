@@ -225,7 +225,7 @@ function Sapin({ ctx }: { ctx: GameContext }) {
             "Choisis une déco et sa couleur en bas, puis pose-la du doigt sur les branches. Les cadeaux vont au pied.",
             "Pour la guirlande, trace-la du doigt sur le sapin.",
             ensemble ? `${autre} est là : tu verras sa main et ses décos en direct.` : `${autre} n'est pas là : ses décos arriveront quand ${autre} passera.`,
-            `Quand vous aurez posé ${contenu.seuilEtoile} décos chacun, l'étoile arrivera. Tenez-la à deux pour la poser tout en haut.`,
+            `Quand vous aurez posé ${contenu.seuilEtoile} décos par personne, l'étoile arrivera. Tenez-la à deux pour la poser tout en haut.`,
             "Pas de score, pas de chrono : le sapin reste jusqu'au 24, et on le voit sur la carte.",
           ]}
           bouton={deja ? "Retour au sapin" : "Décorer !"}

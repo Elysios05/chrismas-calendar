@@ -263,7 +263,7 @@ function Bataille({ ctx }: { ctx: GameContext }) {
           emoji="☃️"
           titre="Le duel des forts"
           regles={[
-            `${nb} manches de ${contenu.secondes} s, chacun derrière son fort, au pied de la cascade gelée.`,
+            `${nb} manches de ${contenu.secondes} s, un fort pour toi et un pour ${autre}, au pied de la cascade gelée.`,
             "Glisse le doigt vers l'arrière comme un lance-pierre, puis lâche : plus tu tires loin, plus la boule va loin.",
             `Une boule sur ${autre} : +${contenu.points}. Une boule sur un fort lui enlève une rangée de neige.`,
             "Reste appuyé sur « Se baisser » (ou Espace) pour te cacher : ton fort se répare pendant ce temps.",
@@ -311,7 +311,7 @@ function Bataille({ ctx }: { ctx: GameContext }) {
             <p>
               {pret.me
                 ? (pret.partner ? "Attention… 3, 2, 1…" : `C'est noté. On attend ${autre}…`)
-                : (pret.partner ? `${autre} n'attend plus que toi !` : "Dès que chacun a cliqué, la bataille commence.")}
+                : (pret.partner ? `${autre} n'attend plus que toi !` : `Dès que vous aurez cliqué, toi et ${autre}, la bataille commence.`)}
             </p>
             <div className="duel-pret">
               <span className={pret.me ? "ok" : ""}>{PRENOMS[ctx.me]} {pret.me ? "✅" : "…"}</span>
@@ -402,7 +402,7 @@ function Bataille({ ctx }: { ctx: GameContext }) {
             {moiFini
               ? (bilan.complet
                 ? `${t[ctx.me] === t[ctx.partner] ? "Égalité !" : t[ctx.me] > t[ctx.partner] ? "Tu gagnes !" : `${autre} gagne !`} Chaque boule qui a touché compte un point.`
-                : finDirecte && !patience ? `Je compte les boules ${de(autre)}…` : `${autre} affrontera ton fantôme : ton score sera recalculé à ce moment-là (s'il se cache bien…).`)
+                : finDirecte && !patience ? `Je compte les boules ${de(autre)}…` : `${autre} affrontera ton fantôme : ton score sera recalculé à ce moment-là (tout dépendra de ses esquives…).`)
               : suivante?.direct
                 ? `Manche suivante dans ${Math.max(0, Math.ceil((suivante.debut - maintenant) / 1000))} s…`
                 : joues[ctx.partner][prochaineSeul]

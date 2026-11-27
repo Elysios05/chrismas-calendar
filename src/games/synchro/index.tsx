@@ -29,7 +29,7 @@ function verdict(pourcent: number) {
 
 /** Les options d'une question « qui » sont les mêmes des deux côtés : des prénoms, jamais « toi » */
 function optionsDe(q: QuestionSynchro, PRENOMS: Record<Who, string>): string[] {
-  if (q.type === "qui") return [PRENOMS.alexandre, PRENOMS.flavie, "Les deux", "Aucun des deux"];
+  if (q.type === "qui") return [PRENOMS.alexandre, PRENOMS.flavie, "Les deux", "Personne"];
   return q.options ?? [];
 }
 
@@ -114,7 +114,7 @@ function Synchro({ ctx }: { ctx: GameContext }) {
     setIndex(suivante === -1 ? 0 : suivante);
     if (suivante === -1) { setEtape("fin"); return; }
     setSecondes(0);
-    if (ensemble) { setEtape("jeu"); ctx.say([`${prenomAutre} est là. Répondez chacun de votre côté, sans tricher 👀`]); }
+    if (ensemble) { setEtape("jeu"); ctx.say([`${prenomAutre} est là. Répondez de votre côté, sans tricher 👀`]); }
     else { setEtape("attente"); ctx.say([`Je préviens ${prenomAutre}… on attend un petit peu ?`]); }
   };
 
@@ -159,9 +159,9 @@ function Synchro({ ctx }: { ctx: GameContext }) {
           titre="Sommes-nous synchro ?"
           regles={[
             `${total} questions, posées à vous deux en même temps.`,
-            "Vous répondez chacun sans voir l'autre, puis les deux réponses se retournent ensemble.",
+            "Vous répondez sans voir la réponse de l'autre, puis les deux réponses se retournent ensemble.",
             "Même réponse = +1 point de synchro. Ce n'est pas un quiz, personne n'a « raison ».",
-            "Pas de chrono : chacun son rythme.",
+            "Pas de chrono : prenez votre temps.",
             ensemble
               ? `${prenomAutre} est là : vous jouez en direct.`
               : `${prenomAutre} n'est pas là : tu peux jouer ton tour, la réponse viendra plus tard.`,

@@ -384,7 +384,7 @@ function Bonhomme({ ctx }: { ctx: GameContext }) {
             <p>
               {pret.me
                 ? (pret.partner ? "Attention… 3, 2, 1…" : `C'est noté. On attend ${autre}…`)
-                : (pret.partner ? `${autre} n'attend plus que toi !` : "Dès que chacun a cliqué, on roule les boules.")}
+                : (pret.partner ? `${autre} n'attend plus que toi !` : `Dès que vous aurez cliqué, toi et ${autre}, on roule les boules.`)}
             </p>
             <div className="bh-pret">
               <span className={pret.me ? "ok" : ""}>{PRENOMS[ctx.me]} {pret.me ? "✅" : "…"}</span>

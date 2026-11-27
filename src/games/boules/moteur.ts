@@ -281,7 +281,7 @@ export async function lancerManche(o: OptionsManche): Promise<Manche | null> {
       if (e.cible === o.moi) {
         secousse = 0.35;
         o.sound.play("bad");
-        o.surFlash(b.compte ? "Aïe ! Touché·e…" : "Aïe ! (le lutin ne compte pas)");
+        o.surFlash(b.compte ? "Aïe ! Bien visé…" : "Aïe ! (le lutin ne compte pas)");
       } else if (b.qui === o.moi) {
         o.sound.play("good");
         o.surFlash(`🎯 +${c.points}`);

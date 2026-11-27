@@ -64,6 +64,25 @@ du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
 
+### 27 novembre 2026 — textes des jeux sans accord de genre (branche `jeux/textes-neutres`, règle 7 de `docs/salons.md`)
+
+**Décisions prises avec Alexandre :**
+- **Tournures neutres partout, sans point médian** : plus de « chacun », « tous les deux », « il/elle » sur le
+  joueur ou l'autre, et les 3 « ·e » existants sont retirés (« Prêt·e ! » → « On y va ! » comme les autres jeux,
+  « Touché·e » → « Bien visé… », « resté·e / revenu·e » reformulés).
+- **« Chacun son tour » → « À tour de rôle »** (étiquette du mode différé dans `planning.ts` + bouton du Pictionary).
+
+Autres choix de formulation (pris seul, dans l'esprit de la décision) : « Dès que vous aurez cliqué, toi et {autre}, … »,
+« +N pour vous deux », « l'attrapez À DEUX », « par personne », « Chaque personne… » (intros de l'éditeur),
+jour 14 « Biscuits de Noël, d'une cuisine à l'autre », luge « Te voilà en bas sans une égratignure », synchro
+« Aucun des deux » → « Personne » (réponses stockées par index, rien ne casse).
+Restent volontairement : « Pour chacun » (= chaque dessin) au jour 9, et des commentaires de code.
+
+**Vérifié :** `npm run build` OK ; `npm run capture -- --prenoms=Sam,Camille` jours 14 (mobile + ordinateur) et 11 :
+0 erreur console. ⚠️ Ne lancer qu'**une** capture à la fois (port 4180 partagé).
+
+**Prochaine étape :** corrections remontées par la Qualité ; fermer #56 et #109 quand la Qualité confirme.
+
 ### 26 novembre 2026 — contenu d'Alexandre & Flavie retiré du dépôt public (branche `jeux/contenu-prive`)
 
 - `src/data/salons/alexandre-flavie.ts` **supprimé** (le chef l'a déjà chargé dans leur salon Supabase).

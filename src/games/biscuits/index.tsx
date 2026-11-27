@@ -389,7 +389,7 @@ function Biscuits({ ctx }: { ctx: GameContext }) {
             <p>
               {pret.me
                 ? (pret.partner ? "Attention… 3, 2, 1…" : `C'est noté. On attend ${autre}…`)
-                : (pret.partner ? `${autre} n'attend plus que toi !` : "Dès que chacun a cliqué, on lance la cuisine au même moment.")}
+                : (pret.partner ? `${autre} n'attend plus que toi !` : `Dès que vous aurez cliqué, toi et ${autre}, on lance la cuisine au même moment.`)}
             </p>
             <div className="bis-pret">
               <span className={pret.me ? "ok" : ""}>{PRENOMS[ctx.me]} {pret.me ? "✅" : "…"}</span>
@@ -397,7 +397,7 @@ function Biscuits({ ctx }: { ctx: GameContext }) {
             </div>
             <div className="jeu-actions">
               <button className="jeu-btn clair" onClick={() => { partie.current?.live?.setReady(false); void demarrer(choisie); }}>Commencer sans attendre</button>
-              {!pret.me && <button className="jeu-btn" onClick={() => { ctx.sound.play("tap"); partie.current?.live?.setReady(true); }}>Prêt·e !</button>}
+              {!pret.me && <button className="jeu-btn" onClick={() => { ctx.sound.play("tap"); partie.current?.live?.setReady(true); }}>On y va !</button>}
             </div>
           </div>
         </div>
@@ -517,6 +517,6 @@ function Biscuits({ ctx }: { ctx: GameContext }) {
 
 export const biscuitsJour14: GameModule = {
   id: "biscuits-jour14",
-  title: "Biscuits de Noël, chacun chez soi",
+  title: "Biscuits de Noël, d'une cuisine à l'autre",
   mount: (el, ctx) => monterReact(el, <Biscuits ctx={ctx} />),
 };

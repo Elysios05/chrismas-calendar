@@ -24,12 +24,12 @@ export const PHOTO_JOUR19: PhotoContent = {
   idees: [
     "Celle-ci m'a fait penser à toi",
     "Ma déco préférée du jour",
-    "Imagine-nous devant, tous les deux",
+    "Imagine-nous devant, à deux",
   ],
   questions: [
     { id: "ou", texte: "Où est-ce que j'ai trouvé cette déco ?", options: ["Chez moi", "Dans la rue", "Dans un magasin", "Chez quelqu'un"] },
     { id: "qui", texte: "Qui l'a installée, d'après toi ?", options: ["Moi", "Quelqu'un que je connais", "Un inconnu", "La ville"] },
-    { id: "temps", texte: "Combien de temps je suis resté·e devant ?", options: ["Quelques secondes", "Une minute", "Plusieurs minutes", "Je suis revenu·e exprès"] },
+    { id: "temps", texte: "Combien de temps j'ai passé devant ?", options: ["Quelques secondes", "Une minute", "Plusieurs minutes", "J'ai fait des allers-retours exprès"] },
     { id: "rappelle", texte: "Qu'est-ce que ça me rappelle ?", options: ["Mon enfance", "Un Noël avec toi", "Un film de Noël", "Rien, c'est juste joli"] },
     { id: "depuis", texte: "Depuis quand je connais cet endroit ?", options: ["Je viens de le découvrir", "Quelques mois", "Des années", "Depuis toujours"] },
   ],
@@ -40,7 +40,7 @@ export const PHOTO_JOUR19: PhotoContent = {
 export const SCHEMA_PHOTO_JOUR19: SchemaContenu = {
   jour: 19,
   titre: "Jour 19 — Défi photo croisé",
-  intro: "Chacun photographie une déco de Noël, choisit une question et donne sa vraie réponse ; l'autre la devine en découvrant la photo. Choisis des questions dont la réponse ne se voit pas sur la photo.",
+  intro: "Chaque personne photographie une déco de Noël, choisit une question et donne sa vraie réponse ; l'autre la devine en découvrant la photo. Choisis des questions dont la réponse ne se voit pas sur la photo.",
   champs: [
     { type: "texte", cle: "emoji", label: "Emoji", max: 8, exemple: "🎄" },
     { type: "texte", cle: "titre", label: "Titre du défi", max: 40, exemple: "Ta déco de Noël" },
