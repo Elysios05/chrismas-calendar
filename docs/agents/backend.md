@@ -250,3 +250,18 @@ Seuils réglables dans `app_settings` (valeurs par défaut entre parenthèses).
 - **Ordre de mise en ligne** : 1) migration 0006 ; 2) redéployer `salons` et `rappel-veille` ; 3) fusionner le site.
   Entre 1 et 3, un ancien site ne peut plus se connecter à un compte à adresse réelle (les adresses techniques marchent).
 - Questions posées sur #59 : quota photos par salon ; qui peut supprimer un calendrier.
+
+**Décisions d'Alexandre (27 nov, transmises par le chef), intégrées dans la même PR #146 :**
+- **Mot de passe : 8 caractères minimum** (SEC-13) : `MOT_DE_PASSE_MIN = 8` (`config.ts`, Edge Function `salons`,
+  `updatePassword`, contrat). Écrans de l'Interface (`minLength={6}`, `mdp.length < 6`, « 6 caractères au moins ») :
+  issue ouverte pour l'Interface.
+- **Seul le créateur (place `alexandre`) supprime le calendrier** : `salon_du_createur(user)` côté serveur, et vérif. dans
+  les deux backends.
+- **Photos : le plus de couples possible sur 1 Go** : 1280 px, JPEG 0,8 (`PHOTO_MAX_DIMENSION`, `PHOTO_QUALITE`), 15 Mo
+  par salon (`salon_photo_octets_max`), 900 Mo pour le site. **Exceptions par salon** : colonnes `salons.photo_dimension`,
+  `photo_octets_max`, `photo_max` (null = réglage du site), lues par `salon_photo_quota_ok` et par le site
+  (`salon_public` → `photoDimension`). Seul le serveur les modifie. Le chef pose l'exception du salon d'Alexandre
+  et Flavie (2000 px, 150 Mo) après l'application ; leur identifiant n'est jamais écrit dans le dépôt.
+- **Contrat** (confié par le chef) : `SalonApi.creerSalonAvecCaptcha(input, captcha)` et `SalonApi.supprimerSalon()` ;
+  l'interface hors contrat `SalonSecurite` est retirée.
+- Tests : SQL 220, `supabase_salons_test.py` 40, `demo_backend_test.py` 97.

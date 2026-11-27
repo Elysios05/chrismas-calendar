@@ -21,11 +21,16 @@ export const DEMO_DAY_OUTSIDE_DECEMBER = 9;
 /** Jours des cases préparées par chacun pour l'autre. */
 export const PREPARED_DAYS: readonly DayNumber[] = [4, 8, 12, 16, 20, 24];
 
-/** Taille maximale d'une photo APRÈS compression (octets). Doit rester ≤ à celle du bucket (10 Mo). */
+/** Taille maximale d'une photo APRÈS compression (octets). Doit rester ≤ à celle du bucket (5 Mo). */
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
-/** Plus grand côté (px) d'une photo après redimensionnement côté navigateur. */
-export const PHOTO_MAX_DIMENSION = 2000;
+/**
+ * Plus grand côté (px) d'une photo après redimensionnement côté navigateur, et qualité JPEG (~200–300 Ko).
+ * Décision d'Alexandre (27 nov) : servir le plus de couples possible sur l'offre gratuite. Un salon peut avoir
+ * une autre taille, réglée sur le serveur (salons.photo_dimension, lue par salon_public → photoDimension).
+ */
+export const PHOTO_MAX_DIMENSION = 1280;
+export const PHOTO_QUALITE = 0.8;
 /** Idem en mode démo (les photos sont stockées dans localStorage, ~5 Mo en tout). */
 export const DEMO_PHOTO_MAX_DIMENSION = 640;
 
@@ -118,8 +123,8 @@ export const SALON_PRENOM_MAX = 30;
 export const SALON_CONFIG_MAX_BYTES = 200 * 1024;
 /** Nombre de salons qu'un même appareil peut créer par heure. */
 export const SALON_CREATIONS_PAR_HEURE = 5;
-/** Longueur minimale d'un mot de passe (minimum de Supabase Auth). */
-export const MOT_DE_PASSE_MIN = 6;
+/** Longueur minimale d'un mot de passe (décision d'Alexandre, 27 nov ; même valeur dans l'Edge Function « salons »). */
+export const MOT_DE_PASSE_MIN = 8;
 
 /** Erreur des salons : message en français prêt à afficher + code (voir SalonErreurCode). */
 export class SalonError extends Error {

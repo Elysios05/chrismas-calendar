@@ -78,8 +78,8 @@ class FakeSupabase:
         if path == "/functions/v1/salons":
             pw = body.get("motDePasse") or ""
             if body.get("action") == "supprimer":
-                if not me:
-                    return reply(401, {"code": "NON_AUTORISE", "message": "Connecte-toi d'abord."})
+                if not me or me["who"] != "alexandre":
+                    return reply(401, {"code": "NON_AUTORISE", "message": "Seule la personne qui a créé le calendrier peut le supprimer."})
                 sid = me["salon"]
                 self.salons.pop(sid, None)
                 for e in [e for e, u in self.users.items() if u["salon"] == sid]:
@@ -94,7 +94,7 @@ class FakeSupabase:
                         self.tokens[tok] = email
                         return reply(200, {"session": {"access_token": tok, "refresh_token": "r-" + tok[-12:]}})
                 return reply(404, {"code": "SALON_INCONNU", "message": "Ce calendrier n'existe pas (ou plus)."})
-            if len(pw) < 6:
+            if len(pw) < 8:
                 return reply(400, {"code": "MOT_DE_PASSE_FAIBLE", "message": "Trop court."})
             if body.get("action") == "creer":
                 sid = str(uuid.uuid4())
@@ -228,7 +228,7 @@ def main():
             check(call(a, "backend.salons.getSalon()") == {"ok": None}, "première visite : pas de salon (écran d'accueil)")
             r = call(a, f"backend.salons.creerSalon({{ config: {json.dumps(cfg)}, motDePasse: '123' }})")
             check(r.get("err") == "MOT_DE_PASSE_FAIBLE", "mot de passe trop court refusé avant l'appel")
-            r = call(a, f"backend.salons.creerSalon({{ config: {json.dumps(cfg)}, motDePasse: 'secret1' }})")["ok"]
+            r = call(a, f"backend.salons.creerSalon({{ config: {json.dumps(cfg)}, motDePasse: 'secret-01' }})")["ok"]
             sid = r["salon"]["id"]
             check(r["lienConnexion"].endswith(f"?salon={sid}") and "?invitation=" in r["lienInvitation"], "liens de connexion et d'invitation")
             check(r["salon"]["config"]["joueurs"]["alexandre"]["prenom"] == "Léo", "prénom nettoyé, salon lu par son membre")
@@ -247,14 +247,14 @@ def main():
             check(call(b, f"backend.salons.accepterInvitation('{jeton}', 'abc')").get("err") == "MOT_DE_PASSE_FAIBLE",
                   "mot de passe de l'invitée vérifié")
             b.evaluate("window.salons = []; backend.salons.onSalonChange((s) => window.salons.push(s && s.id)); 0")
-            check("ok" in call(b, f"backend.salons.accepterInvitation('{jeton}', 'secret2', {{ email: 'ines@example.com' }})"),
+            check("ok" in call(b, f"backend.salons.accepterInvitation('{jeton}', 'secret-02', {{ email: 'ines@example.com' }})"),
                   "invitation acceptée (avec une vraie adresse)")
             check(call(b, "backend.me()") == {"ok": "flavie"}, "invitée connectée à la place 2")
             sb = call(b, "backend.salons.getSalon()")["ok"]
             check(sb["id"] == sid and sb["inviteArrive"] and sb["config"]["contenu"]["1"], "invitée : salon complet ouvert")
             b.wait_for_function("window.salons.length > 0")
             check(sid in b.evaluate("window.salons"), "onSalonChange prévenu à l'arrivée")
-            r2 = call(b, f"backend.salons.accepterInvitation('{jeton}', 'secret2')")
+            r2 = call(b, f"backend.salons.accepterInvitation('{jeton}', 'secret-02')")
             check(r2.get("err") == "INVITATION_UTILISEE" and "déjà servi" in r2["msg"], "jeton à usage unique (code et message du serveur)")
             check(call(b, "backend.salons.lienInvitation()").get("err") == "NON_AUTORISE", "invitée : pas de lien d'invitation")
             check(call(a, "backend.salons.lienInvitation()").get("err") == "INVITATION_UTILISEE", "créateur : plus de lien une fois l'invitée arrivée")
@@ -267,7 +267,7 @@ def main():
             check(call(c, "backend.me()") == {"ok": None}, "pas connecté")
             check(call(c, "backend.signIn('flavie', 'mauvais')")["msg"] == "Mot de passe incorrect.", "mauvais mot de passe")
             n_fn = sum(1 for r in fake.requests if r[1] == "/functions/v1/salons")
-            check("ok" in call(c, "backend.signIn('flavie', 'secret2')") and call(c, "backend.me()") == {"ok": "flavie"},
+            check("ok" in call(c, "backend.signIn('flavie', 'secret-02')") and call(c, "backend.me()") == {"ok": "flavie"},
                   "connexion par place, adresse réelle gardée par le serveur (Edge Function)")
             check(sum(1 for r in fake.requests if r[1] == "/functions/v1/salons") > n_fn
                   and not any(r[1] == "/auth/v1/token" and "password" in r[2] for r in fake.requests[-6:]),
@@ -293,9 +293,11 @@ def main():
             check(call(a, "backend.salons.getSalon()")["ok"]["config"]["contenu"] == {}, "après déconnexion : contenu plus lisible")
 
             print("Suppression du salon (RGPD)")
-            check(call(a, "backend.supprimerSalon()").get("err") == "NON_AUTORISE", "pas connecté : suppression refusée")
-            check("ok" in call(c, "backend.supprimerSalon()"), "membre connecté : salon supprimé")
-            check(call(c, "backend.me()") == {"ok": None} and call(c, "backend.salons.getSalon()") == {"ok": None},
+            check(call(a, "backend.salons.supprimerSalon()").get("err") == "NON_AUTORISE", "pas connecté : suppression refusée")
+            check(call(c, "backend.salons.supprimerSalon()").get("err") == "NON_AUTORISE", "invitée : suppression refusée")
+            check("ok" in call(a, "backend.signIn('alexandre', 'secret-01')"), "créateur reconnecté")
+            check("ok" in call(a, "backend.salons.supprimerSalon()"), "créateur : salon supprimé")
+            check(call(a, "backend.me()") == {"ok": None} and call(a, "backend.salons.getSalon()") == {"ok": None},
                   "après suppression : plus connecté, plus de salon courant")
             check(sid not in fake.salons and not any(u["salon"] == sid for u in fake.users.values()),
                   "salon et comptes supprimés côté serveur")

@@ -19,8 +19,11 @@ alter table public.app_settings add column if not exists salon_game_rows_max int
   check (salon_game_rows_max between 0 and 100000);        -- SEC-02 : lignes de game_state par salon
 alter table public.app_settings add column if not exists salon_game_octets_max bigint not null default 5242880
   check (salon_game_octets_max >= 0);                      -- SEC-02 : 5 Mo de données de jeu par salon
-alter table public.app_settings add column if not exists salon_photo_octets_max bigint not null default 41943040
-  check (salon_photo_octets_max >= 0);                     -- SEC-03 : 40 Mo de photos par salon
+alter table public.app_settings add column if not exists salon_photo_octets_max bigint not null default 15728640
+  check (salon_photo_octets_max >= 0);                     -- SEC-03 : 15 Mo de photos par salon (décision d'Alexandre)
+alter table public.app_settings alter column salon_photo_octets_max set default 15728640;
+alter table public.app_settings add column if not exists photo_dimension int not null default 1280
+  check (photo_dimension between 320 and 4000);            -- plus grand côté des photos (px), redimensionnées par le site
 alter table public.app_settings add column if not exists photos_octets_total_max bigint not null default 943718400
   check (photos_octets_total_max >= 0);                    -- SEC-03 : 900 Mo pour tout le site (offre gratuite : 1 Go)
 alter table public.app_settings add column if not exists push_appareils_max int not null default 5
@@ -199,10 +202,11 @@ language sql stable security definer set search_path = public, auth as $$
   where p.salon_id = p_salon and p.who = p_place
 $$;
 
--- Salon d'un compte (Edge Function, action "supprimer")
-create or replace function public.salon_of_user(p_user uuid) returns uuid
+-- Salon que ce compte a CRÉÉ (place "alexandre"), sinon null : seul le créateur peut supprimer un calendrier
+-- (décision d'Alexandre, 27 nov). Edge Function, action "supprimer".
+create or replace function public.salon_du_createur(p_user uuid) returns uuid
 language sql stable security definer set search_path = public as $$
-  select salon_id from public.profiles where user_id = p_user
+  select salon_id from public.profiles where user_id = p_user and who = 'alexandre'
 $$;
 
 -- =====================================================================
@@ -312,6 +316,28 @@ create trigger game_state_quota before insert or update on public.game_state
   for each row execute function public.game_state_quota();
 
 -- =====================================================================
+-- Photos : réglages PAR SALON (exceptions), null = réglage du site (app_settings). Posés à la main par le chef
+-- (SQL Editor) ; les membres ne peuvent modifier que `config`, jamais ces colonnes.
+--   photo_dimension  : plus grand côté des photos (px), lu par le site via salon_public → photoDimension
+--   photo_octets_max : volume de photos du salon (octets) ; photo_max : nombre de photos du salon
+-- =====================================================================
+alter table public.salons add column if not exists photo_dimension int check (photo_dimension between 320 and 4000);
+alter table public.salons add column if not exists photo_octets_max bigint check (photo_octets_max >= 0);
+alter table public.salons add column if not exists photo_max int check (photo_max between 0 and 100000);
+
+-- Ce que voit un visiteur : comme avant (0004), plus la taille des photos du salon
+create or replace function public.salon_public(p_salon uuid) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(
+    'id', s.id,
+    'joueurs', s.config -> 'joueurs',
+    'inviteArrive', exists (select 1 from public.profiles p where p.salon_id = s.id and p.who = 'flavie'),
+    'createdAt', s.created_at,
+    'photoDimension', coalesce(s.photo_dimension, (select a.photo_dimension from public.app_settings a where a.id = 1), 1280))
+  from public.salons s where s.id = p_salon
+$$;
+
+-- =====================================================================
 -- SEC-03 — Photos : 5 Mo par fichier, volume par salon et pour tout le site (en octets)
 -- (la taille d'un fichier n'est connue qu'après l'envoi : le volume peut dépasser d'au plus une photo)
 -- =====================================================================
@@ -321,9 +347,12 @@ where id = 'photos' and (file_size_limit is null or file_size_limit > 5242880);
 create or replace function public.salon_photo_quota_ok() returns boolean
 language sql stable security definer set search_path = public, storage as $$
   with cfg as (
-    select coalesce(a.salon_photo_max, 150) as nb_max, coalesce(a.salon_photo_octets_max, 41943040) as octets_max,
+    select coalesce(s.photo_max, a.salon_photo_max, 150) as nb_max,
+           coalesce(s.photo_octets_max, a.salon_photo_octets_max, 15728640) as octets_max,
            coalesce(a.photos_octets_total_max, 943718400) as total_max
-    from (select 1) one left join public.app_settings a on a.id = 1
+    from (select 1) one
+    left join public.app_settings a on a.id = 1
+    left join public.salons s on s.id = public.my_salon()
   ), mine as (
     select o.metadata from storage.objects o
     where o.bucket_id = 'photos' and (o.name like public.my_salon()::text || '/%'
@@ -467,7 +496,7 @@ end $$;
 -- Fonctions des salons : visiteurs (lecture d'un salon, d'une invitation, info de connexion), créateur, serveur
 revoke execute on function
   public.salon_connexion_info(uuid, text), public.salon_login_email(uuid, text), public.salon_login_email_serveur(uuid, text),
-  public.salon_of_user(uuid), public.salon_essai_ok(text, text), public.salon_essai_rate(text, text),
+  public.salon_du_createur(uuid), public.salon_essai_ok(text, text), public.salon_essai_rate(text, text),
   public.salons_inactifs(int, timestamptz), public.purge_salons_inactifs(int, timestamptz), public.menage_quotidien(),
   public.ensure_legacy_salon(), public.new_salon_token()
   from public, anon, authenticated;
@@ -475,7 +504,7 @@ grant execute on function public.salon_connexion_info(uuid, text), public.salon_
   to anon, authenticated;
 grant execute on function
   public.salon_connexion_info(uuid, text), public.salon_login_email(uuid, text), public.salon_login_email_serveur(uuid, text),
-  public.salon_of_user(uuid), public.salon_essai_ok(text, text), public.salon_essai_rate(text, text),
+  public.salon_du_createur(uuid), public.salon_essai_ok(text, text), public.salon_essai_rate(text, text),
   public.salons_inactifs(int, timestamptz), public.purge_salons_inactifs(int, timestamptz), public.menage_quotidien(),
   public.salon_claim_invitation(text), public.salon_invitation_info(text)
   to service_role;

@@ -9,9 +9,9 @@ import type {
   ReminderStatus, Salon, SalonApi, SalonConfig, SalonCree, SalonErreurCode, Who,
 } from "../core/contracts";
 import { browserStatus, currentSubscription, subscribe, subscriptionKeys } from "./push";
-import type { PasswordRecovery, SalonSecurite } from "./index";
+import type { PasswordRecovery } from "./index";
 import {
-  FROZEN_MESSAGE, PHOTO_MAX_DIMENSION, PREPARED_DAYS, READ_URL_TTL_SECONDS, UPLOAD_URL_TTL_SECONDS,
+  FROZEN_MESSAGE, MOT_DE_PASSE_MIN, PHOTO_MAX_DIMENSION, PHOTO_QUALITE, PREPARED_DAYS, READ_URL_TTL_SECONDS, UPLOAD_URL_TTL_SECONDS,
   checkMotDePasse, checkPhotoSize, checkSalonConfig, compressImage, isWho, lienInvitationUrl, lienSalonUrl, partnerOf,
   salonError, siteBaseUrl,
 } from "./config";
@@ -84,7 +84,7 @@ function friendly(message: string): string {
   return message;
 }
 
-export class SupabaseBackend implements BackendApi, PasswordRecovery, SalonSecurite {
+export class SupabaseBackend implements BackendApi, PasswordRecovery {
   readonly mode = "supabase" as const;
   private sb: SupabaseClient;
   private who: Who | null = null;           // place dans le SALON COURANT (null si pas membre de ce salon)
@@ -224,29 +224,8 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery, SalonSecur
     this.emitSalon();   // le contenu n'est plus lisible
   }
 
-  /* ----- sécurité des salons (méthodes en plus du contrat, voir SalonSecurite) ----- */
-
+  /** Jeton anti-robot de la création en cours (creerSalonAvecCaptcha). */
   private captcha: string | undefined;
-
-  async creerSalonAvecCaptcha(input: Parameters<SalonApi["creerSalon"]>[0], captcha: string | undefined): Promise<SalonCree> {
-    this.captcha = captcha;
-    try { return await this.salons.creerSalon(input); } finally { this.captcha = undefined; }
-  }
-
-  async supprimerSalon() {
-    if (!(await this.me()) || !this.salonId) throw salonError("NON_AUTORISE");
-    // L'Edge Function lit le compte dans la session envoyée avec la requête
-    await this.callSalons({ action: "supprimer" });
-    try { const sub = await currentSubscription(); if (sub) await sub.unsubscribe(); } catch { /* sans gravité */ }
-    try { await this.sb.auth.signOut({ scope: "local" }); } catch { /* comptes déjà supprimés */ }
-    this.who = null;
-    this.profil = null;
-    this.whoReady = Promise.resolve(null);
-    this.setSalonId(null);
-    this.watchSalon();
-    this.emitAuth(null);
-    this.emitSalon();
-  }
 
   /* ----- mot de passe oublié (méthodes en plus du contrat) ----- */
 
@@ -265,7 +244,7 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery, SalonSecur
   inPasswordRecovery() { return this.recovery; }
 
   async updatePassword(newPassword: string) {
-    if (newPassword.length < 6) throw new Error("Mot de passe trop court (6 caractères minimum).");
+    if (newPassword.length < MOT_DE_PASSE_MIN) throw new Error(`Mot de passe trop court (${MOT_DE_PASSE_MIN} caractères minimum).`);
     const { error } = await this.sb.auth.updateUser({ password: newPassword });
     if (error) throw new Error(error.message);
     this.recovery = false;
@@ -341,11 +320,25 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery, SalonSecur
     if (error) throw new Error(friendly(error.message));
   }
 
+  /** Taille des photos de ce salon (réglage du serveur : 1280 px en général), lue une fois. */
+  private photoDimension: { salon: string; px: number } | null = null;
+  private async dimensionPhotos(salon: string): Promise<number> {
+    if (this.photoDimension?.salon === salon) return this.photoDimension.px;
+    let px = PHOTO_MAX_DIMENSION;
+    try {
+      const { data } = await this.sb.rpc("salon_public", { p_salon: salon });
+      const v = Number((data as { photoDimension?: unknown } | null)?.photoDimension);
+      if (Number.isFinite(v) && v >= 320 && v <= 4000) px = Math.round(v);
+    } catch { /* réglage par défaut */ }
+    this.photoDimension = { salon, px };
+    return px;
+  }
+
   /** Envoie une photo dans <salon>/<moi>/<uuid>.jpg et renvoie une URL signée valable 60 jours. */
   async uploadPhoto(file: Blob): Promise<string> {
     const me = await this.requireMe();
     const salon = this.profil!.salonId;
-    const small = await compressImage(file, PHOTO_MAX_DIMENSION);
+    const small = await compressImage(file, await this.dimensionPhotos(salon), PHOTO_QUALITE);
     checkPhotoSize(small);
     const ext = small.type === "image/png" ? "png" : small.type === "image/webp" ? "webp" : "jpg";
     const path = `${salon}/${me}/${crypto.randomUUID()}.${ext}`;
@@ -555,6 +548,28 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery, SalonSecur
         action: "accepter", jeton, motDePasse, email: options?.email?.trim() || undefined,
       });
       await this.enterSalon(r.salonId, r.email, motDePasse, options?.rester);
+    },
+
+    creerSalonAvecCaptcha: async (input, captcha) => {
+      this.captcha = captcha;
+      try { return await this.salons.creerSalon(input); } finally { this.captcha = undefined; }
+    },
+
+    supprimerSalon: async () => {
+      // Réservé au créateur (le serveur le vérifie aussi)
+      if ((await this.me()) !== "alexandre" || !this.salonId) throw salonError("NON_AUTORISE");
+      // L'Edge Function lit le compte dans la session envoyée avec la requête
+      await this.callSalons({ action: "supprimer" });
+      try { const sub = await currentSubscription(); if (sub) await sub.unsubscribe(); } catch { /* sans gravité */ }
+      try { await this.sb.auth.signOut({ scope: "local" }); } catch { /* comptes déjà supprimés */ }
+      this.who = null;
+      this.profil = null;
+      this.whoReady = Promise.resolve(null);
+      this.photoDimension = null;
+      this.setSalonId(null);
+      this.watchSalon();
+      this.emitAuth(null);
+      this.emitSalon();
     },
 
     ouvrirSalon: async (id) => {

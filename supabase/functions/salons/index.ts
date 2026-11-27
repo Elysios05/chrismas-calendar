@@ -12,8 +12,8 @@
 //         Les comptes à adresse technique se connectent directement depuis le site (salon_connexion_info).
 //   { "action": "oubli", "salonId": "…", "place": "…", "redirectTo": "https://…" }
 //       → envoie l'e-mail « mot de passe oublié » à l'adresse réelle du compte. Réponse : { ok: true }
-//   { "action": "supprimer" }  (avec la session de l'utilisateur, en-tête Authorization)
-//       → supprime le salon de l'utilisateur : photos, comptes des deux membres, toutes les données. Réponse : { ok: true }
+//   { "action": "supprimer" }  (avec la session de l'utilisateur, en-tête Authorization ; créateur seulement)
+//       → supprime le salon dont l'utilisateur est le créateur : photos, comptes des deux membres, toutes les données. Réponse : { ok: true }
 //
 // Erreurs : { code: SalonErreurCode, message } avec un statut 400/401/403/404/409/429/500. Les messages sont
 // génériques : le détail technique ne part que dans les journaux de la fonction (SEC-14).
@@ -25,7 +25,7 @@
 // Déploiement : npx supabase functions deploy salons --project-ref <ID> --no-verify-jwt --use-api
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.119.0";
 
-const MOT_DE_PASSE_MIN = 6;
+const MOT_DE_PASSE_MIN = 8;   // même valeur que src/backend/config.ts
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CORS = {
@@ -256,9 +256,10 @@ async function supprimer(db: SupabaseClient, req: Request) {
   const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
   const { data: u, error: ue } = jwt ? await db.auth.getUser(jwt) : { data: { user: null }, error: null };
   if (ue || !u?.user) throw new Refus("NON_AUTORISE", "Connecte-toi d'abord à ton calendrier.");
-  const { data: salonId, error } = await db.rpc("salon_of_user", { p_user: u.user.id });
+  // Seule la personne qui a créé le calendrier (place "alexandre") peut le supprimer
+  const { data: salonId, error } = await db.rpc("salon_du_createur", { p_user: u.user.id });
   if (error) throw fromSql(error.message);
-  if (!salonId) throw new Refus("NON_AUTORISE", "Ce compte n'appartient à aucun calendrier.");
+  if (!salonId) throw new Refus("NON_AUTORISE", "Seule la personne qui a créé le calendrier peut le supprimer.");
   const legacy = salonId === "00000000-0000-0000-0000-000000000001";
   for (const d of legacy ? ["alexandre", "flavie", `${salonId}/alexandre`, `${salonId}/flavie`]
                          : [`${salonId}/alexandre`, `${salonId}/flavie`]) {

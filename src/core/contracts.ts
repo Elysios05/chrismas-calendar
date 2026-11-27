@@ -175,7 +175,7 @@ export type SalonErreurCode =
   | "LIMITE_CREATION"       // trop de salons créés depuis cet appareil / récemment
   | "NON_AUTORISE"          // pas membre du salon, ou pas le créateur (lien d'invitation)
   | "SALON_INCONNU"         // le salon du lien n'existe pas (ou plus)
-  | "MOT_DE_PASSE_FAIBLE"   // moins de 6 caractères
+  | "MOT_DE_PASSE_FAIBLE"   // moins de 8 caractères
   | "CONFIG_INVALIDE"       // prénom vide, contenu trop gros…
   | "INDISPONIBLE";         // fonction pas encore active sur ce backend
 
@@ -197,6 +197,13 @@ export interface SalonApi {
    * Peut échouer avec LIMITE_CREATION, MOT_DE_PASSE_FAIBLE, CONFIG_INVALIDE.
    */
   creerSalon(input: { config: SalonConfig; motDePasse: string; email?: string; rester?: boolean }): Promise<SalonCree>;
+  /**
+   * Comme `creerSalon`, avec le jeton du widget anti-robot (Cloudflare Turnstile) quand il est activé sur le
+   * serveur (sinon ignoré). Échec de la vérification : LIMITE_CREATION, avec un message prêt à afficher.
+   */
+  creerSalonAvecCaptcha(
+    input: { config: SalonConfig; motDePasse: string; email?: string; rester?: boolean }, captcha: string | undefined,
+  ): Promise<SalonCree>;
   /** Remplace la configuration du salon courant (membre connecté). Le contenu remplace tout l'objet `contenu`. */
   modifierSalon(config: SalonConfig): Promise<Salon>;
 
@@ -222,6 +229,14 @@ export interface SalonApi {
    * `onAuthChange` et `onSalonChange` sont appelés si quelque chose change. Échec : SALON_INCONNU.
    */
   ouvrirSalon(id: SalonId): Promise<Salon>;
+
+  /**
+   * Supprime pour de bon le salon courant : photos, lettres, jeux, réglages et les comptes des DEUX personnes.
+   * Réservé à la personne qui l'a créé (place "alexandre", connectée). Ensuite plus personne n'est connecté et il
+   * n'y a plus de salon courant (`getSalon()` → null ; en démo, retour au salon fictif).
+   * Échec : NON_AUTORISE (pas connecté à ce salon, ou pas le créateur).
+   */
+  supprimerSalon(): Promise<void>;
 }
 
 /* ------------------------------------------------------------------ */

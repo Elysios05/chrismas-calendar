@@ -160,6 +160,14 @@ select public.salon_essai_ok('ipE', 'oubli'), public.salon_essai_ok('ipF', 'conn
 select t.ok(true, 'autre action ou autre IP : pas bloquées');
 reset role;
 
+-- Suppression d'un calendrier : seulement par son créateur
+set role service_role;
+select t.ok(public.salon_du_createur((select p.user_id from public.profiles p where p.salon_id = t.id('config') and p.who = 'alexandre'))
+            = t.id('config'), 'créateur : son salon peut être supprimé');
+select t.ok(public.salon_du_createur((select p.user_id from public.profiles p where p.salon_id = t.id('config') and p.who = 'flavie'))
+            is null, 'invitée : pas de suppression');
+reset role;
+
 -- =====================================================================
 -- SEC-16 — Lien d'invitation : 30 jours
 -- =====================================================================
@@ -212,7 +220,7 @@ insert into storage.objects (bucket_id, name, metadata) values ('photos', t.id('
 select t.raises($$insert into storage.objects (bucket_id, name, metadata) values ('photos', t.id('photo') || '/alexandre/3.jpg', '{"size": 10}')$$,
                 'new row violates', 'volume de photos du salon atteint');
 reset role;
-update public.app_settings set salon_photo_octets_max = 41943040,
+update public.app_settings set salon_photo_octets_max = 15728640,
   photos_octets_total_max = (select sum((metadata ->> 'size')::bigint) from storage.objects where bucket_id = 'photos');
 set role authenticated;
 select t.login('rappels', 'alexandre');
@@ -220,6 +228,28 @@ select t.raises($$insert into storage.objects (bucket_id, name, metadata) values
                 'new row violates', 'stockage du site plein : envoi refusé pour tous');
 reset role;
 update public.app_settings set photos_octets_total_max = 943718400;
+
+-- Réglages photo par salon (exception posée par le chef) : taille et quota propres
+select t.ok((select salon_photo_octets_max from public.app_settings) = 15728640
+            and (public.salon_public(t.id('photo')) ->> 'photoDimension')::int = 1280,
+            'par défaut : 15 Mo par salon, photos de 1280 px');
+update public.app_settings set salon_photo_octets_max = 3000, salon_photo_max = 0;
+update public.salons set photo_dimension = 2000, photo_octets_max = 157286400, photo_max = 400 where id = t.id('photo');
+select t.ok((public.salon_public(t.id('photo')) ->> 'photoDimension')::int = 2000, 'exception : photos de 2000 px');
+select t.ok((public.salon_public(t.id('rappels')) ->> 'photoDimension')::int = 1280, 'les autres salons gardent 1280 px');
+set role authenticated;
+select t.login('photo', 'alexandre');
+insert into storage.objects (bucket_id, name, metadata) values ('photos', t.id('photo') || '/alexandre/4.jpg', '{"size": 10}');
+select t.ok(true, 'exception : quota du salon (150 Mo) au lieu de celui du site');
+select t.raises($$update public.salons set photo_octets_max = 999999999999 where id = t.id('photo')$$, 'permission denied',
+                'un membre ne peut pas changer les réglages photo de son salon');
+reset role;
+set role authenticated;
+select t.login('rappels', 'alexandre');
+select t.raises($$insert into storage.objects (bucket_id, name, metadata) values ('photos', t.id('rappels') || '/alexandre/9.jpg', '{"size": 10}')$$,
+                'new row violates', 'sans exception : quota du site');
+reset role;
+update public.app_settings set salon_photo_octets_max = 15728640, salon_photo_max = 150;
 
 -- =====================================================================
 -- SEC-10 — Photos d'une case : seulement celles de l'auteur, dans son salon
