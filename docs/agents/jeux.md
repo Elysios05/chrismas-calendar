@@ -13,7 +13,7 @@
 
 ## À faire (par priorité) — mis à jour par le chef le 24 nov
 **🎯 Plan final (chef, 27 nov — validé par Alexandre)** : à finir **samedi 28 au soir**.
-1. **PRIORITÉ ABSOLUE — retirer leur contenu du dépôt public** (décision d'Alexandre, 27 nov) : le chef a **déjà chargé**
+1. ✅ *(fait le 26 nov, branche `jeux/contenu-prive`)* **PRIORITÉ ABSOLUE — retirer leur contenu du dépôt public** (décision d'Alexandre, 27 nov) : le chef a **déjà chargé**
    `CONTENU_ALEXANDRE_FLAVIE` (jours 1, 3, 5, 7, 9, 11, 14, 15, 17) dans leur vrai salon Supabase.
    - Supprime `src/data/salons/alexandre-flavie.ts` et **toute mention** de leurs souvenirs perso dans le dépôt
      (imports, commentaires des `src/data/games/*`, atelier de dev…). Le contenu par défaut reste générique.
@@ -46,7 +46,7 @@ Faits : 1, 2, 3, **5, 6** (PR #83 en attente de fusion), 7, 11, 15, 17. Restent 
 5. ~~Jour **13** (en direct)~~ — fait le 26 nov (PR #107, fusionnée)
 6. ~~Jour **14** (activité synchronisée)~~ — fait le 26 nov, branche `jeux/biscuits-jour14`
 7. ~~Jour **18** (en direct)~~ — fait le 26 nov, branche `jeux/boules-neige-jour18`
-8. ~~Jour **19** (défi photo)~~ — fait le 26 nov, branche `jeux/defi-photo-jour19`
+8. Jour **19** (défi photo)
 9. ~~Jour 21~~ → **confié à l'équipe Monde** (26 nov, #29)
 10. ~~Jour 22~~ → **confié à l'équipe Monde** (26 nov, #29)
 11. Jour **23** (activité synchronisée)
@@ -64,25 +64,24 @@ du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
 
-### 26 novembre 2026 — jour 19, défi photo croisé « ta déco de Noël » (branche `jeux/defi-photo-jour19`)
+### 26 novembre 2026 — contenu d'Alexandre & Flavie retiré du dépôt public (branche `jeux/contenu-prive`)
 
-**Décidé avec Alexandre :**
-- La déco peut être **n'importe où** (chez soi, dans la rue, une vitrine, chez quelqu'un), pas forcément chez nous.
-- Questions : **mélange** « coulisses » (où je l'ai trouvée, qui l'a installée, combien de temps devant) et
-  « souvenirs » (ce que ça me rappelle, depuis quand je connais l'endroit).
-- Mode démo : la photo de l'autre est un **sapin décoré dessiné** au canevas.
+- `src/data/salons/alexandre-flavie.ts` **supprimé** (le chef l'a déjà chargé dans leur salon Supabase).
+- Une copie JSON a été écrite dans `prive/contenu-alexandre-flavie.json` (ignoré par git, **pas** dans le dépôt).
+  Elle disparaît avec le conteneur : la source de vérité est désormais leur salon Supabase.
+- **Atelier** (`src/games/dev/atelier.tsx`) : le bouton « A & F » lit ce fichier privé via `import.meta.glob`
+  s'il existe ; sinon le bouton n'apparaît pas (vérifié dans les deux cas, 0 erreur console).
+- Commentaires des `src/data/games/*` : plus de lien vers le fichier supprimé. Retirés aussi : l'exemple
+  « Train de nuit » du schéma du jour 5 (→ « Notre premier rendez-vous ») et « Alexandre n'a pas de four ».
+- Le contenu par défaut restant est générique (raclette, valise, Venise en exemple… : rien de propre à eux).
+- **Hors de mon dossier, signalé dans la PR** : `src/backend/demo.ts` l. 78 (« Ljubljana est jolie… », déjà #111),
+  `docs/cahier-des-charges.md`, `docs/supabase.md`, `src/backend/config.ts` (mentions de Ljubljana), et
+  **l'historique git** contient toujours l'ancien fichier (le réécrire = décision du chef / d'Alexandre).
+- Règle pour la suite : un nouveau jeu avec du contenu à eux → `prive/contenu-alexandre-flavie.json`, puis
+  Alexandre l'envoie au chef.
 
-**Fait :** même jeu que le jour 3. `creerDefiPhoto(id, titre, config)` prend maintenant une config (contenu par
-défaut, schéma, dessin de démo, pastille de fin) ; `defiPhotoJour19` dans `src/games/photo/index.tsx`, contenu
-`src/data/games/photo-jour19.ts` (+ `SCHEMA_PHOTO_JOUR19` pour l'éditeur du salon), sapin `dessinerSapinExemple()`
-dans `exemple.ts`, registre (jeu, contenu, schéma). Pas d'entrée « 19 » dans `alexandre-flavie.ts` : le contenu
-générique leur convient tel quel (à ajouter si Alexandre veut une touche perso).
-
-**Vérifié :** `npm run build` OK ; atelier 390×844 joué jusqu'à la découverte de la photo de démo (0 erreur) ;
-jour 3 inchangé ; `npm run capture -- --jour=19 --case=19` mobile + ordinateur : 0 erreur console.
-
-**Prochaine étape :** jour 23 (film de Noël lancé au même moment, activité synchronisée) : demander d'abord ses
-règles à Alexandre.
+**Prochaine étape :** corrections remontées par la Qualité ; fermer #56 et #109 quand la Qualité confirme.
+(Jour 19 → Interface : notre PR #132 attend l'arbitrage du chef ; jour 23 → Monde.)
 
 ### 26 novembre 2026 — issue #129, petites cibles tactiles sur téléphone (branche `jeux/cibles-tactiles-129`)
 

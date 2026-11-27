@@ -2,7 +2,7 @@
  * Jour 17 — Mots croisés de votre histoire.
  *
  * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
- * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ * (éditeur du salon ; contenu propre à un couple : jamais dans le dépôt, voir docs/salons.md).
  *
  * ALEXANDRE : la grille n'est PAS dessinée à la main. Le code la construit à partir de cette liste,
  * en cherchant les croisements. Tu peux donc remplacer les mots sans rien casser.

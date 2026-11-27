@@ -2,10 +2,10 @@
  * Jour 14 — Biscuits de Noël, chacun chez soi, en même temps.
  *
  * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
- * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ * (éditeur du salon ; contenu propre à un couple : jamais dans le dépôt, voir docs/salons.md).
  *
  * Règles décidées avec Alexandre (26 nov) :
- *  - chacun choisit SA recette (il y en a avec et sans four : Alexandre n'a pas de four, Flavie si) ;
+ *  - chacun choisit SA recette (il y en a avec et sans four, pour qui n'en a pas) ;
  *  - on cuisine en même temps, étape par étape, et on voit où en est l'autre ;
  *  - les minuteurs (frigo, four…) se voient des deux côtés ;
  *  - à la fin, chacun prend sa fournée en photo ; on découvre celle de l'autre après avoir posté la sienne,

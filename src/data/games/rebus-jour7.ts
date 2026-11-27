@@ -2,7 +2,7 @@
  * Jour 7 — Rébus en emojis.
  *
  * Contenu PAR DÉFAUT, générique, pour tous les salons. Le contenu personnel d'un couple vit dans son salon
- * (éditeur du salon ; pour Alexandre et Flavie : src/data/salons/alexandre-flavie.ts).
+ * (éditeur du salon ; contenu propre à un couple : jamais dans le dépôt, voir docs/salons.md).
  *
  * ALEXANDRE : tout se remplace ici.
  *  - `emojis`   : la suite d'emojis affichée en grand (2 à 4, c'est le plus lisible)
