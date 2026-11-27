@@ -30,6 +30,15 @@ et Pingou (répliques + 5 expressions).
    contenu générique par défaut, schéma pour l'éditeur, `ctx.prenoms`, pas d'accord de genre.
 2. **Vérification en vrai sur Supabase** (site en ligne branché depuis le 26 nov) : création de salon, invitation, première
    connexion, messages d'erreur de #75, abonnement aux notifications ; Alexandre te fournit l'accès si tu as besoin d'un `.env.local`.
+3. **Ouverture au public, gratuite avec dons** (décision d'Alexandre, 27 nov) — textes validés par Alexandre avant de coder :
+   - un bouton discret **« Soutenir le projet ☕ »** (Réglages + écran final + accueil), lien vers la page de dons
+     d'Alexandre (constante ou `import.meta.env.VITE_LIEN_DON` ; bouton caché si vide — le chef te donnera le lien) ;
+   - une page **« Confidentialité & mentions »** (données stockées : prénoms, textes, photos ; où : Supabase UE ; durée ;
+     suppression ; contact) — brouillon à faire valider par Alexandre, ce n'est pas un avis juridique (audit SEC-07, #143) ;
+   - dans Réglages › Notre calendrier, **« Supprimer notre calendrier »** (double confirmation, efface salon, textes, photos ;
+     appel fourni par le Backend dans sa PR de correctifs de sécurité) (SEC-07, #143) ;
+   - l'écran **« Complet pour cette année »** quand la création renvoie `LIMITE_CREATION` avec un message commençant par
+     « Complet » (plafond de 50 salons, migration 0005).
 Dimanche 29 : tests et corrections seulement. Lundi 30 : rien de nouveau.
 
 Méthode : prends le **premier point non fait** de cette liste, une branche et une PR par point, `npm run build`,
