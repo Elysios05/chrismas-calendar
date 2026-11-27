@@ -56,7 +56,7 @@ export const SAPIN_LIGNES = {
   horsSapin: "Ça, ça va sur les branches !",
   cadeauPied: "Les cadeaux, c'est au pied du sapin 🎁",
   plein: "Tu as posé toutes tes décos ! Tu peux en enlever avec « Annuler ».",
-  etoilePrete: "L'étoile est arrivée ⭐ Tenez-la tous les deux en même temps pour la poser là-haut !",
+  etoilePrete: "L'étoile est arrivée ⭐ Tenez-la à deux en même temps pour la poser là-haut !",
   etoileAttendre: "Tiens bon… il faut que {autre} la tienne aussi !",
   etoileVeille: "Tu as tenu l'étoile ✨ Elle montera dès que {autre} la tiendra à son tour.",
   etoileAutreVeille: "{autre} a déjà tenu l'étoile pour toi. À ton tour : garde le doigt dessus !",

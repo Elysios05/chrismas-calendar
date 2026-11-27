@@ -129,7 +129,7 @@ export const QUIZ_VERDICTS: { min: number; ligne: string }[] = [
 export const SCHEMA_QUIZ_JOUR1: SchemaContenu = {
   jour: 1,
   titre: "Jour 1 — Est-ce que tu me connais ?",
-  intro: "Chacun répond sur soi, puis devine les réponses de l'autre. Écris chaque question deux fois : posée à soi, puis posée sur l'autre ({autre} devient son prénom).",
+  intro: "Chaque personne répond sur soi, puis devine les réponses de l'autre. Écris chaque question deux fois : posée à soi, puis posée sur l'autre ({autre} devient son prénom).",
   champs: [
     { type: "nombre", cle: "nombre", label: "Nombre de questions posées", aide: "Les premières de la liste.", min: 3, max: 20 },
     {

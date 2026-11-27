@@ -268,7 +268,7 @@ function Duel({ ctx }: { ctx: GameContext }) {
             `${nb} manches de ${contenu.secondes} s, les deux hottes sous la même pluie.`,
             "Glisse le doigt (ou les flèches) : la première hotte qui touche une friandise la garde.",
             `🍭 🍬 +${contenu.points.sucre} · 🍪 +${contenu.points.pain} · charbon ${contenu.points.charbon} et ta hotte ralentit.`,
-            `⭐ L'étoile dorée : +${contenu.points.etoile} chacun, seulement si vous l'attrapez TOUS LES DEUX.`,
+            `⭐ L'étoile dorée : +${contenu.points.etoile} pour vous deux, seulement si vous l'attrapez À DEUX.`,
             ensemble
               ? `${autre} est là : vous jouez en direct.`
               : `${autre} n'est pas là : tu joueras contre son fantôme, ou tu poseras un score à battre.`,
@@ -312,7 +312,7 @@ function Duel({ ctx }: { ctx: GameContext }) {
             <p>
               {pret.me
                 ? (pret.partner ? "Attention… 3, 2, 1…" : `C'est noté. On attend ${autre}…`)
-                : (pret.partner ? `${autre} n'attend plus que toi !` : "Dès que chacun a cliqué, la pluie commence.")}
+                : (pret.partner ? `${autre} n'attend plus que toi !` : `Dès que vous aurez cliqué, toi et ${autre}, la pluie commence.`)}
             </p>
             <div className="duel-pret">
               <span className={pret.me ? "ok" : ""}>{PRENOMS[ctx.me]} {pret.me ? "✅" : "…"}</span>

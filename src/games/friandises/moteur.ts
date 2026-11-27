@@ -154,7 +154,7 @@ export async function lancerManche(o: OptionsManche): Promise<Manche | null> {
     if (f.type === "etoile") {
       const e = etoiles.get(p.id) ?? { moi: false, lui: false };
       e.lui = true; etoiles.set(p.id, e);
-      if (e.moi) { o.sound.play("good"); o.surFlash(`✨ +${c.points.etoile} chacun !`); }
+      if (e.moi) { o.sound.play("good"); o.surFlash(`✨ +${c.points.etoile} pour vous deux !`); }
       return;
     }
     // la mienne, si je l'avais touchée plus tôt, reste à moi
@@ -225,7 +225,7 @@ export async function lancerManche(o: OptionsManche): Promise<Manche | null> {
           o.surFlash(`${c.points.charbon} · charbon !`);
         } else if (f.type === "etoile") {
           const e = etoiles.get(f.id)!;
-          if (e.lui) { o.sound.play("good"); o.surFlash(`✨ +${c.points.etoile} chacun !`); }
+          if (e.lui) { o.sound.play("good"); o.surFlash(`✨ +${c.points.etoile} pour vous deux !`); }
           else { o.sound.play("pop"); o.surFlash(o.direct || o.fantome ? "⭐ À deux, vite !" : "⭐ Il faut être deux…"); }
         } else o.sound.play("pop");
       }

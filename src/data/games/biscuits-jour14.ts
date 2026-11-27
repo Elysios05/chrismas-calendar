@@ -47,8 +47,8 @@ export type BiscuitsContent = {
 
 export const BISCUITS_JOUR14: BiscuitsContent = {
   emoji: "🍪",
-  titre: "Biscuits de Noël, chacun chez soi",
-  intro: "Même moment, deux cuisines : on prépare chacun sa fournée et on se tient au courant, étape par étape.",
+  titre: "Biscuits de Noël, d'une cuisine à l'autre",
+  intro: "Même moment, deux cuisines : chaque cuisine prépare sa fournée et on se tient au courant, étape par étape.",
   recettes: [
     {
       id: "sables",
@@ -124,8 +124,8 @@ export const BISCUITS_JOUR14: BiscuitsContent = {
 /** Ce qu'un couple personnalise dans l'éditeur du salon (voir src/games/shared/contenu.ts). */
 export const SCHEMA_BISCUITS_JOUR14: SchemaContenu = {
   jour: 14,
-  titre: "Jour 14 — Biscuits de Noël, chacun chez soi",
-  intro: "Chacun choisit une recette et la prépare chez lui, en même temps que l'autre. Mettez au moins une recette sans four si l'un de vous n'en a pas. Finir une étape par « [30 min] » ajoute un minuteur que l'autre voit aussi.",
+  titre: "Jour 14 — Biscuits de Noël, d'une cuisine à l'autre",
+  intro: "Chaque personne choisit une recette et la prépare dans sa cuisine, en même temps que l'autre. Mettez au moins une recette sans four s'il manque un four d'un côté. Finir une étape par « [30 min] » ajoute un minuteur que l'autre voit aussi.",
   facultatif: true,
   champs: [
     { type: "texte", cle: "intro", label: "Phrase d'accueil", long: true, max: 160, exemple: "Même moment, deux cuisines." },
@@ -146,7 +146,7 @@ export const SCHEMA_BISCUITS_JOUR14: SchemaContenu = {
         },
       ],
     },
-    { type: "textes", cle: "titres", label: "Titres décernés par Pingou", aide: "Un pour chacun, tiré au hasard à la fin.", min: 2, max: 12, maxLongueur: 60, exemple: "Médaille d'or du goûter" },
+    { type: "textes", cle: "titres", label: "Titres décernés par Pingou", aide: "Un par personne, tiré au hasard à la fin.", min: 2, max: 12, maxLongueur: 60, exemple: "Médaille d'or du goûter" },
     { type: "textes", cle: "idees", label: "Idées de légende pour la photo", min: 1, max: 6, maxLongueur: 80, exemple: "Tadaaa ! Ma fournée du jour" },
   ],
 };

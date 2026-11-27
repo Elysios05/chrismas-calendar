@@ -10,7 +10,7 @@
  * ALEXANDRE : deux sortes de questions, mélangées.
  *  - `type: "choix"` : tu écris 4 options. Synchro si vous choisissez la même.
  *  - `type: "qui"`   : pas d'options à écrire, le jeu propose vos deux prénoms,
- *                      « Les deux » et « Aucun des deux ». Attention : la question doit se lire
+ *                      « Les deux » et « Personne ». Attention : la question doit se lire
  *                      pareil des deux côtés, donc écris « Qui… » et jamais « toi » ou « moi ».
  *
  * `pingou` (facultatif) : ce que la mascotte lance quand vous n'êtes PAS d'accord.
@@ -58,14 +58,14 @@ export const SYNCHRO_JOUR11: SynchroContent = {
       pingou: "L'honnêteté avait ses limites, visiblement." },
     { id: "noel", type: "choix", emoji: "🎁", texte: "Le meilleur moment de Noël ?",
       options: ["Ouvrir les cadeaux", "Le repas", "La déco et la musique", "Ne rien faire du tout"],
-      pingou: "Chacun son Noël, finalement." },
+      pingou: "Deux Noëls différents, finalement." },
     { id: "vacances", type: "choix", emoji: "🏔️", texte: "Prochaines vacances à deux :",
       options: ["La montagne sous la neige", "Une grande ville", "La mer, même en hiver", "Un endroit qu'on ne connaît pas"],
       pingou: "Deux destinations. Ça promet pour la réservation." },
     { id: "bordel", type: "qui", emoji: "🧺", texte: "Qui laisse traîner ses affaires partout ?",
-      pingou: "Chacun accuse l'autre. Classique." },
+      pingou: "Vous vous accusez mutuellement. Classique." },
     { id: "pardon", type: "qui", emoji: "🤝", texte: "Qui s'excuse en premier après une dispute ?",
-      pingou: "Pas d'accord non plus. Au moins vous êtes constants." },
+      pingou: "Pas d'accord non plus. Au moins, c'est constant." },
     { id: "dans5ans", type: "choix", emoji: "🔮", texte: "Dans cinq ans, on se voit…",
       options: ["Exactement comme maintenant", "À l'étranger, ensemble", "Avec un chat et trop de plantes", "Aucune idée, et c'est bien"],
       pingou: "Deux avenirs différents… il faudra en reparler 💞" },
@@ -77,7 +77,7 @@ export const SYNCHRO_VERDICTS: { min: number; ligne: string }[] = [
   { min: 90, ligne: "Vous répondez comme une seule personne. C'est beau et un peu effrayant 💞" },
   { min: 70, ligne: "Très synchro ! Quelques surprises, mais rien de grave." },
   { min: 50, ligne: "Une moitié d'accord : de quoi discuter au prochain appel 😄" },
-  { min: 25, ligne: "Aïe. Vous vous êtes découverts ce soir, on dirait." },
+  { min: 25, ligne: "Aïe. Soirée riche en découvertes, on dirait." },
   { min: 0, ligne: "Pas une seule réponse commune. Au moins, vous ne vous ennuierez jamais 🐧" },
 ];
 
@@ -85,7 +85,7 @@ export const SYNCHRO_VERDICTS: { min: number; ligne: string }[] = [
 export const SCHEMA_SYNCHRO_JOUR11: SchemaContenu = {
   jour: 11,
   titre: "Jour 11 — Sommes-nous synchro ?",
-  intro: "Vous répondez chacun à la même question sans voir l'autre : même réponse = un point de synchro. Une question « Qui de vous deux ? » propose vos deux prénoms, « Les deux » et « Aucun des deux ».",
+  intro: "Vous répondez à la même question sans voir l'autre : même réponse = un point de synchro. Une question « Qui de vous deux ? » propose vos deux prénoms, « Les deux » et « Personne ».",
   champs: [
     { type: "nombre", cle: "nombre", label: "Nombre de questions posées", aide: "Les premières de la liste.", min: 3, max: 20 },
     {

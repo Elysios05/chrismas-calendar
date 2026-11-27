@@ -350,7 +350,7 @@ function Pictionary({ ctx }: { ctx: GameContext }) {
       setMode("seul");
       setRevele(null);
       live?.setReady(false);
-      ctx.say([`${autre} a quitté la partie… Je garde tout : continuez chacun votre tour 💌`]);
+      ctx.say([`${autre} a quitté la partie… Je garde tout : continuez à tour de rôle 💌`]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ensemble, mode]);
@@ -459,7 +459,7 @@ function Pictionary({ ctx }: { ctx: GameContext }) {
           emoji="🎨"
           titre="Pictionary de Noël"
           regles={[
-            `${2 * n} manches de ${total} s : vous dessinez chacun ${n} fois, à tour de rôle.`,
+            `${2 * n} manches de ${total} s : chaque personne dessine ${n} fois, à tour de rôle.`,
             "Quand c'est ton tour de dessiner, tu choisis entre un mot de Noël et un mot « à vous deux ».",
             "L'autre tape ses propositions. Accents et majuscules sont pardonnés.",
             "Plus le dessin est trouvé vite, plus vous gagnez de points, l'un comme l'autre.",
@@ -506,14 +506,14 @@ function Pictionary({ ctx }: { ctx: GameContext }) {
             <p>
               {pret.me
                 ? (pret.partner ? "C'est parti…" : `C'est noté. On attend ${autre}…`)
-                : (pret.partner ? `${autre} n'attend plus que toi !` : "Dès que chacun a cliqué, on commence.")}
+                : (pret.partner ? `${autre} n'attend plus que toi !` : `Dès que vous aurez cliqué, toi et ${autre}, on commence.`)}
             </p>
             <div className="pic-pret">
               <span className={pret.me ? "ok" : ""}>{PRENOMS[ctx.me]} {pret.me ? "✅" : "…"}</span>
               <span className={pret.partner ? "ok" : ""}>{autre} {pret.partner ? "✅" : "…"}</span>
             </div>
             <div className="jeu-actions">
-              <button className="jeu-btn clair" onClick={() => { setMode("seul"); live?.setReady(false); }}>Jouer chacun son tour</button>
+              <button className="jeu-btn clair" onClick={() => { setMode("seul"); live?.setReady(false); }}>Jouer à tour de rôle</button>
               {!pret.me && <button className="jeu-btn" onClick={() => { ctx.sound.play("tap"); live?.setReady(true); }}>On y va !</button>}
             </div>
           </div>

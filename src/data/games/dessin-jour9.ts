@@ -56,7 +56,7 @@ export const SCHEMA_DESSIN_JOUR9: SchemaContenu = {
   titre: "Jour 9 — Vos souvenirs dessinés",
   intro: "Pour chaque dessin, on choisit un thème, on dessine son souvenir et l'autre le devine. Il faut au moins autant de thèmes que de dessins.",
   champs: [
-    { type: "nombre", cle: "nbDessins", label: "Dessins chacun", min: 1, max: 5 },
+    { type: "nombre", cle: "nbDessins", label: "Dessins par personne", min: 1, max: 5 },
     {
       type: "liste", cle: "themes", label: "Thèmes proposés", libelleElement: "Thème", min: 3, max: 12, modele: { id: "" },
       champs: [
