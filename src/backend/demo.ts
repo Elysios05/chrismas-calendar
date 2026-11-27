@@ -74,8 +74,8 @@ function seedData(today: DayNumber): DemoData {
       "Encore quelques jours… je compte les dodos !",
     ],
     alexandre: [
-      "Bonjour ma Flavie ! Voici ta première case : un petit mot et un souvenir de nous deux.",
-      "Ljubljana est jolie sous la neige, mais il manque quelqu'un à côté de moi.",
+      "Coucou toi ! Voici ta première case : un petit mot et un souvenir de nous deux.",
+      "La ville est jolie sous la neige, mais il manque quelqu'un à côté de moi.",
       "Plus que quelques cases avant Noël, tiens bon !",
     ],
   };
