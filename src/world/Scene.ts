@@ -1503,35 +1503,46 @@ export class Scene {
     const r = (n: number) => { const x = Math.sin(n * 91.7 + 13.1) * 43758.5; return x - Math.floor(x); };
     const pics: { x: number; y: number; h: number; w: number; k: number }[] = [];
     let k = 0;
-    for (let u = 10; u < uMax + 10; u += 34) for (let t = -BIG; t <= BIG; t += 64) {
+    for (let u = 14; u < uMax + 10; u += 46) for (let t = -BIG; t <= BIG; t += 100) {
       k++;
       const p = at(t + (r(k) - 0.5) * 40, Math.min(uMax, u + (r(k + 7) - 0.5) * 16));
       // près de l'entrée, les pics restent bas : ils ne doivent pas déborder sur le marché
       const bord = Math.min(1, u / 70);
-      const h = (55 + r(k + 3) * 75) * (0.45 + 0.55 * bord);
-      pics.push({ x: p.x, y: p.y, h, w: h * (0.75 + r(k + 5) * 0.3), k });
+      const h = (45 + r(k + 3) * 50) * (0.45 + 0.55 * bord);
+      pics.push({ x: p.x, y: p.y, h, w: h * (1.25 + r(k + 5) * 0.4), k });
     }
     // une dernière rangée de petits pics à cheval sur le bord, côté pôle Nord, pour casser la ligne droite
-    for (let t = -BIG; t <= BIG; t += 44) {
+    for (let t = -BIG; t <= BIG; t += 60) {
       k++;
       const p = at(t + (r(k) - 0.5) * 20, uMax + 8 + r(k + 2) * 10);
-      const h = 26 + r(k + 3) * 26;
-      pics.push({ x: p.x, y: p.y, h, w: h * 0.9, k });
+      const h = 22 + r(k + 3) * 20;
+      pics.push({ x: p.x, y: p.y, h, w: h * 1.5, k });
     }
     pics.sort((a, b) => a.y - b.y);
     const rocheL = c(0x6f97ba), rocheR = c(0x3f6487), neigeL = c(0xf2f8fc), neigeR = c(0xc6d6e8);
+    // collines arrondies : flanc gauche éclairé, flanc droit dans l'ombre, dôme de neige sur le haut
+    const N = 14;
     for (const p of pics) {
-      const top = { x: p.x + (r(p.k + 9) - 0.5) * p.w * 0.3, y: p.y - p.h };
-      const L = { x: p.x - p.w, y: p.y }, R = { x: p.x + p.w, y: p.y }, M = { x: p.x + p.w * 0.15, y: p.y + 4 };
-      g.poly([top.x, top.y, L.x, L.y, M.x, M.y]).fill(rocheL);
-      g.poly([top.x, top.y, M.x, M.y, R.x, R.y]).fill(rocheR);
-      // chapeau de neige sur le tiers du haut, au bord dentelé
-      const f = 0.36 + r(p.k + 11) * 0.12;
-      const lerp = (a: { x: number; y: number }, b: { x: number; y: number }, t: number) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-      const nl = lerp(top, L, f), nm = lerp(top, M, f * 1.15), nr = lerp(top, R, f * 0.9);
-      const dent = lerp(top, lerp(L, M, 0.5), f * 0.75);
-      g.poly([top.x, top.y, nl.x, nl.y, dent.x, dent.y, nm.x, nm.y]).fill(neigeL);
-      g.poly([top.x, top.y, nm.x, nm.y, nr.x, nr.y]).fill(neigeR);
+      const sommet = (r(p.k + 9) - 0.5) * 0.3; // le sommet n'est pas toujours au milieu
+      const courbe = Array.from({ length: N + 1 }, (_, i) => {
+        const x = -1 + (2 * i) / N, e = Math.max(0, 1 - ((x - sommet) / (1 + Math.sign(x - sommet) * sommet)) ** 2);
+        return { x: p.x + x * p.w, y: p.y - p.h * Math.pow(e, 0.55) };
+      });
+      const mil = Math.round(((sommet + 1) / 2) * N) + 1;
+      const pied = (pts: { x: number; y: number }[]) => [...pts.flatMap((q) => [q.x, q.y]), pts[pts.length - 1].x, p.y + 3, pts[0].x, p.y + 3];
+      g.poly(pied(courbe)).fill(rocheR);
+      g.poly(pied(courbe.slice(0, mil + 1))).fill(rocheL);
+      // neige : une calotte qui suit la courbe de la colline, plus épaisse au sommet, au bord ondulé
+      const ep = 0.38 + r(p.k + 11) * 0.12;
+      const sous = courbe.map((q, i) => ({ x: q.x, y: q.y + (p.y - q.y) * ep + (i % 2 ? 2 : -2) }));
+      const garde = (i: number) => p.y - courbe[i].y > p.h * 0.18; // pas de neige sur les pieds
+      const idx = courbe.map((_, i) => i).filter(garde);
+      if (idx.length > 1) {
+        const calotte = (ids: number[]) => [...ids.map((i) => courbe[i]), ...ids.slice().reverse().map((i) => sous[i])].flatMap((q) => [q.x, q.y]);
+        g.poly(calotte(idx)).fill(neigeR);
+        const gauche = idx.filter((i) => i <= mil);
+        if (gauche.length > 1) g.poly(calotte(gauche)).fill(neigeL);
+      }
     }
   }
 
