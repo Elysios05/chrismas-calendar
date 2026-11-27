@@ -25,16 +25,11 @@ et Pingou (répliques + 5 expressions).
 
 ## À faire (par priorité) — mis à jour par le chef le 24 nov
 **🎯 Plan final (chef, 27 nov — validé par Alexandre)** : à finir **samedi 28 au soir**.
-1. ~~Jour 19~~ : finalement fait par les Jeux (PR #132, fusionnée).
+1. ~~**Jour 19 « défi photo »**~~ — **fait par l'équipe Jeux** (PR #132), confirmé par Alexandre le 27 nov : rien à faire ici. (confié par le chef : `src/games/<dossier du jeu 19>/` + son contenu dans `src/data/games/`,
+   + sa ligne dans `src/games/registry.ts`) : reprend le jeu photo du jour 3 ; règles proposées à Alexandre avant de coder ;
+   contenu générique par défaut, schéma pour l'éditeur, `ctx.prenoms`, pas d'accord de genre.
 2. **Vérification en vrai sur Supabase** (site en ligne branché depuis le 26 nov) : création de salon, invitation, première
    connexion, messages d'erreur de #75, abonnement aux notifications ; Alexandre te fournit l'accès si tu as besoin d'un `.env.local`.
-3. **Ouverture au public, gratuite avec dons** (décision d'Alexandre, 27 nov) — après validation des textes par Alexandre :
-   - un bouton discret **« Soutenir le projet ☕ »** (Réglages + écran final + page d'accueil), lien vers la page de dons
-     d'Alexandre (lien lu dans une constante ou `import.meta.env.VITE_LIEN_DON` ; bouton caché si vide) ;
-   - une page **« Confidentialité & mentions »** (ce qu'on stocke : prénoms, textes, photos ; où : Supabase UE ; combien de
-     temps ; comment supprimer son salon ; contact) — brouillon à faire valider par Alexandre, ce n'est pas un avis juridique ;
-   - l'écran **« Complet pour cette année »** quand la création est refusée parce que le plafond de salons est atteint
-     (code d'erreur `LIMITE_CREATION` existant ou nouveau code donné par le Backend dans #84).
 Dimanche 29 : tests et corrections seulement. Lundi 30 : rien de nouveau.
 
 Méthode : prends le **premier point non fait** de cette liste, une branche et une PR par point, `npm run build`,
@@ -476,3 +471,17 @@ accord d'Alexandre : `npm run capture` ne sait pas entrer dans un jeu).
 - Pour les Jeux (#129) : cases des mots croisés 22 px, pastilles du sapin 30 px, touches du pendu 27 px de large.
 - Prochaine étape : **D, jour 19** (attendre que le chef confirme dans #116 les fichiers de `src/games/` confiés),
   puis **A** après le 27 (erreurs #75 sur vrai Supabase).
+
+### Vérification sur le vrai Supabase (branche `interface/verif-supabase`, 27 nov)
+Point 2 du plan final. **Alexandre a choisi « lecture seule sur la prod »** : je ne crée ni salon ni compte dans la
+vraie base. Site en ligne testé en 390×844 (script jetable hors dépôt, comme pour la revue des jeux).
+- ✅ Accueil sans salon, sans erreur console. ✅ Mauvais mot de passe → « Mot de passe incorrect. » ✅ Réseau coupé
+  → « Pas de réseau… », Pingou suit.
+- ⚠️ « Trop d'essais » : 40 essais ratés d'affilée sans que Supabase ne bloque → message jamais vu en vrai.
+- 🐛 **Corrigé** (`Invitation.tsx`) : lien d'invitation invalide = cul-de-sac sans bouton → « Revenir à l'accueil ».
+  Et une panne réseau pendant la lecture du jeton affichait « Ce lien ne marche plus » → nouvelle réplique
+  `invitationIllisible` + « Réessayer ». Vérifié sur une version locale branchée sur le vrai Supabase.
+- Non fait (écrit dans la base) : création de salon, invitation valide, première connexion, e-mail non confirmé,
+  notifications → **liste à cocher pour Alexandre dans la PR**.
+- À proposer : un lien `?salon=` inconnu retombe sur l'accueil sans rien dire (pas corrigé, choix de texte).
+- Prochaine étape : suivre la PR ; corriger ce qu'Alexandre trouvera avec la liste à cocher. Dimanche 29 : corrections seulement.

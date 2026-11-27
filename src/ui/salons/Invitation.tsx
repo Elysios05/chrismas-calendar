@@ -18,22 +18,44 @@ export function Invitation({ backend, onEntree, onConnexion }: {
   const [rester, setRester] = useState(true);
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  /** La lecture du jeton a échoué (réseau, serveur) : ce n'est pas le lien qui est mauvais. */
+  const [lectureRatee, setLectureRatee] = useState(false);
+  const [essai, setEssai] = useState(0);
 
   useEffect(() => {
     let vivant = true;
     if (!backend.salons) { setInfo({ statut: "invalide" }); return; }
+    setLectureRatee(false);
     backend.salons.lireInvitation()
       .then((i) => { if (vivant) setInfo(i); })
-      .catch(() => { if (vivant) setInfo({ statut: "invalide" }); });
+      .catch(() => { if (vivant) setLectureRatee(true); });
     return () => { vivant = false; };
-  }, [backend]);
+  }, [backend, essai]);
+
+  /** Sortie de secours : la page sans `?invitation=`, rechargée (accueil, ou connexion si un salon est connu). */
+  const allerALAccueil = () => {
+    const url = new URL(location.href); url.searchParams.delete("invitation");
+    location.replace(url);
+  };
+
+  if (lectureRatee) {
+    return (
+      <EcranPingou ligne={PINGOU_SALON.invitationIllisible()}>
+        <button className="btn salon-btn" onClick={() => setEssai((n) => n + 1)}>Réessayer</button>
+      </EcranPingou>
+    );
+  }
 
   if (!info) {
     return <EcranPingou ligne={{ text: "Une seconde, je cherche ton calendrier…", face: "neutre" }}>{null}</EcranPingou>;
   }
 
   if (info.statut === "invalide") {
-    return <EcranPingou ligne={PINGOU_SALON.invitationInvalide()}>{null}</EcranPingou>;
+    return (
+      <EcranPingou ligne={PINGOU_SALON.invitationInvalide()}>
+        <button className="btn ghost salon-btn" onClick={allerALAccueil}>Revenir à l'accueil</button>
+      </EcranPingou>
+    );
   }
 
   const { alexandre: createur, flavie: invite } = info.joueurs;
