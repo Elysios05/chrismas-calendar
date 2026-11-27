@@ -739,7 +739,7 @@ export class Scene {
         const o = drawProp(p.kind, p.x, p.y, pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop, alongX: p.alongX, flying: p.kind === "sleigh" && flying });
         if (o.anim) anims.push(...o.anim);
         o.y = -p.z * ZH;
-        if (p.zone === this.caveZ) { o.label = "grotte"; o.alpha = this.alphaGrotte; }
+        if (this.sousMontagne(p.x + 0.5, p.y + 0.5)) { o.label = "grotte"; o.alpha = this.alphaGrotte; }
         c.addChild(o);
       }
     }
@@ -765,12 +765,14 @@ export class Scene {
     return this.fondu[pi] ?? { ground: ZONES[zone].ground, rock: ZONES[zone].atmo.rock };
   }
 
-  dessinerCase(g: Graphics, cell: Cell, pal: Palette) {
+  /** `sur` : dessiner la case avec un autre relief et d'autres couleurs (la montagne qui recouvre la grotte) */
+  dessinerCase(g: Graphics, cell: Cell, pal: Palette, sur?: { hv: (x: number, y: number) => number; ground: number; rock: number }) {
     const { cells } = this.terrain;
-    const fondu = this.couleursSol(cell.pi, cell.zone);
+    const fondu = sur ?? this.couleursSol(cell.pi, cell.zone);
     const c = pal.c;
     const V = this.terrain.V;
-    const hv = (x: number, y: number) => V.get(key(x, y)) ?? 0;
+    const hv = sur?.hv ?? ((x: number, y: number) => V.get(key(x, y)) ?? 0);
+    const lac = !sur && cell.lake;
     // lumière venant de l'arrière-gauche : les faces tournées vers la gauche sont claires
     const Lx = -0.35, Ly = 0.55, Lz = 0.76;
     const flatB = Lz;
@@ -789,7 +791,7 @@ export class Scene {
       const steep = 1 - nz;
       const zdef = ZONES[cell.zone];
       let col: number;
-      if (cell.lake) {
+      if (lac) {
         // glace : un bleu franc, avec des plaques plus claires et un bord givré
         const ice = zdef.ice ?? 0x6fb9df;
         // plaques larges et irrégulières plutôt qu'un damier
@@ -819,8 +821,8 @@ export class Scene {
     const C: [number, number, number] = [x + 1, y + 1, hv(x + 1, y + 1)], D: [number, number, number] = [x, y + 1, hv(x, y + 1)];
     face([A, B, C]);
     face([A, C, D]);
-    if (cell.sol) this.dessinerSol(g, cell, pal);
-    if (cell.lake && (x + y) % 3 === 0) poly(g, [P(x + 0.2, y + 0.3, 0), P(x + 0.6, y + 0.1, 0), P(x + 0.65, y + 0.18, 0), P(x + 0.25, y + 0.38, 0)], c(0xeaf8fd));
+    if (!sur && cell.sol) this.dessinerSol(g, cell, pal);
+    if (lac && (x + y) % 3 === 0) poly(g, [P(x + 0.2, y + 0.3, 0), P(x + 0.6, y + 0.1, 0), P(x + 0.65, y + 0.18, 0), P(x + 0.25, y + 0.38, 0)], c(0xeaf8fd));
   }
 
   /** Place du pôle Nord (dalles de glace) et piste d'envol (neige damée balisée), posées sur la case */
@@ -1466,7 +1468,7 @@ export class Scene {
     // dehors : la grotte entière est recouverte par la montagne, et ce qu'elle contient s'efface
     this.couvercle.visible = aGrotte > 0.01;
     this.couvercle.alpha = Math.min(1, aGrotte / 0.97);
-    if (this.couvercle.visible) this.dessinerCouvercle(seuils);
+    if (this.couvercle.visible) this.dessinerCouvercle(seuils, L[i1], L[i1 + 1]);
     const aObj = Math.round((1 - this.couvercle.alpha) * 50) / 50;
     if (aObj !== this.alphaGrotte) {
       this.alphaGrotte = aObj;
@@ -1475,112 +1477,95 @@ export class Scene {
     }
   }
 
-  /** La montagne qui recouvre la grotte, vue de dehors : une bande entre les deux seuils, hérissée de pics de
-   *  roche enneigés (mêmes teintes que les parois). Dessinée une fois en coordonnées du monde, refaite seulement
-   *  au passage jour / nuit. */
-  dessinerCouvercle(seuils: { mid: { x: number; y: number }; out: { x: number; y: number }; rot: number }[]) {
+  /** Bande de la montagne qui recouvre la grotte : coordonnée `u` (pixels du monde, de l'entrée vers la sortie)
+   *  d'un point de la carte, et longueur de la bande. Calculée une fois, à partir du chemin. */
+  private bandeGrotte?: { u: (gx: number, gy: number) => number; uMax: number };
+  bande() {
+    if (this.bandeGrotte) return this.bandeGrotte;
+    const L = this.terrain.path, caveZ = this.caveZ;
+    const i0 = L.findIndex((p) => p.zone === caveZ);
+    let i1 = -1;
+    for (let i = L.length - 1; i >= 0; i--) if (L[i].zone === caveZ) { i1 = i; break; }
+    if (i0 <= 0 || i1 <= 0 || i1 >= L.length - 1) return (this.bandeGrotte = { u: () => -1e9, uMax: 0 });
+    const mid = (a: { x: number; y: number }, b: { x: number; y: number }) => P((a.x + b.x) / 2 + 0.5, (a.y + b.y) / 2 + 0.5);
+    const m0 = mid(L[i0 - 1], L[i0]), m1 = mid(L[i1], L[i1 + 1]);
+    const a = L[i0 - 1], b = L[i0];
+    // normale à la frontière, à l'écran : perpendiculaire à la ligne qui la porte (frontière perpendiculaire sur la carte)
+    const ligne = b.x !== a.x ? P(0, 1) : P(1, 0), n0 = Math.hypot(ligne.x, ligne.y);
+    let nrm = { x: -ligne.y / n0, y: ligne.x / n0 };
+    if ((m1.x - m0.x) * nrm.x + (m1.y - m0.y) * nrm.y < 0) nrm = { x: -nrm.x, y: -nrm.y };
+    const uMax = (m1.x - m0.x) * nrm.x + (m1.y - m0.y) * nrm.y;
+    const u = (gx: number, gy: number) => { const q = P(gx, gy); return (q.x - m0.x) * nrm.x + (q.y - m0.y) * nrm.y; };
+    return (this.bandeGrotte = { u, uMax });
+  }
+  /** largeur (pixels du monde) du versant côté pôle Nord, au-delà de la sortie : elle varie le long du pied */
+  pente(x: number, y: number) {
+    return 70 + 45 * (0.5 + 0.5 * Math.sin(x * 0.37 - y * 0.23 + 0.7));
+  }
+  /** ce point de la carte est-il sous la montagne de la grotte, versant compris (caché vu de dehors) ? */
+  sousMontagne(gx: number, gy: number) {
+    const { u, uMax } = this.bande(), v = u(gx, gy);
+    return v > 4 && v < uMax + this.pente(gx, gy) * 0.8;
+  }
+
+  /** La montagne qui recouvre la grotte, vue de dehors : un vrai relief, dessiné comme les montagnes du début
+   *  (facettes de neige et falaises, Scene.dessinerCase), qui monte doucement depuis le marché et tombe en falaise
+   *  côté pôle Nord, où la bouche de la grotte est creusée (choix d'Alexandre, 27 nov). Dessinée une fois en
+   *  coordonnées du monde, refaite seulement au passage jour / nuit. */
+  dessinerCouvercle(_seuils: unknown, sortie: { x: number; y: number; z: number }, apres: { x: number; y: number }) {
     const pal = this.pal, cle = pal.night ? "nuit" : "jour";
     if (cle === this.couvercleCle) return;
     this.couvercleCle = cle;
     for (const ch of this.couvercle.removeChildren()) ch.destroy();
     const g = new Graphics();
     this.couvercle.addChild(g);
-    const c = pal.c;
-    const [s0, s1] = seuils;
-    const d = { x: Math.cos(s0.rot), y: Math.sin(s0.rot) };   // le long des seuils
-    const nrm = { x: -d.y, y: d.x };                          // en travers
-    const v = { x: -s0.out.x, y: -s0.out.y };                 // de l'entrée vers l'intérieur
-    const m0 = { x: s0.mid.x + s0.out.x * 30, y: s0.mid.y + s0.out.y * 30 };
-    const m1 = { x: s1.mid.x + s1.out.x * 30, y: s1.mid.y + s1.out.y * 30 };
-    const dot = (a: { x: number; y: number }, b: { x: number; y: number }) => a.x * b.x + a.y * b.y;
-    const uMax = dot({ x: m1.x - m0.x, y: m1.y - m0.y }, nrm) / dot(v, nrm);
-    const BIG = 2600;
-    const at = (t: number, u: number) => ({ x: m0.x + d.x * t + v.x * u, y: m0.y + d.y * t + v.y * u });
-    // le fond : la bande pleine, couleur de roche dans l'ombre
-    const fond = [at(-BIG, 0), at(BIG, 0), at(BIG, uMax), at(-BIG, uMax)];
-    g.poly(fond.flatMap((q) => [q.x, q.y])).fill(c(0x4a6f93));
-    // les pics, rangée par rangée de l'arrière vers l'avant (de haut en bas à l'écran)
-    const r = (n: number) => { const x = Math.sin(n * 91.7 + 13.1) * 43758.5; return x - Math.floor(x); };
-    const pics: { x: number; y: number; h: number; w: number; k: number }[] = [];
-    let k = 0;
-    for (let u = 14; u < uMax + 10; u += 46) for (let t = -BIG; t <= BIG; t += 100) {
-      k++;
-      const p = at(t + (r(k) - 0.5) * 40, Math.min(uMax, u + (r(k + 7) - 0.5) * 16));
-      // près de l'entrée, les pics restent bas : ils ne doivent pas déborder sur le marché
-      const bord = Math.min(1, u / 70);
-      const h = (45 + r(k + 3) * 50) * (0.45 + 0.55 * bord);
-      pics.push({ x: p.x, y: p.y, h, w: h * (1.25 + r(k + 5) * 0.4), k });
+    const c = pal.c, T = this.terrain, V = T.V;
+    const { u, uMax } = this.bande();
+    const lisse = (x: number) => { const t = Math.max(0, Math.min(1, x)); return t * t * (3 - 2 * t); };
+    const relief = (x: number, y: number) => {
+      const base = V.get(key(x, y)) ?? 0, w = u(x, y);
+      const monte = lisse(w / 130), tombe = lisse((uMax + this.pente(x, y) - w) / this.pente(x, y));
+      if (monte * tombe <= 0) return base;
+      // des sommets larges et irréguliers : bruit doux et lent, tiré de la position
+      const n = 0.5 + 0.28 * Math.sin(x * 0.31 + y * 0.17) + 0.22 * Math.cos(y * 0.27 - x * 0.13 + 1.3);
+      return Math.max(base, (2.6 + n * 2.4) * monte * tombe);
+    };
+    const montagnes = ZONES.find((z) => z.id === "montagnes");
+    const sur = { hv: relief, ground: montagnes?.ground ?? 0xf7f5f0, rock: montagnes?.atmo.rock ?? 0x6e789a };
+    const cases = [...T.cells.values()].filter((cell) => {
+      const { x, y } = cell;
+      return [[0, 0], [1, 0], [0, 1], [1, 1]].some(([dx, dy]) => relief(x + dx, y + dy) > (V.get(key(x + dx, y + dy)) ?? 0) + 0.02);
+    }).sort((a, b) => a.x + a.y - (b.x + b.y));
+    for (const cell of cases) this.dessinerCase(g, cell, pal, sur);
+
+    // la bouche, dans le plan de la falaise, au-dessus du chemin qui sort de la grotte
+    const along = apres.x !== sortie.x;
+    const face = 1 + 0.4; // la falaise est à mi-pente : un peu au-delà du bord de la dernière case
+    const at = (s: number, z: number, dx = 0) => along
+      ? P(sortie.x + face + dx, sortie.y + 0.5 + s, sortie.z + z)
+      : P(sortie.x + 0.5 + s, sortie.y + face + dx, sortie.z + z);
+    const arche = (w: number, h: number, dx = 0) => Array.from({ length: 19 }, (_, i) => {
+      const t = Math.PI * (1 - i / 18);
+      return at(Math.cos(t) * w, Math.pow(Math.sin(t), 0.85) * h, dx);
+    });
+    const pts = (l: { x: number; y: number }[]) => l.flatMap((q) => [q.x, q.y]);
+    const W = 0.95, H = 1.75;
+    // encadrement de roche (la roche des montagnes, dans l'ombre), rebord de neige au-dessus
+    g.poly(pts(arche(W + 0.28, H + 0.3))).fill(c(0x5d6684));
+    const lev = arche(W + 0.32, H + 0.42), bas = arche(W + 0.16, H + 0.2).reverse();
+    g.poly(pts([...lev.slice(3, 16), ...bas.slice(3, 16)])).fill(c(0xf7f5f0));
+    // le trou, qui s'assombrit vers le fond, et le chemin qui s'y enfonce
+    g.poly(pts(arche(W, H))).fill(pal.night ? 0x0a1426 : c(0x22304e));
+    g.poly(pts(arche(W * 0.74, H * 0.8, -0.5))).fill(pal.night ? 0x050a14 : c(0x161f36));
+    g.poly(pts([at(-W * 0.55, 0), at(W * 0.55, 0), at(W * 0.28, 0, -0.9), at(-W * 0.28, 0, -0.9)])).fill({ color: c(0x6d7f9e), alpha: 0.6 });
+    // stalactites de glace sous l'arche
+    const r = (n: number) => { const v = Math.sin(n * 91.7 + 13.1) * 43758.5; return v - Math.floor(v); };
+    const bord = arche(W, H);
+    for (let i = 4; i <= 14; i += 2) {
+      const q = bord[i], len = 6 + r(i) * 10;
+      g.poly([q.x - 3, q.y - 1, q.x + 3, q.y - 1, q.x, q.y + len]).fill(pal.night ? 0x9fe6ff : c(0xd2f0fb));
     }
-    // une dernière rangée de petits pics à cheval sur le bord, côté pôle Nord, pour casser la ligne droite
-    for (let t = -BIG; t <= BIG; t += 60) {
-      k++;
-      const p = at(t + (r(k) - 0.5) * 20, uMax + 8 + r(k + 2) * 10);
-      const h = 22 + r(k + 3) * 20;
-      pics.push({ x: p.x, y: p.y, h, w: h * 1.5, k });
-    }
-    // autour de la bouche (côté pôle Nord), le premier rang est plus massif : la bouche est creusée dedans
-    const bouche = { x: s1.mid.x + s1.out.x * 26, y: s1.mid.y + s1.out.y * 26 };
-    const tB = dot({ x: bouche.x - m0.x, y: bouche.y - m0.y }, d);
-    for (let i = pics.length - 1; i >= 0; i--) if (Math.hypot(pics[i].x - bouche.x, pics[i].y - bouche.y) < 70 && pics[i].h < 45) pics.splice(i, 1);
-    for (const [dt, du, h] of [[-95, -30, 92], [95, -30, 92], [-55, -4, 104], [55, -4, 104], [0, -40, 96]]) {
-      k++;
-      const q = at(tB + dt, uMax + du);
-      pics.push({ x: q.x, y: q.y, h, w: h * 1.25, k });
-    }
-    pics.sort((a, b) => a.y - b.y);
-    const rocheL = c(0x6f97ba), rocheR = c(0x3f6487), neigeL = c(0xf2f8fc), neigeR = c(0xc6d6e8);
-    // collines arrondies : flanc gauche éclairé, flanc droit dans l'ombre, dôme de neige sur le haut
-    const N = 14;
-    for (const p of pics) {
-      const sommet = (r(p.k + 9) - 0.5) * 0.3; // le sommet n'est pas toujours au milieu
-      const courbe = Array.from({ length: N + 1 }, (_, i) => {
-        const x = -1 + (2 * i) / N, e = Math.max(0, 1 - ((x - sommet) / (1 + Math.sign(x - sommet) * sommet)) ** 2);
-        return { x: p.x + x * p.w, y: p.y - p.h * Math.pow(e, 0.55) };
-      });
-      const mil = Math.round(((sommet + 1) / 2) * N) + 1;
-      const pied = (pts: { x: number; y: number }[]) => [...pts.flatMap((q) => [q.x, q.y]), pts[pts.length - 1].x, p.y + 3, pts[0].x, p.y + 3];
-      g.poly(pied(courbe)).fill(rocheR);
-      g.poly(pied(courbe.slice(0, mil + 1))).fill(rocheL);
-      // neige : une calotte qui suit la courbe de la colline, plus épaisse au sommet, au bord ondulé
-      const ep = 0.38 + r(p.k + 11) * 0.12;
-      const sous = courbe.map((q, i) => ({ x: q.x, y: q.y + (p.y - q.y) * ep + (i % 2 ? 2 : -2) }));
-      const garde = (i: number) => p.y - courbe[i].y > p.h * 0.18; // pas de neige sur les pieds
-      const idx = courbe.map((_, i) => i).filter(garde);
-      if (idx.length > 1) {
-        const calotte = (ids: number[]) => [...ids.map((i) => courbe[i]), ...ids.slice().reverse().map((i) => sous[i])].flatMap((q) => [q.x, q.y]);
-        g.poly(calotte(idx)).fill(neigeR);
-        const gauche = idx.filter((i) => i <= mil);
-        if (gauche.length > 1) g.poly(calotte(gauche)).fill(neigeL);
-      }
-    }
-    // côté pôle Nord, la face tournée vers la caméra : la bouche de la grotte, là où le chemin en sort (choix
-    // d'Alexandre). L'arche est dans le plan de la face de la montagne (le long des seuils), pas face à l'écran.
-    {
-      const b = bouche, ow = 44, oh = 56;
-      const arche = (w: number, h: number, dz = 0) => Array.from({ length: 19 }, (_, i) => {
-        const t = Math.PI * (1 - i / 18), cx = Math.cos(t) * w;
-        return { x: b.x + d.x * cx, y: b.y + d.y * cx + 2 - Math.pow(Math.sin(t), 0.85) * h - dz };
-      });
-      const pts = (l: { x: number; y: number }[]) => l.flatMap((q) => [q.x, q.y]);
-      // encadrement de roche, un ton plus sombre que la face, puis un rebord de neige au-dessus
-      g.poly(pts(arche(ow + 12, oh + 12))).fill(c(0x557ea3));
-      const lev = arche(ow + 14, oh + 16), bas = arche(ow + 6, oh + 8).reverse();
-      g.poly(pts([...lev.slice(3, 16), ...bas.slice(3, 16)])).fill(neigeL);
-      // le trou, qui s'assombrit vers le fond
-      g.poly(pts(arche(ow, oh))).fill(pal.night ? 0x0a1830 : c(0x1d4466));
-      g.poly(pts(arche(ow * 0.72, oh * 0.78))).fill(pal.night ? 0x050d1a : c(0x12304b));
-      // le chemin s'enfonce dans le tunnel
-      const sol = [b.x - d.x * ow * 0.6, b.y - d.y * ow * 0.6 + 2, b.x + d.x * ow * 0.6, b.y + d.y * ow * 0.6 + 2];
-      const fond = { x: b.x - s1.out.x * 26, y: b.y - s1.out.y * 26 };
-      g.poly([...sol, fond.x + d.x * ow * 0.25, fond.y + d.y * ow * 0.25, fond.x - d.x * ow * 0.25, fond.y - d.y * ow * 0.25]).fill({ color: c(0x6f9cc0), alpha: 0.55 });
-      // stalactites sous l'arche
-      const bord = arche(ow, oh);
-      for (let i = 4; i <= 14; i += 2) {
-        const q = bord[i], len = 6 + r(i + 200) * 10;
-        g.poly([q.x - 3, q.y - 1, q.x + 3, q.y - 1, q.x, q.y + len]).fill(pal.night ? 0x9fe6ff : c(0xd2f0fb));
-      }
-      if (pal.night) g.ellipse(b.x, b.y - oh * 0.35, ow * 0.6, oh * 0.4).fill({ color: 0x7fd8ff, alpha: 0.16 });
-    }
+    if (pal.night) { const o = at(0, H * 0.4, -0.3); g.ellipse(o.x, o.y, 24, 20).fill({ color: 0x7fd8ff, alpha: 0.16 }); }
   }
 
   zoneMix(wy: number) {
@@ -1639,7 +1624,7 @@ export class Scene {
       if (vis) {
         updateCritter(cr, dt, this.lifeGround, this.terrain);
         // dans la grotte fermée (vue de dehors), les animaux disparaissent avec le reste
-        cr.alpha = this.terrain.cells.get(key(Math.floor(cr.gx), Math.floor(cr.gy)))?.zone === this.caveZ ? this.alphaGrotte : 1;
+        cr.alpha = this.sousMontagne(cr.gx, cr.gy) ? this.alphaGrotte : 1;
       }
     }
     for (const [, cont] of this.gifts) {
