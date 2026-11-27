@@ -1544,6 +1544,40 @@ export class Scene {
         if (gauche.length > 1) g.poly(calotte(gauche)).fill(neigeL);
       }
     }
+    // côté pôle Nord, la face tournée vers la caméra : la bouche de la grotte, là où le chemin en sort (choix d'Alexandre)
+    {
+      const b = { x: s1.mid.x + s1.out.x * 26, y: s1.mid.y + s1.out.y * 26 };
+      const W = 118, H = 104, ow = 40, oh = 50;
+      const colline = Array.from({ length: 21 }, (_, i) => {
+        const x = -1 + i / 10;
+        return { x: b.x + x * W, y: b.y - H * Math.pow(Math.max(0, 1 - x * x), 0.55) };
+      });
+      const base = (pts: { x: number; y: number }[]) => [...pts.flatMap((q) => [q.x, q.y]), pts[pts.length - 1].x, b.y + 4, pts[0].x, b.y + 4];
+      g.poly(base(colline)).fill(rocheR);
+      g.poly(base(colline.slice(0, 11))).fill(rocheL);
+      const sous = colline.map((q, i) => ({ x: q.x, y: q.y + (b.y - q.y) * 0.34 + (i % 2 ? 2 : -2) }));
+      const ids = colline.map((_, i) => i).filter((i) => b.y - colline[i].y > H * 0.2);
+      const calotte = (l: number[]) => [...l.map((i) => colline[i]), ...l.slice().reverse().map((i) => sous[i])].flatMap((q) => [q.x, q.y]);
+      g.poly(calotte(ids)).fill(neigeR);
+      g.poly(calotte(ids.filter((i) => i <= 10))).fill(neigeL);
+      // l'arche : un liseré de glace, puis le trou sombre
+      const arche = (w: number, h: number) => Array.from({ length: 17 }, (_, i) => {
+        const t = Math.PI * (1 - i / 16);
+        return { x: b.x + Math.cos(t) * w, y: b.y + 2 - Math.pow(Math.sin(t), 0.8) * h };
+      });
+      g.poly(arche(ow + 9, oh + 9).flatMap((q) => [q.x, q.y])).fill(c(0x9cc8e2));
+      g.poly(arche(ow, oh).flatMap((q) => [q.x, q.y])).fill(pal.night ? 0x050d1a : c(0x14304a));
+      // un peu de profondeur : le sol du tunnel, plus clair, qui s'enfonce
+      g.poly([b.x - ow * 0.75, b.y + 2, b.x + ow * 0.75, b.y + 2, b.x + ow * 0.3, b.y - oh * 0.35, b.x - ow * 0.3, b.y - oh * 0.35]).fill({ color: c(0x2c5b80), alpha: 0.85 });
+      // stalactites sous l'arche
+      for (let i = 0; i < 6; i++) {
+        const t = Math.PI * (0.2 + (0.6 * i) / 5);
+        const x = b.x + Math.cos(t) * ow, y = b.y + 2 - Math.pow(Math.sin(t), 0.8) * oh;
+        const len = 7 + r(i + 200) * 10;
+        g.poly([x - 3.5, y - 1, x + 3.5, y - 1, x, y + len]).fill(pal.night ? 0x9fe6ff : c(0xd2f0fb));
+      }
+      if (pal.night) g.ellipse(b.x, b.y - oh * 0.35, ow * 0.6, oh * 0.4).fill({ color: 0x7fd8ff, alpha: 0.18 });
+    }
   }
 
   zoneMix(wy: number) {
