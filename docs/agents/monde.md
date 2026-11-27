@@ -563,3 +563,31 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - Vérifié : build, oxlint, `npm run capture` jours 16, 17, 20, 21 (jour et 21:00, mobile et ordinateur), 0 erreur.
   - **Prochaine étape** : options B (relecture) ou C (performance téléphone) de #29, selon Alexandre ou le chef.
 
+
+- 27 nov — **grotte refaite « sous la montagne »** (branche `monde/grotte-v2`). Alexandre n'aimait pas la voûte de
+  glace de #126 (« pas belle, ne se met pas dans le décor, pas de fondu »). Chemin parcouru avec lui, pour mémoire :
+  falaise avec bouche / gorge qui se resserre → **aucune des deux** ; voûte de roche en haut de l'écran → « pas beau du
+  tout » ; puis la version retenue :
+  - **On ne voit jamais la grotte et le dehors en même temps.** Dans la grotte, ce qui est avant l'entrée et après la
+    sortie passe au noir (`Scene.dessinerDehors`, deux voiles en dégradé tournés selon la frontière des mondes, qui est
+    perpendiculaire au chemin sur la carte donc en biais à l'écran). Dehors, la grotte est recouverte par une montagne.
+    Les deux se relaient en fondu selon `caveForce` (même mélange que l'ambiance, `zoneMix`).
+  - **La montagne** (`Scene.dessinerCouvercle`, `reliefMontagne`) : un vrai relief en facettes dessiné par
+    `dessinerCase` (nouveau paramètre `sur` : autre relief, couleurs des Montagnes), « comme au jour 1 » (demande
+    d'Alexandre). Elle monte depuis le marché, a des sommets vers le milieu, et retombe côté pôle Nord en versant
+    **enneigé** (largeur `pente()` assez grande pour rester sous le seuil de la roche — il voulait « plus de neige »).
+  - **Bouche côté pôle Nord** (la seule face que la caméra voit de face), au fond d'une **entaille** creusée dans le
+    versant pour le chemin (« j'aime beaucoup l'entaille »). L'arche est dans le plan de la frontière, sur la carte.
+  - **Rangement en profondeur** : la montagne est découpée en rangées de cases ajoutées aux tranches d'objets
+    (`zIndex = x + y + 1.45`) : elle cache les échoppes du bas du marché qui sont derrière. Les rangées du versant
+    pôle Nord passent avant (−3) : sinon la maison du Père Noël et la Fabrique (rangées en arrière de leur case)
+    étaient coupées. Les rangées sont refaites quand la scène est reconstruite (`commit` remplace `objects`).
+  - **Décors cachés vu de dehors** (`sousMontagne`, étiquette `grotte` → `alphaGrotte`) : tout décor de la grotte, et
+    tout ce qui est sous la montagne ou posé sur sa pente (sapins, sucres d'orge du pôle Nord) ; cadeaux, étiquettes
+    (calque du dessus) et animaux aussi.
+  - Aussi : parois qui montent sur 5 pas (`terrain.ts`, `RAMPE`), **fondu de couleur** du sol et de la roche le long du
+    chemin autour de la grotte (`Scene.couleursSol`), presque plus de neige qui tombe dans la grotte, décor `caveMouth`
+    supprimé (ses 2 tirages de `R()` sont gardés : le reste du monde ne bouge pas).
+  - Vérifié : build, oxlint, `npm run capture` jours 16, 19, 22 (jour et 21:00), mobile et ordinateur, 0 erreur.
+  - **Prochaine étape** : options B (relecture) ou C (performance téléphone) de #29. Pour la perf : les voiles sont
+    recalculés à chaque image (peu coûteux), la montagne une seule fois.
