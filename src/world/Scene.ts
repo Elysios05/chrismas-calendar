@@ -1518,6 +1518,15 @@ export class Scene {
       const h = 22 + r(k + 3) * 20;
       pics.push({ x: p.x, y: p.y, h, w: h * 1.5, k });
     }
+    // autour de la bouche (côté pôle Nord), le premier rang est plus massif : la bouche est creusée dedans
+    const bouche = { x: s1.mid.x + s1.out.x * 26, y: s1.mid.y + s1.out.y * 26 };
+    const tB = dot({ x: bouche.x - m0.x, y: bouche.y - m0.y }, d);
+    for (let i = pics.length - 1; i >= 0; i--) if (Math.hypot(pics[i].x - bouche.x, pics[i].y - bouche.y) < 70 && pics[i].h < 45) pics.splice(i, 1);
+    for (const [dt, du, h] of [[-95, -30, 92], [95, -30, 92], [-55, -4, 104], [55, -4, 104], [0, -40, 96]]) {
+      k++;
+      const q = at(tB + dt, uMax + du);
+      pics.push({ x: q.x, y: q.y, h, w: h * 1.25, k });
+    }
     pics.sort((a, b) => a.y - b.y);
     const rocheL = c(0x6f97ba), rocheR = c(0x3f6487), neigeL = c(0xf2f8fc), neigeR = c(0xc6d6e8);
     // collines arrondies : flanc gauche éclairé, flanc droit dans l'ombre, dôme de neige sur le haut
@@ -1544,39 +1553,33 @@ export class Scene {
         if (gauche.length > 1) g.poly(calotte(gauche)).fill(neigeL);
       }
     }
-    // côté pôle Nord, la face tournée vers la caméra : la bouche de la grotte, là où le chemin en sort (choix d'Alexandre)
+    // côté pôle Nord, la face tournée vers la caméra : la bouche de la grotte, là où le chemin en sort (choix
+    // d'Alexandre). L'arche est dans le plan de la face de la montagne (le long des seuils), pas face à l'écran.
     {
-      const b = { x: s1.mid.x + s1.out.x * 26, y: s1.mid.y + s1.out.y * 26 };
-      const W = 118, H = 104, ow = 40, oh = 50;
-      const colline = Array.from({ length: 21 }, (_, i) => {
-        const x = -1 + i / 10;
-        return { x: b.x + x * W, y: b.y - H * Math.pow(Math.max(0, 1 - x * x), 0.55) };
+      const b = bouche, ow = 44, oh = 56;
+      const arche = (w: number, h: number, dz = 0) => Array.from({ length: 19 }, (_, i) => {
+        const t = Math.PI * (1 - i / 18), cx = Math.cos(t) * w;
+        return { x: b.x + d.x * cx, y: b.y + d.y * cx + 2 - Math.pow(Math.sin(t), 0.85) * h - dz };
       });
-      const base = (pts: { x: number; y: number }[]) => [...pts.flatMap((q) => [q.x, q.y]), pts[pts.length - 1].x, b.y + 4, pts[0].x, b.y + 4];
-      g.poly(base(colline)).fill(rocheR);
-      g.poly(base(colline.slice(0, 11))).fill(rocheL);
-      const sous = colline.map((q, i) => ({ x: q.x, y: q.y + (b.y - q.y) * 0.34 + (i % 2 ? 2 : -2) }));
-      const ids = colline.map((_, i) => i).filter((i) => b.y - colline[i].y > H * 0.2);
-      const calotte = (l: number[]) => [...l.map((i) => colline[i]), ...l.slice().reverse().map((i) => sous[i])].flatMap((q) => [q.x, q.y]);
-      g.poly(calotte(ids)).fill(neigeR);
-      g.poly(calotte(ids.filter((i) => i <= 10))).fill(neigeL);
-      // l'arche : un liseré de glace, puis le trou sombre
-      const arche = (w: number, h: number) => Array.from({ length: 17 }, (_, i) => {
-        const t = Math.PI * (1 - i / 16);
-        return { x: b.x + Math.cos(t) * w, y: b.y + 2 - Math.pow(Math.sin(t), 0.8) * h };
-      });
-      g.poly(arche(ow + 9, oh + 9).flatMap((q) => [q.x, q.y])).fill(c(0x9cc8e2));
-      g.poly(arche(ow, oh).flatMap((q) => [q.x, q.y])).fill(pal.night ? 0x050d1a : c(0x14304a));
-      // un peu de profondeur : le sol du tunnel, plus clair, qui s'enfonce
-      g.poly([b.x - ow * 0.75, b.y + 2, b.x + ow * 0.75, b.y + 2, b.x + ow * 0.3, b.y - oh * 0.35, b.x - ow * 0.3, b.y - oh * 0.35]).fill({ color: c(0x2c5b80), alpha: 0.85 });
+      const pts = (l: { x: number; y: number }[]) => l.flatMap((q) => [q.x, q.y]);
+      // encadrement de roche, un ton plus sombre que la face, puis un rebord de neige au-dessus
+      g.poly(pts(arche(ow + 12, oh + 12))).fill(c(0x557ea3));
+      const lev = arche(ow + 14, oh + 16), bas = arche(ow + 6, oh + 8).reverse();
+      g.poly(pts([...lev.slice(3, 16), ...bas.slice(3, 16)])).fill(neigeL);
+      // le trou, qui s'assombrit vers le fond
+      g.poly(pts(arche(ow, oh))).fill(pal.night ? 0x0a1830 : c(0x1d4466));
+      g.poly(pts(arche(ow * 0.72, oh * 0.78))).fill(pal.night ? 0x050d1a : c(0x12304b));
+      // le chemin s'enfonce dans le tunnel
+      const sol = [b.x - d.x * ow * 0.6, b.y - d.y * ow * 0.6 + 2, b.x + d.x * ow * 0.6, b.y + d.y * ow * 0.6 + 2];
+      const fond = { x: b.x - s1.out.x * 26, y: b.y - s1.out.y * 26 };
+      g.poly([...sol, fond.x + d.x * ow * 0.25, fond.y + d.y * ow * 0.25, fond.x - d.x * ow * 0.25, fond.y - d.y * ow * 0.25]).fill({ color: c(0x6f9cc0), alpha: 0.55 });
       // stalactites sous l'arche
-      for (let i = 0; i < 6; i++) {
-        const t = Math.PI * (0.2 + (0.6 * i) / 5);
-        const x = b.x + Math.cos(t) * ow, y = b.y + 2 - Math.pow(Math.sin(t), 0.8) * oh;
-        const len = 7 + r(i + 200) * 10;
-        g.poly([x - 3.5, y - 1, x + 3.5, y - 1, x, y + len]).fill(pal.night ? 0x9fe6ff : c(0xd2f0fb));
+      const bord = arche(ow, oh);
+      for (let i = 4; i <= 14; i += 2) {
+        const q = bord[i], len = 6 + r(i + 200) * 10;
+        g.poly([q.x - 3, q.y - 1, q.x + 3, q.y - 1, q.x, q.y + len]).fill(pal.night ? 0x9fe6ff : c(0xd2f0fb));
       }
-      if (pal.night) g.ellipse(b.x, b.y - oh * 0.35, ow * 0.6, oh * 0.4).fill({ color: 0x7fd8ff, alpha: 0.18 });
+      if (pal.night) g.ellipse(b.x, b.y - oh * 0.35, ow * 0.6, oh * 0.4).fill({ color: 0x7fd8ff, alpha: 0.16 });
     }
   }
 
