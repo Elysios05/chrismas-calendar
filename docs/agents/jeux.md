@@ -20,7 +20,7 @@
    - Pour un **nouveau** jeu qui a du contenu propre à eux : écris-le dans `prive/contenu-alexandre-flavie.json`
      (dossier ignoré par git, vérifie `git status`) et dis à Alexandre d'envoyer le fichier au chef, qui le charge dans Supabase.
 2. ~~#129 cibles tactiles~~ (PR #131, fusionnée).
-3. Le **jour 19 est confié à l'Interface**, le **jour 23 au Monde** : ne les fais pas.
+3. ~~Jour 19~~ fait (PR #132). **Jour 23 « activité synchronisée » : repris par toi** (27 nov, le Monde est occupé par la carte) — règles proposées à Alexandre avant de coder ; contenu générique par défaut, schéma pour l'éditeur, `ctx.prenoms`, pas d'accord de genre ; contenu perso éventuel dans `prive/` (voir point 1).
 4. Ensuite : corrections remontées par la Qualité ; fermer #56 et #109 quand la Qualité confirme.
 
 **🆕 Contenu d'Alexandre & Flavie séparé du contenu générique (décision d'Alexandre, 25 nov — PRIORITÉ 1)** :

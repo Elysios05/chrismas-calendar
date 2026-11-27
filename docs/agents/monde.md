@@ -9,12 +9,12 @@
   `Scene.ts` rendu, caméra liée au défilement, brouillard, nuages, neige, mode nuit.
 
 ## À faire (par priorité) — mis à jour par le chef le 24 nov
-**🎯 Plan final (chef, 27 nov — validé par Alexandre)** : à finir **samedi 28 au soir**.
-1. Finir la **grotte** en cours avec Alexandre.
-2. Puis **jour 23 « activité synchronisée »** (confié par le chef : `src/games/<dossier du jeu 23>/` + son contenu dans
-   `src/data/games/` + sa ligne dans `src/games/registry.ts`) ; règles proposées à Alexandre avant de coder ; contenu
-   générique par défaut, schéma pour l'éditeur, `ctx.prenoms`, pas d'accord de genre.
-3. Ensuite : plus rien de nouveau, seulement les corrections remontées par la Qualité.
+**🎯 Plan final (chef, 27 nov — mis à jour l'après-midi, décision d'Alexandre)** : à finir **samedi 28 au soir**.
+1. ~~Grotte~~ (PR #147).
+2. **Retravailler la carte avec Alexandre** (il te guide en direct).
+3. ~~Jour 23~~ → **repris par l'équipe Jeux** : ne le fais pas.
+4. Préviens le chef (issue) quand le monde est **figé** : le Marketing ré-enregistrera alors ses vidéos sur le monde final.
+   (Le PDF des souvenirs photographie le décor en direct au moment du téléchargement : il suivra tout seul le dernier monde.)
 
 **🆕 Renfort Jeux (choix d'Alexandre du 26 nov, #29)** : le chef te confie par écrit, en plus de `src/world/` :
 1. ~~**Jour 22**~~ fait le 26 nov (branche `monde/jeu-22`). « Tri des cadeaux » (score à battre, PixiJS) → `src/games/tri-cadeaux/` + son contenu dans `src/data/games/`
