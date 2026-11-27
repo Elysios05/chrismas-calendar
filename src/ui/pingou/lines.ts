@@ -210,5 +210,6 @@ export const PINGOU_SALON = {
   contenuQuitter: (): PingouLine => ({ text: "Tu pars sans enregistrer ? Tes changements vont fondre comme neige.", face: "surpris" }),
   contenuSurprise: (prenom: string): PingouLine => ({ text: `${prenom} a préparé les questions des jeux. C'est une surprise 🤫`, face: "clin" }),
   contenuIncomplet: (): PingouLine => ({ text: "Presque ! Il reste un souci dans les cartes marquées en rouge.", face: "surpris" }),
+  invitationIllisible: (): PingouLine => ({ text: "Je n'arrive pas à lire ton lien : le réseau a dû geler. Vérifie ta connexion, puis réessaie.", face: "surpris" }),
   invitationInvalide: (): PingouLine => ({ text: "Ce lien ne marche plus. Demande un nouveau lien à la personne qui te l'a envoyé.", face: "triste" }),
 } as const;
