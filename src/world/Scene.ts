@@ -1479,14 +1479,14 @@ export class Scene {
 
   /** Bande de la montagne qui recouvre la grotte : coordonnée `u` (pixels du monde, de l'entrée vers la sortie)
    *  d'un point de la carte, et longueur de la bande. Calculée une fois, à partir du chemin. */
-  private bandeGrotte?: { u: (gx: number, gy: number) => number; uMax: number };
+  private bandeGrotte?: { u: (gx: number, gy: number) => number; uMax: number; route: { x: number; y: number }[] };
   bande() {
     if (this.bandeGrotte) return this.bandeGrotte;
     const L = this.terrain.path, caveZ = this.caveZ;
     const i0 = L.findIndex((p) => p.zone === caveZ);
     let i1 = -1;
     for (let i = L.length - 1; i >= 0; i--) if (L[i].zone === caveZ) { i1 = i; break; }
-    if (i0 <= 0 || i1 <= 0 || i1 >= L.length - 1) return (this.bandeGrotte = { u: () => -1e9, uMax: 0 });
+    if (i0 <= 0 || i1 <= 0 || i1 >= L.length - 1) return (this.bandeGrotte = { u: () => -1e9, uMax: 0, route: [] });
     const mid = (a: { x: number; y: number }, b: { x: number; y: number }) => P((a.x + b.x) / 2 + 0.5, (a.y + b.y) / 2 + 0.5);
     const m0 = mid(L[i0 - 1], L[i0]), m1 = mid(L[i1], L[i1 + 1]);
     const a = L[i0 - 1], b = L[i0];
@@ -1496,16 +1496,38 @@ export class Scene {
     if ((m1.x - m0.x) * nrm.x + (m1.y - m0.y) * nrm.y < 0) nrm = { x: -nrm.x, y: -nrm.y };
     const uMax = (m1.x - m0.x) * nrm.x + (m1.y - m0.y) * nrm.y;
     const u = (gx: number, gy: number) => { const q = P(gx, gy); return (q.x - m0.x) * nrm.x + (q.y - m0.y) * nrm.y; };
-    return (this.bandeGrotte = { u, uMax });
+    // le chemin à la sortie : on lui creuse une tranchée dans le versant
+    const route = L.slice(i1, i1 + 9).map((p) => ({ x: p.x + 0.5, y: p.y + 0.5 }));
+    return (this.bandeGrotte = { u, uMax, route });
   }
-  /** largeur (pixels du monde) du versant côté pôle Nord, au-delà de la sortie : elle varie le long du pied */
+  /** largeur (pixels du monde) du versant côté pôle Nord, au-delà de la sortie : elle varie le long du pied.
+   *  Assez large pour que la pente reste sous le seuil de la roche : la neige y tient. */
   pente(x: number, y: number) {
-    return 70 + 45 * (0.5 + 0.5 * Math.sin(x * 0.37 - y * 0.23 + 0.7));
+    return 125 + 50 * (0.5 + 0.5 * Math.sin(x * 0.37 - y * 0.23 + 0.7));
   }
-  /** ce point de la carte est-il sous la montagne de la grotte, versant compris (caché vu de dehors) ? */
+  /** hauteur de la montagne qui recouvre la grotte, en un sommet de la carte (le terrain lui-même hors de la montagne) */
+  reliefMontagne(x: number, y: number) {
+    const { u, uMax, route } = this.bande(), base = this.terrain.V.get(key(x, y)) ?? 0, w = u(x, y);
+    const lisse = (t: number) => { const k = Math.max(0, Math.min(1, t)); return k * k * (3 - 2 * k); };
+    const pente = this.pente(x, y);
+    const monte = lisse(w / 130), tombe = lisse((uMax + pente - w) / pente);
+    if (monte * tombe <= 0) return base;
+    // des sommets larges et irréguliers : bruit doux et lent, tiré de la position
+    const n = 0.5 + 0.28 * Math.sin(x * 0.31 + y * 0.17) + 0.22 * Math.cos(y * 0.27 - x * 0.13 + 1.3);
+    let h = (2.5 + n * 2.2) * monte * tombe;
+    if (w > uMax - 10) {
+      // tranchée du chemin dans le versant, jusqu'à la bouche
+      const dr = Math.min(...route.map((p) => Math.hypot(x - p.x, y - p.y)));
+      h *= lisse((dr - 0.7) / 1.4);
+    }
+    return Math.max(base, h);
+  }
+  /** ce point de la carte est-il sous la montagne de la grotte (caché vu de dehors) ? Dans la grotte, ou là où le
+   *  versant s'élève vraiment : ce qui est au pied (la maison du Père Noël) reste visible. */
   sousMontagne(gx: number, gy: number) {
     const { u, uMax } = this.bande(), v = u(gx, gy);
-    return v > 4 && v < uMax + this.pente(gx, gy) * 0.8;
+    if (v > 4 && v < uMax) return true;
+    return this.reliefMontagne(gx, gy) - (this.terrain.V.get(key(Math.round(gx), Math.round(gy))) ?? 0) > 0.6;
   }
 
   /** La montagne qui recouvre la grotte, vue de dehors : un vrai relief, dessiné comme les montagnes du début
@@ -1520,16 +1542,7 @@ export class Scene {
     const g = new Graphics();
     this.couvercle.addChild(g);
     const c = pal.c, T = this.terrain, V = T.V;
-    const { u, uMax } = this.bande();
-    const lisse = (x: number) => { const t = Math.max(0, Math.min(1, x)); return t * t * (3 - 2 * t); };
-    const relief = (x: number, y: number) => {
-      const base = V.get(key(x, y)) ?? 0, w = u(x, y);
-      const monte = lisse(w / 130), tombe = lisse((uMax + this.pente(x, y) - w) / this.pente(x, y));
-      if (monte * tombe <= 0) return base;
-      // des sommets larges et irréguliers : bruit doux et lent, tiré de la position
-      const n = 0.5 + 0.28 * Math.sin(x * 0.31 + y * 0.17) + 0.22 * Math.cos(y * 0.27 - x * 0.13 + 1.3);
-      return Math.max(base, (2.6 + n * 2.4) * monte * tombe);
-    };
+    const relief = (x: number, y: number) => this.reliefMontagne(x, y);
     const montagnes = ZONES.find((z) => z.id === "montagnes");
     const sur = { hv: relief, ground: montagnes?.ground ?? 0xf7f5f0, rock: montagnes?.atmo.rock ?? 0x6e789a };
     const cases = [...T.cells.values()].filter((cell) => {
@@ -1540,7 +1553,7 @@ export class Scene {
 
     // la bouche, dans le plan de la falaise, au-dessus du chemin qui sort de la grotte
     const along = apres.x !== sortie.x;
-    const face = 1 + 0.4; // la falaise est à mi-pente : un peu au-delà du bord de la dernière case
+    const face = 1 + 0.1; // au fond de la tranchée, juste au-delà du bord de la dernière case de la grotte
     const at = (s: number, z: number, dx = 0) => along
       ? P(sortie.x + face + dx, sortie.y + 0.5 + s, sortie.z + z)
       : P(sortie.x + 0.5 + s, sortie.y + face + dx, sortie.z + z);
