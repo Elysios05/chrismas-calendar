@@ -123,8 +123,9 @@ export class Scene {
   /** « sous la montagne » : dans la grotte, tout ce qui est dehors (avant l'entrée, après la sortie) est plongé dans le noir */
   dehors = new Container();
   private dehorsVoiles: Sprite[] = [];
-  /** vue de dehors, la grotte est recouverte par la montagne : des pics enneigés dessinés dans le monde */
-  private couvercle = new Container();
+  /** vue de dehors, la grotte est recouverte par une montagne : une rangée de cases par profondeur, rangées
+   *  parmi les tranches d'objets pour que ce qui est derrière soit caché et ce qui est devant passe par-dessus */
+  private rangs: Graphics[] = [];
   private couvercleCle = "";
   /** opacité des objets de la grotte (décors, cadeaux, animaux) : 0 quand la montagne la recouvre */
   private alphaGrotte = 1;
@@ -229,9 +230,7 @@ export class Scene {
     this.cb = cb;
     this.pal = makePalette(night);
     this.objects.sortableChildren = true;
-    // la montagne qui recouvre la grotte passe sous les objets : ce qui est devant (la maison du Père Noël)
-    // la recouvre, et les objets de la grotte elle-même sont effacés quand elle est fermée
-    this.world.addChild(this.ground, this.aurora, this.couvercle, this.objects);
+    this.world.addChild(this.ground, this.aurora, this.objects);
     this.fog.texture = gradientTexture([[0, "rgba(255,255,255,0)"], [0.55, "rgba(255,255,255,0.35)"], [1, "rgba(255,255,255,1)"]]);
     const ct = cloudTexture();
     for (let i = 0; i < 7; i++) {
@@ -739,7 +738,7 @@ export class Scene {
         const o = drawProp(p.kind, p.x, p.y, pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop, alongX: p.alongX, flying: p.kind === "sleigh" && flying });
         if (o.anim) anims.push(...o.anim);
         o.y = -p.z * ZH;
-        if (this.sousMontagne(p.x + 0.5, p.y + 0.5)) { o.label = "grotte"; o.alpha = this.alphaGrotte; }
+        if (p.zone === this.caveZ || this.sousMontagne(p.x + 0.5, p.y + 0.5)) { o.label = "grotte"; o.alpha = this.alphaGrotte; }
         c.addChild(o);
       }
     }
@@ -1466,10 +1465,10 @@ export class Scene {
       if (lab && n) lab.alpha = 1 - Math.min(1, (n.zone === caveZ ? aGrotte : aDehors) / 0.97);
     }
     // dehors : la grotte entière est recouverte par la montagne, et ce qu'elle contient s'efface
-    this.couvercle.visible = aGrotte > 0.01;
-    this.couvercle.alpha = Math.min(1, aGrotte / 0.97);
-    if (this.couvercle.visible) this.dessinerCouvercle(seuils, L[i1], L[i1 + 1]);
-    const aObj = Math.round((1 - this.couvercle.alpha) * 50) / 50;
+    const aC = Math.min(1, aGrotte / 0.97);
+    if (aC > 0.01) this.dessinerCouvercle(L[i1], L[i1 + 1]);
+    for (const r of this.rangs) if (!r.destroyed) { r.visible = aC > 0.01; r.alpha = aC; }
+    const aObj = Math.round((1 - aC) * 50) / 50;
     if (aObj !== this.alphaGrotte) {
       this.alphaGrotte = aObj;
       for (const lot of this.objects.children) for (const o of lot.children) if (o.label === "grotte") o.alpha = aObj;
@@ -1514,7 +1513,10 @@ export class Scene {
     if (monte * tombe <= 0) return base;
     // des sommets larges et irréguliers : bruit doux et lent, tiré de la position
     const n = 0.5 + 0.28 * Math.sin(x * 0.31 + y * 0.17) + 0.22 * Math.cos(y * 0.27 - x * 0.13 + 1.3);
-    let h = (2.5 + n * 2.2) * monte * tombe;
+    // et des sommets plus hauts vers le milieu de la montagne, avec leurs arêtes
+    const milieu = Math.sin(Math.PI * Math.max(0, Math.min(1, w / uMax)));
+    const pic = Math.pow(Math.max(0, Math.sin(x * 0.55 + y * 0.21) * Math.sin(y * 0.47 - x * 0.19 + 0.8)), 1.4);
+    let h = (2.4 + n * 1.8 + pic * 3.2 * milieu + milieu * 1.2) * monte * tombe;
     if (w > uMax - 10) {
       // tranchée du chemin dans le versant, jusqu'à la bouche
       const dr = Math.min(...route.map((p) => Math.hypot(x - p.x, y - p.y)));
@@ -1527,20 +1529,23 @@ export class Scene {
   sousMontagne(gx: number, gy: number) {
     const { u, uMax } = this.bande(), v = u(gx, gy);
     if (v > 4 && v < uMax) return true;
-    return this.reliefMontagne(gx, gy) - (this.terrain.V.get(key(Math.round(gx), Math.round(gy))) ?? 0) > 0.6;
+    const leve = (x: number, y: number) => this.reliefMontagne(x, y) - (this.terrain.V.get(key(x, y)) ?? 0);
+    const x = Math.round(gx), y = Math.round(gy);
+    // posé sur la pente : il flotterait sur la montagne (ce qui est derrière, la montagne le cache d'elle-même)
+    return leve(x, y) > 0.3 || leve(x + 1, y) > 0.3 || leve(x, y + 1) > 0.3 || leve(x + 1, y + 1) > 0.3;
   }
 
   /** La montagne qui recouvre la grotte, vue de dehors : un vrai relief, dessiné comme les montagnes du début
    *  (facettes de neige et falaises, Scene.dessinerCase), qui monte doucement depuis le marché et tombe en falaise
    *  côté pôle Nord, où la bouche de la grotte est creusée (choix d'Alexandre, 27 nov). Dessinée une fois en
    *  coordonnées du monde, refaite seulement au passage jour / nuit. */
-  dessinerCouvercle(_seuils: unknown, sortie: { x: number; y: number; z: number }, apres: { x: number; y: number }) {
+  dessinerCouvercle(sortie: { x: number; y: number; z: number }, apres: { x: number; y: number }) {
     const pal = this.pal, cle = pal.night ? "nuit" : "jour";
-    if (cle === this.couvercleCle) return;
+    // à refaire au passage jour / nuit, ou quand la scène a été reconstruite (les rangées partent avec l'ancienne)
+    if (cle === this.couvercleCle && this.rangs.length && this.rangs[0].parent === this.objects) return;
     this.couvercleCle = cle;
-    for (const ch of this.couvercle.removeChildren()) ch.destroy();
-    const g = new Graphics();
-    this.couvercle.addChild(g);
+    for (const r of this.rangs) if (!r.destroyed) r.destroy();
+    this.rangs = [];
     const c = pal.c, T = this.terrain, V = T.V;
     const relief = (x: number, y: number) => this.reliefMontagne(x, y);
     const montagnes = ZONES.find((z) => z.id === "montagnes");
@@ -1548,8 +1553,26 @@ export class Scene {
     const cases = [...T.cells.values()].filter((cell) => {
       const { x, y } = cell;
       return [[0, 0], [1, 0], [0, 1], [1, 1]].some(([dx, dy]) => relief(x + dx, y + dy) > (V.get(key(x + dx, y + dy)) ?? 0) + 0.02);
-    }).sort((a, b) => a.x + a.y - (b.x + b.y));
-    for (const cell of cases) this.dessinerCase(g, cell, pal, sur);
+    });
+    // une case (x, y) passe devant les décors des cases de profondeur x + y ou moins (tranche k + 0.5, k = x + y + 1)
+    const parRang = new Map<number, Cell[]>();
+    for (const cell of cases) { const k = cell.x + cell.y; if (!parRang.has(k)) parRang.set(k, []); parRang.get(k)!.push(cell); }
+    // côté pôle Nord, le versant descend vers la caméra : il passe avant les décors voisins (les grands bâtiments
+    // sont rangés un peu en arrière de leur case, la maison du Père Noël serait sinon coupée par la pente)
+    const { u, uMax } = this.bande();
+    for (const [k, l] of parRang) for (const versant of [false, true]) {
+      const part = l.filter((cell) => (u(cell.x + 0.5, cell.y + 0.5) > uMax) === versant);
+      if (!part.length) continue;
+      const rg = new Graphics();
+      rg.zIndex = k + 1.45 - (versant ? 3 : 0);
+      for (const cell of part) this.dessinerCase(rg, cell, pal, sur);
+      this.objects.addChild(rg);
+      this.rangs.push(rg);
+    }
+    const g = new Graphics();
+    g.zIndex = sortie.x + sortie.y + 2.47; // la bouche, juste devant la pente qui l'entoure
+    this.objects.addChild(g);
+    this.rangs.push(g);
 
     // la bouche, dans le plan de la falaise, au-dessus du chemin qui sort de la grotte
     const along = apres.x !== sortie.x;
