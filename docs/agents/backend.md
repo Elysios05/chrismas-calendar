@@ -266,7 +266,7 @@ Seuils réglables dans `app_settings` (valeurs par défaut entre parenthèses).
   l'interface hors contrat `SalonSecurite` est retirée.
 - Tests : SQL 220, `supabase_salons_test.py` 40, `demo_backend_test.py` 97.
 
-### 28 novembre 2026 — ménage du 31 janvier (branche `backend/menage-31-janvier`)
+### 28 novembre 2026 — ménage du 31 janvier (branche `backend/menage-31-janvier`, PR #154 brouillon)
 **Décision d'Alexandre (28 nov, option A)** : la page Confidentialité promet des données gardées **au plus tard jusqu'au
 31 janvier** qui suit la saison. Migration `supabase/migrations/0007_menage_31_janvier.sql` :
 - `salons.garder boolean not null default false` : jamais effacé automatiquement (ni fin de saison, ni
