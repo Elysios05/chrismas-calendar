@@ -625,10 +625,11 @@ html[data-nuit="oui"] .entete-pastille { color: #fff !important; }
 /* ---------- ouverture au public : dons et confidentialité (27 nov) ---------- */
 a.btn { display: inline-block; text-align: center; text-decoration: none; }
 .reg-pied .soutenir { display: block; margin: 0 auto 12px; }
-.final-soutenir { color: #fff; font-weight: 600; font-size: 15px; }
+.final-soutenir { display: block; margin-top: 12px; color: var(--ink-soft); font-weight: 600; font-size: 15px; text-align: center; }
 .conf-fond { z-index: 60; }
 .conf { max-height: min(92dvh, 820px); }
-.conf-texte { color: var(--ink); font-size: 15px; line-height: 1.5; }
+.conf .sheet-head > div { flex: 1; text-align: left; }
+.conf-texte { text-align: left; color: var(--ink); font-size: 15px; line-height: 1.5; }
 .conf-texte h3 { margin: 16px 0 4px; font-size: 16px; color: var(--ink); }
 .conf-texte h3:first-child { margin-top: 0; }
 .conf-texte p, .conf-texte ul { margin: 0 0 6px; }

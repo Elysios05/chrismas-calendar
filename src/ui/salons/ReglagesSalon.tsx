@@ -180,7 +180,7 @@ export function ReglagesSalon({ backend, me, onFermer, onSupprime }: {
           <p className="salon-etiq" id="supp-titre">Tout sera effacé, pour toujours :</p>
           <ul>
             <li>les 24 cases et votre avancée ;</li>
-            <li>les lettres, les réponses et les questions des jeux ;</li>
+            <li>les lettres et les questions des jeux ;</li>
             <li>toutes les photos ;</li>
             <li>vos deux comptes : ni toi ni {joueurs[autre].prenom} ne pourrez plus entrer.</li>
           </ul>
