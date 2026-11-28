@@ -598,3 +598,19 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - Vérifié : build, oxlint, `npm run capture` jours 16, 19, 22 (jour et 21:00), mobile et ordinateur, 0 erreur.
   - **Prochaine étape** : options B (relecture) ou C (performance téléphone) de #29. Pour la perf : les voiles sont
     recalculés à chaque image (peu coûteux), la montagne une seule fois.
+
+- 28 nov — **jonction marché / grotte et entailles du pôle Nord** (branche `monde/jonction-grotte`), demande
+  directe d'Alexandre : « écarter » le marché de la montagne de la grotte (des échoppes se retrouvaient sur ses
+  pentes) et, au pôle Nord, creuser la montagne autour des bâtiments proches, « pas même sur le flanc montant ».
+  - `Scene.ts`, `reliefMontagne` : **entaille autour de chaque bâtiment** du dehors proche de la montagne
+    (`EMPRISE` par type : échoppe, maison, chalet, poste, grande roue, Fabrique, maison du Père Noël, écurie, grand
+    sapin) : replat sur l'emprise + 1 case, puis la pente reprend sur 2,2 cases. La Fabrique et la maison du Père Noël
+    sont maintenant sur du plat, la montagne recule derrière elles. Le relief est mis en cache (`reliefCache`).
+  - **Bande libre au pied de la montagne côté marché** (`devantMontagne`, `PIED_LIBRE = 150` px) : les décors du
+    marché dans cette bande ne sont plus dessinés (la montagne s'étend de part et d'autre du chemin, ses pics
+    montaient au milieu des échoppes et des maisons). Restent : le panneau de la frontière et la grande roue.
+    Montée un peu plus douce depuis le marché (`w / 200` au lieu de `w / 130`).
+  - Essayé puis écarté : reculer le pied de la montagne dans la grotte (on voyait le sol bleu de la grotte après le panneau).
+  - Le terrain et les tirages `R()` ne changent pas (tout se fait au dessin) : le reste du monde est identique.
+  - Vérifié : build, oxlint, `npm run capture` jours 16, 19, 21 (jour et 21:00), mobile et ordinateur, 0 erreur.
+  - **Prochaine étape** : avis d'Alexandre sur la PR (largeur de la bande libre, à ajuster par `PIED_LIBRE`).

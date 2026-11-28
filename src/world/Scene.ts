@@ -65,6 +65,14 @@ const BATIMENTS_LARGES = new Set(["wheel", "workshop", "santaHouse", "postOffice
 /** Durée d'une tranche de reconstruction en arrière-plan (ms). Les tranches sont des tâches à part,
  *  pas liées aux images : le navigateur glisse ses images entre elles, et la reconstruction avance
  *  aussi vite sur un téléphone qui rame que sur un ordinateur (environ la moitié du temps chacun). */
+/** demi-largeur (en cases) des bâtiments autour desquels la montagne de la grotte s'écarte */
+const EMPRISE: Partial<Record<PropKind, number>> = {
+  stall: 0.75, house: 0.8, chalet: 1, postOffice: 0.8, wheel: 1.3, workshop: 1.3, santaHouse: 1.1, stable: 1.1, bigTree: 0.7,
+};
+/** largeur (pixels du monde) de la bande sans décor laissée au marché devant la montagne de la grotte */
+type BandeGrotte = { u: (gx: number, gy: number) => number; uMax: number; route: { x: number; y: number }[];
+  bats: { x: number; y: number; r: number }[] };
+const PIED_LIBRE = 150;
 const TRANCHE_MS = 8;
 
 /** Issue #14 : on prépare d'avance ce qui est à moins d'un demi-écran, on détruit ce qui est à plus d'un écran */
@@ -735,6 +743,7 @@ export class Scene {
         if (++n % 12 === 0) yield;
         // le 24 ouvert, l'attelage est parti avec le traîneau
         if (p.attelage && flying) continue;
+        if (this.devantMontagne(p)) continue;
         const o = drawProp(p.kind, p.x, p.y, pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop, alongX: p.alongX, flying: p.kind === "sleigh" && flying });
         if (o.anim) anims.push(...o.anim);
         o.y = -p.z * ZH;
@@ -1478,14 +1487,15 @@ export class Scene {
 
   /** Bande de la montagne qui recouvre la grotte : coordonnée `u` (pixels du monde, de l'entrée vers la sortie)
    *  d'un point de la carte, et longueur de la bande. Calculée une fois, à partir du chemin. */
-  private bandeGrotte?: { u: (gx: number, gy: number) => number; uMax: number; route: { x: number; y: number }[] };
-  bande() {
+  private bandeGrotte?: BandeGrotte;
+  private reliefCache = new Map<string, number>();
+  bande(): BandeGrotte {
     if (this.bandeGrotte) return this.bandeGrotte;
     const L = this.terrain.path, caveZ = this.caveZ;
     const i0 = L.findIndex((p) => p.zone === caveZ);
     let i1 = -1;
     for (let i = L.length - 1; i >= 0; i--) if (L[i].zone === caveZ) { i1 = i; break; }
-    if (i0 <= 0 || i1 <= 0 || i1 >= L.length - 1) return (this.bandeGrotte = { u: () => -1e9, uMax: 0, route: [] });
+    if (i0 <= 0 || i1 <= 0 || i1 >= L.length - 1) return (this.bandeGrotte = { u: () => -1e9, uMax: 0, route: [], bats: [] });
     const mid = (a: { x: number; y: number }, b: { x: number; y: number }) => P((a.x + b.x) / 2 + 0.5, (a.y + b.y) / 2 + 0.5);
     const m0 = mid(L[i0 - 1], L[i0]), m1 = mid(L[i1], L[i1 + 1]);
     const a = L[i0 - 1], b = L[i0];
@@ -1497,7 +1507,13 @@ export class Scene {
     const u = (gx: number, gy: number) => { const q = P(gx, gy); return (q.x - m0.x) * nrm.x + (q.y - m0.y) * nrm.y; };
     // le chemin à la sortie : on lui creuse une tranchée dans le versant
     const route = L.slice(i1, i1 + 9).map((p) => ({ x: p.x + 0.5, y: p.y + 0.5 }));
-    return (this.bandeGrotte = { u, uMax, route });
+    // les bâtiments du dehors proches de la montagne : elle s'écarte autour d'eux (échoppes du marché, Fabrique,
+    // maison du Père Noël…), pour qu'aucun ne se retrouve sur son flanc (demande d'Alexandre, 27 nov)
+    const bats = this.terrain.props
+      .filter((p) => p.zone !== caveZ && EMPRISE[p.kind] !== undefined && !this.devantMontagne(p, u, uMax))
+      .map((p) => ({ x: p.x + 0.5, y: p.y + 0.5, r: EMPRISE[p.kind]! }))
+      .filter((b) => { const w = u(b.x, b.y); return w > -400 && w < uMax + 400; });
+    return (this.bandeGrotte = { u, uMax, route, bats });
   }
   /** largeur (pixels du monde) du versant côté pôle Nord, au-delà de la sortie : elle varie le long du pied.
    *  Assez large pour que la pente reste sous le seuil de la roche : la neige y tient. */
@@ -1506,10 +1522,18 @@ export class Scene {
   }
   /** hauteur de la montagne qui recouvre la grotte, en un sommet de la carte (le terrain lui-même hors de la montagne) */
   reliefMontagne(x: number, y: number) {
-    const { u, uMax, route } = this.bande(), base = this.terrain.V.get(key(x, y)) ?? 0, w = u(x, y);
+    const ck = key(x, y), vu = this.reliefCache.get(ck);
+    if (vu !== undefined) return vu;
+    const h = this.calculerRelief(x, y);
+    this.reliefCache.set(ck, h);
+    return h;
+  }
+  private calculerRelief(x: number, y: number) {
+    const { u, uMax, route, bats } = this.bande(), base = this.terrain.V.get(key(x, y)) ?? 0, w = u(x, y);
     const lisse = (t: number) => { const k = Math.max(0, Math.min(1, t)); return k * k * (3 - 2 * k); };
     const pente = this.pente(x, y);
-    const monte = lisse(w / 130), tombe = lisse((uMax + pente - w) / pente);
+    // montée douce depuis le marché (et le marché laisse une bande libre devant elle : `devantMontagne`)
+    const monte = lisse(w / 200), tombe = lisse((uMax + pente - w) / pente);
     if (monte * tombe <= 0) return base;
     // des sommets larges et irréguliers : bruit doux et lent, tiré de la position
     const n = 0.5 + 0.28 * Math.sin(x * 0.31 + y * 0.17) + 0.22 * Math.cos(y * 0.27 - x * 0.13 + 1.3);
@@ -1522,7 +1546,20 @@ export class Scene {
       const dr = Math.min(...route.map((p) => Math.hypot(x - p.x, y - p.y)));
       h *= lisse((dr - 0.7) / 1.4);
     }
+    // entaille autour des bâtiments voisins : replat sur leur emprise et une marge, puis la pente reprend
+    for (const b of bats) {
+      const d = Math.max(Math.abs(x - b.x), Math.abs(y - b.y)) - b.r;
+      if (d < 3.2) h = base + (h - base) * lisse((d - 1) / 2.2);
+    }
     return Math.max(base, h);
+  }
+  /** décor du marché au pied de la montagne de la grotte : on ne le dessine pas, pour laisser une bande de neige
+   *  libre entre les échoppes et la montagne, qui s'étend de part et d'autre du chemin (demande d'Alexandre, 27 nov).
+   *  Le panneau de la frontière et la grande roue restent (la montagne s'écarte autour de la roue). */
+  devantMontagne(p: PlacedProp, u: (gx: number, gy: number) => number = this.bande().u, uMax: number = this.bande().uMax) {
+    if (p.zone === this.caveZ || p.kind === "signpost" || p.kind === "wheel") return false;
+    const w = u(p.x + 0.5, p.y + 0.5);
+    return w > -PIED_LIBRE && w < uMax / 2;
   }
   /** ce point de la carte est-il sous la montagne de la grotte (caché vu de dehors) ? Dans la grotte, ou là où le
    *  versant s'élève vraiment : ce qui est au pied (la maison du Père Noël) reste visible. */
