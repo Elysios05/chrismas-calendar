@@ -11,7 +11,7 @@
  */
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { GameModule } from "../../core/contracts";
+import type { BackendApi, GameModule } from "../../core/contracts";
 import { LoginScreen } from "../LoginScreen";
 import { DayWindow } from "../DayWindow";
 import { PreparedEditor, RappelVeille } from "../PreparedEditor";
@@ -76,7 +76,7 @@ async function creerSamEtCamille() {
     return { coat, hat, pompom, hair, longHair };
   };
   const cree = await backend.salons!.creerSalon({
-    motDePasse: "flocon",
+    motDePasse: "flocons!",
     config: { joueurs: { alexandre: { prenom: "Sam", couleurs: c("alexandre") }, flavie: { prenom: "Camille", couleurs: c("flavie") } }, contenu: {} },
   });
   return cree;
@@ -110,6 +110,13 @@ function Maquettes() {
     return <HudMaquette piste={vue.slice(4) as "a" | "b" | "c"} />;
   }
 
+  if (vue === "creer-complet") {
+    // Plafond de 50 salons atteint : la création répond LIMITE_CREATION « Complet… » (migration 0005).
+    const salons = Object.create(backend.salons!) as NonNullable<BackendApi["salons"]>;
+    salons.creerSalon = async () => { throw Object.assign(new Error("Complet pour cette année."), { code: "LIMITE_CREATION" }); };
+    const plein = Object.create(backend, { salons: { value: salons } }) as BackendApi;
+    return <CreerSalon backend={plein} onOuvrir={() => alert("→ le calendrier")} />;
+  }
   if (vue === "creer") {
     return <CreerSalon backend={backend} onOuvrir={() => alert("→ le calendrier")} onDemo={() => alert("→ la démo")} />;
   }

@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import type { BackendApi, InvitationInfo } from "../../core/contracts";
 import { PINGOU_SALON } from "../pingou/lines";
-import { ChampMotDePasse, EcranPingou, Personnage, codeErreur, messageErreur } from "./EcranPingou";
+import { ChampMotDePasse, EcranPingou, MDP_MIN, Personnage, codeErreur, messageErreur } from "./EcranPingou";
 
 export function Invitation({ backend, onEntree, onConnexion }: {
   backend: BackendApi; onEntree: () => void; onConnexion: () => void;
@@ -100,7 +100,7 @@ export function Invitation({ backend, onEntree, onConnexion }: {
           <input type="checkbox" checked={rester} onChange={(e) => setRester(e.target.checked)} />
           Se souvenir de moi sur cet appareil
         </label>
-        <button className="btn salon-btn" type="submit" disabled={busy || mdp.length < 6}>
+        <button className="btn salon-btn" type="submit" disabled={busy || mdp.length < MDP_MIN}>
           {busy ? "Un instant…" : "Entrer dans le calendrier"}
         </button>
       </form>

@@ -212,4 +212,8 @@ export const PINGOU_SALON = {
   contenuIncomplet: (): PingouLine => ({ text: "Presque ! Il reste un souci dans les cartes marquées en rouge.", face: "surpris" }),
   invitationIllisible: (): PingouLine => ({ text: "Je n'arrive pas à lire ton lien : le réseau a dû geler. Vérifie ta connexion, puis réessaie.", face: "surpris" }),
   invitationInvalide: (): PingouLine => ({ text: "Ce lien ne marche plus. Demande un nouveau lien à la personne qui te l'a envoyé.", face: "triste" }),
+  // Ouverture au public (27 nov) — « complet » validée par Alexandre ; les deux autres à faire valider
+  complet: (): PingouLine => ({ text: "Oh non… tous mes calendriers sont déjà distribués !", face: "triste" }),
+  supprimer: (prenom: string): PingouLine => ({ text: `Vraiment ? Si tu effaces tout, ${prenom} et toi ne pourrez plus revenir. Même moi, je ne pourrai rien retrouver.`, face: "triste" }),
+  supprimerSouci: (): PingouLine => ({ text: "Je n'ai pas réussi à tout effacer. Rien n'est perdu : réessaie dans un instant.", face: "surpris" }),
 } as const;

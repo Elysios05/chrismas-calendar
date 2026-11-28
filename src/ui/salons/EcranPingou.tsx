@@ -126,6 +126,9 @@ export function ChoixCouleurs({ c, onChange, plus, onPlus }: {
   );
 }
 
+/** Longueur minimale d'un mot de passe (décision d'Alexandre, 27 nov : 8). */
+export const MDP_MIN = 8;
+
 /** Champ mot de passe avec l'œil, comme sur l'écran de connexion. */
 export function ChampMotDePasse({ id, valeur, onChange, visible, onVisible, erreur, label }: {
   id: string; valeur: string; onChange: (v: string) => void; visible: boolean; onVisible: () => void; erreur?: boolean; label: string;
@@ -135,7 +138,7 @@ export function ChampMotDePasse({ id, valeur, onChange, visible, onVisible, erre
       <label className="salon-etiq" htmlFor={id}>{label}</label>
       <div className="login-champ">
         <input id={id} className={`login-input${erreur ? " erreur" : ""}`} type={visible ? "text" : "password"}
-          autoComplete="new-password" value={valeur} onChange={(e) => onChange(e.target.value)} minLength={6}
+          autoComplete="new-password" value={valeur} onChange={(e) => onChange(e.target.value)} minLength={MDP_MIN}
           aria-invalid={!!erreur} aria-describedby={`${id}-aide`} autoFocus />
         <button type="button" className="login-oeil" onClick={onVisible} aria-pressed={visible}
           aria-label={visible ? "Masquer le mot de passe" : "Afficher le mot de passe"}>
@@ -146,7 +149,7 @@ export function ChampMotDePasse({ id, valeur, onChange, visible, onVisible, erre
           </svg>
         </button>
       </div>
-      <p className="salon-aide" id={`${id}-aide`}>6 caractères au moins.</p>
+      <p className="salon-aide" id={`${id}-aide`}>{MDP_MIN} caractères au moins.</p>
     </div>
   );
 }

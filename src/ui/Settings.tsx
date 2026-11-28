@@ -5,6 +5,8 @@ import { PenguinPortrait } from "./Mascot";
 import { useDialog } from "./useDialog";
 import { RemindersRow } from "./Reminders";
 import { ReglagesSalon } from "./salons/ReglagesSalon";
+import { Confidentialite } from "./Confidentialite";
+import { BoutonSoutenir } from "./Soutenir";
 
 
 export const CLE_SON = "interface:son";
@@ -73,9 +75,11 @@ export function Settings({
   const [animations, setAnimations] = useState(() => lire(CLE_ANIMATIONS, true));
 
   // « Notre calendrier » s'ouvre par-dessus : tant qu'il est ouvert, c'est lui qui répond à Échap.
+  // Idem pour la page Confidentialité.
   const [salonOuvert, setSalonOuvert] = useState(false);
+  const [confOuverte, setConfOuverte] = useState(false);
   const salonOuvertRef = useRef(false);
-  salonOuvertRef.current = salonOuvert;
+  salonOuvertRef.current = salonOuvert || confOuverte;
   const fermer = useCallback(() => { if (!salonOuvertRef.current) onClose(); }, [onClose]);
   const { panneau, surFond } = useDialog<HTMLElement>(fermer);
 
@@ -129,9 +133,17 @@ export function Settings({
               <span className="reg-fleche" aria-hidden="true">›</span>
             </button>
           )}
+          <button type="button" className="reg-ligne reg-salon" onClick={() => setConfOuverte(true)}>
+            <span className="reg-texte">
+              Confidentialité &amp; mentions
+              <span className="reg-aide">Ce que nous gardons, et comment tout effacer.</span>
+            </span>
+            <span className="reg-fleche" aria-hidden="true">›</span>
+          </button>
         </div>
 
         <div className="reg-pied">
+          <BoutonSoutenir className="btn ghost reg-sortie" />
           {backend.mode === "demo" && <p className="reg-demo">Version de démonstration : rien n'est enregistré.</p>}
           <button
             className="btn ghost reg-sortie"
@@ -143,7 +155,9 @@ export function Settings({
         </div>
       </section>
     </div>
-    {salonOuvert && <ReglagesSalon backend={backend} me={me} onFermer={() => setSalonOuvert(false)} />}
+    {salonOuvert && <ReglagesSalon backend={backend} me={me} onFermer={() => setSalonOuvert(false)}
+      onSupprime={() => { setSalonOuvert(false); onSignedOut?.(); }} />}
+    {confOuverte && <Confidentialite onFermer={() => setConfOuverte(false)} />}
     </>
   );
 }

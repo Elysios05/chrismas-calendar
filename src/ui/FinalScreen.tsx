@@ -4,6 +4,7 @@ import { PRENOMS_PAR_DEFAUT } from "./useSalon";
 import { MascotDialog, PenguinPortrait } from "./Mascot";
 import { PINGOU_CASE, type PingouLine } from "./pingou/lines";
 import { avancee } from "./RaceIndicator";
+import { BoutonSoutenir } from "./Soutenir";
 
 
 /** Une gerbe de feu d'artifice : des étincelles qui partent dans toutes les directions. */
@@ -88,6 +89,7 @@ export function FinalScreen({
           {onRevoir && <button className="btn ghost" type="button" onClick={onRevoir}>Relire vos lettres</button>}
           {onFermer && <button className="btn" type="button" onClick={onFermer}>Joyeux Noël 🌟</button>}
         </div>
+        <BoutonSoutenir className="final-soutenir" />
       </main>
 
       <MascotDialog key={JSON.stringify(lines)} lines={lines} variant="inline" onDone={() => setLines([])} />
