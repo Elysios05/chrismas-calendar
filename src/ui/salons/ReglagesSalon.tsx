@@ -56,10 +56,13 @@ function BlocLien({ id, titre, lien, note, onCopie }: {
   );
 }
 
-/** Suppression du salon (PR #146 du Backend, hors contrat pour l'instant) : présente si le backend la sait faire. */
+/**
+ * `SalonApi.supprimerSalon` arrive avec la PR #146 du Backend : tant qu'elle n'est pas fusionnée, le bouton
+ * reste caché. (Une fois fusionnée, ce test devient toujours vrai et peut être retiré.)
+ */
 type AvecSuppression = { supprimerSalon(): Promise<void> };
-const saitSupprimer = (b: BackendApi): b is BackendApi & AvecSuppression =>
-  typeof (b as Partial<AvecSuppression>).supprimerSalon === "function";
+const saitSupprimer = (api: unknown): api is AvecSuppression =>
+  typeof (api as Partial<AvecSuppression> | undefined)?.supprimerSalon === "function";
 
 /**
  * `onSupprime` : le salon vient d'être effacé (le backend a déjà fermé la session) → retour à l'accueil.
@@ -95,7 +98,7 @@ export function ReglagesSalon({ backend, me, onFermer, onSupprime }: {
   const api = backend.salons;
   const inviter = me === "alexandre" && !!salon && !salon.inviteArrive && !salon.demo;
   // Seul le créateur (place 1) peut tout effacer (décision d'Alexandre, 27 nov).
-  const peutSupprimer = me === "alexandre" && !!salon && !salon.demo && saitSupprimer(backend);
+  const peutSupprimer = me === "alexandre" && !!salon && !salon.demo && saitSupprimer(backend.salons);
 
   useEffect(() => {
     if (!api) return;
@@ -155,11 +158,12 @@ export function ReglagesSalon({ backend, me, onFermer, onSupprime }: {
   };
 
   const supprimer = async () => {
-    if (busy || !saitSupprimer(backend)) return;
+    const api = backend.salons;
+    if (busy || !saitSupprimer(api)) return;
     setBusy(true);
     setErreur(null);
     try {
-      await backend.supprimerSalon();
+      await api.supprimerSalon();
       onSupprime?.();
     } catch (e) {
       setErreur(messageErreur(e));
