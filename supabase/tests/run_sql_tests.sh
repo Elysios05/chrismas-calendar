@@ -21,7 +21,7 @@ PSQL=("$PGBIN/psql" -h "$TMP" -p "$PORT" -U postgres -d postgres -v ON_ERROR_STO
 for pass in 1 2; do  # 2e passage : les migrations doivent être ré-exécutables
   for m in "$ROOT"/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$m" >/dev/null; done
 done
-for t in rls_test rappels_test salons_test securite_test; do
+for t in rls_test rappels_test salons_test securite_test menage_test; do
   "${PSQL[@]}" -t -f "$HERE/$t.sql" | grep -E 'ok  |ÉCHEC|Tous les tests'
 done
 

@@ -14,6 +14,9 @@
 //       → envoie l'e-mail « mot de passe oublié » à l'adresse réelle du compte. Réponse : { ok: true }
 //   { "action": "supprimer" }  (avec la session de l'utilisateur, en-tête Authorization ; créateur seulement)
 //       → supprime le salon dont l'utilisateur est le créateur : photos, comptes des deux membres, toutes les données. Réponse : { ok: true }
+//   { "action": "fin-saison" }  (appel de la base, pg_net, en-tête x-cron-secret = secret CRON_SECRET)
+//       → ménage du 31 janvier (migration 0007) : pour chaque salon de salons_fin_saison() qui a des photos,
+//         vide son dossier du bucket « photos » puis appelle supprimer_salon. Réponse : { supprimes, erreurs }
 //
 // Erreurs : { code: SalonErreurCode, message } avec un statut 400/401/403/404/409/429/500. Les messages sont
 // génériques : le détail technique ne part que dans les journaux de la fonction (SEC-14).
@@ -270,6 +273,30 @@ async function supprimer(db: SupabaseClient, req: Request) {
   return { ok: true };
 }
 
+/** Ménage de fin de saison (31 janvier) : photos d'abord (API Storage), puis comptes et salon. Serveur seulement. */
+async function finSaison(db: SupabaseClient, req: Request) {
+  const secret = Deno.env.get("CRON_SECRET");
+  if (!secret || req.headers.get("x-cron-secret") !== secret) {
+    throw new Refus("NON_AUTORISE", "Action réservée au serveur.");
+  }
+  const { data, error } = await db.rpc("salons_fin_saison");
+  if (error) throw fromSql(error.message);
+  let supprimes = 0, erreurs = 0;
+  for (const s of (data ?? []) as { salon_id: string; a_des_photos: boolean }[]) {
+    if (!s.a_des_photos || !UUID.test(s.salon_id)) continue;   // sans photo : la base s'en charge elle-même
+    try {
+      await viderDossier(db, s.salon_id);
+      const r = await db.rpc("supprimer_salon", { p_salon: s.salon_id });
+      if (r.error) throw new Error(r.error.message);
+      supprimes++;
+    } catch (e) {
+      erreurs++;                                               // réessayé la nuit suivante
+      console.error("[salons] fin-saison", s.salon_id, e);
+    }
+  }
+  return { supprimes, erreurs };
+}
+
 /** Adresse IP du visiteur : celle vue par Cloudflare si elle existe, sinon la première de x-forwarded-for. */
 function clientIp(req: Request): string {
   return req.headers.get("cf-connecting-ip")?.trim()
@@ -298,6 +325,7 @@ Deno.serve(async (req) => {
       case "connexion": return json(200, await connexion(db, body, ipHash));
       case "oubli": return json(200, await oubli(db, body, ipHash));
       case "supprimer": return json(200, await supprimer(db, req));
+      case "fin-saison": return json(200, await finSaison(db, req));
       default: return json(400, { code: "CONFIG_INVALIDE", message: "Action inconnue." });
     }
   } catch (e) {

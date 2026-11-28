@@ -265,3 +265,26 @@ Seuils réglables dans `app_settings` (valeurs par défaut entre parenthèses).
 - **Contrat** (confié par le chef) : `SalonApi.creerSalonAvecCaptcha(input, captcha)` et `SalonApi.supprimerSalon()` ;
   l'interface hors contrat `SalonSecurite` est retirée.
 - Tests : SQL 220, `supabase_salons_test.py` 40, `demo_backend_test.py` 97.
+
+### 28 novembre 2026 — ménage du 31 janvier (branche `backend/menage-31-janvier`)
+**Décision d'Alexandre (28 nov, option A)** : la page Confidentialité promet des données gardées **au plus tard jusqu'au
+31 janvier** qui suit la saison. Migration `supabase/migrations/0007_menage_31_janvier.sql` :
+- `salons.garder boolean not null default false` : jamais effacé automatiquement (ni fin de saison, ni
+  `purge_salons_inactifs` → `salons_inactifs` réécrite avec `and not s.garder`). Les membres ne peuvent pas le poser
+  (droit `update (config)` seulement). Le chef le pose à la main pour le salon d'Alexandre & Flavie (**identifiant
+  jamais dans le dépôt**). Attention : poser `garder` rafraîchit `updated_at` (salons_guard), sans conséquence.
+- `date_fin_saison(p_maintenant)` : 31 janvier 0 h (fuseau `app_settings.timezone`) qui suit le dernier 1er décembre.
+- `salons_fin_saison(p_maintenant)` (aperçu) : vide avant la date ; ensuite tous les salons **créés avant la date**, sauf
+  `garder` et le salon principal (un salon créé pour la saison suivante n'est pas touché).
+- `menage_fin_saison(p_maintenant)` : salons **sans photo** → `supprimer_salon` en SQL ; s'il en reste **avec photos**,
+  `demander_menage_photos()` appelle via pg_net l'Edge Function `salons` (action `fin-saison`, en-tête `x-cron-secret`
+  = secret `CRON_SECRET`, secrets du coffre `project_url` / `rappel_cron_secret` déjà créés pour les rappels), qui vide
+  les dossiers par l'API Storage puis appelle `supprimer_salon`. Pourquoi : Supabase refuse les DELETE SQL sur
+  `storage.objects` (et ils laisseraient des fichiers orphelins). Un salon qui a encore des photos n'est jamais supprimé
+  en SQL ; en cas d'échec, réessai chaque nuit.
+- Branché dans `menage_quotidien()` (clé `fin_saison` dans le JSON), tâche pg_cron `menage-salons` inchangée (3 h 17 UTC).
+- Tout est réservé à `service_role`. Tests : `supabase/tests/menage_test.sql` (35 vérifications ; total SQL 255).
+
+**À appliquer (chef)** : migration 0007, redéployer l'Edge Function `salons` (`--no-verify-jwt`), vérifier que le secret
+`CRON_SECRET` existe dans les secrets des Edge Functions et que `project_url` / `rappel_cron_secret` sont dans le coffre,
+puis `update public.salons set garder = true where id = '<id>'`.
