@@ -25,6 +25,18 @@ Le serveur des captures utilise le port **4199** (`QA_PORT`) pour ne pas gêner 
 Remotion ne peut pas télécharger son navigateur ici : `remotion.config.ts` prend `/usr/bin/google-chrome`
 (variable `REMOTION_CHROME` pour un autre chemin).
 
+## L'adresse du site sur la carte de fin
+
+Une seule source : **`src/lien.ts`** (`LIEN_PAR_DEFAUT`). Par défaut elle est **vide** : la carte de fin dit
+seulement « Lien en bio 👆 » (pas d'adresse GitHub, en attendant le choix d'un nom de domaine).
+
+- **Changer l'adresse pour de bon** : mettre par ex. `export const LIEN_PAR_DEFAUT = "notre-calendrier.fr";`
+  dans `src/lien.ts`, puis `npm run rendre` (re-rend les 5 vidéos, ≈ 10 min ; rushes et musique inchangés).
+  Une adresse avec un « / » est coupée sur deux lignes après le premier « / » ; « (lien en bio) » s'affiche dessous.
+- **Juste le temps d'un rendu**, sans toucher au fichier : `LIEN_SITE=notre-calendrier.fr npm run rendre`
+  (`LIEN_SITE= npm run rendre` = aucune adresse). `rendre.mjs` la passe aux compositions (`--props`).
+- Vérifier une seule image : `npx remotion still copine /tmp/fin.png --frame=470 --props='{"lien":"notre-calendrier.fr"}'`.
+
 ## Les coupes suivent le site
 Chaque rush écrit ses **images clés** (`src/rushes/<rush>.json` : toucher du cadeau, enveloppe, lettre, début du jeu,
 début de chaque monde, envol du traîneau…). Les compositions coupent sur ces repères : si une animation du site
@@ -33,7 +45,8 @@ les cadrages (`zoom`, `origine`, `glisse` des `<Plan>`) dans `src/videos/*.tsx` 
 
 ## Fichiers
 - `src/commun.tsx` : briques (Plan filmé + caméra, Titre, Pastille, Bruit, carte de Fin), charte.
-- `src/videos/Surprise.tsx`, `Monde.tsx`, `Jeux.tsx`, `Demain.tsx` : les vidéos 1 à 4.
+- `src/videos/Surprise.tsx`, `Monde.tsx`, `Jeux.tsx`, `Demain.tsx`, `Copine.tsx` : les vidéos 1 à 5.
+- `src/lien.ts` : l'adresse affichée sur la carte de fin (voir plus haut).
 - `public/fonts/` : Fredoka (licence OFL), `public/pingou.svg` : icône de l'appli.
 - `../outils/filmer.mjs` (plans), `../outils/rushes.mjs`, `../outils/musique.mjs`, `../outils/rendre.mjs`.
 

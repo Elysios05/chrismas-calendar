@@ -34,3 +34,10 @@ qui s'allument une à une. Aucune case sous le texte.
 - Étiquettes crème derrière les titres (façon légende TikTok) : les plans sont très chargés (neige, sapins) ;
   c'est le vocabulaire de l'appli (pastilles de lieux) et non un panneau décoratif.
 - « Coup de zoom » de 7 images à chaque coupe : rythme TikTok ; ce n'est pas une transition à effet.
+
+## Vidéo 5 « copine » (POV écrit)
+- Textes à la 1re personne, en minuscules quand c'est une réaction (« je pleure 😭 », « et y a des *JEUX* »),
+  comme une vraie légende TikTok ; mêmes étiquettes, mêmes tailles, même bord gauche.
+- Bulles de message (acte 3, la nuit) : la mienne à droite en bleu nuit, la sienne à gauche en crème, contour
+  bleu nuit, taille étiquette. Pas de nouvelle couleur, pas de prénom dans les bulles.
+- Émojis : police Noto Color Emoji du système (un par titre au plus).

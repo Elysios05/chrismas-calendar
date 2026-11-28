@@ -44,6 +44,10 @@ Besoin d'une option du site ou de `npm run capture` → le noter ci-dessous (le 
 - Remarques techniques : Remotion ne peut pas télécharger son navigateur (hôte bloqué) → Chrome du système
   (`remotion.config.ts`). La musique passe par `audio-demo.html` servi par Vite (port 4198).
 
+### 28 nov (soir) — vidéo 5 « copine » et adresse paramétrable (branche `marketing/video-copine`)
+- `5-copine` (+ `-musique`, planche) : POV écrit « Regardez ce que mon copain m'a fait 🥹 » → lettre, « je pleure 😭 », photo-souvenir, jeux, nuit + bulles de message, fin « Fais-le pour ta moitié. » (`montage/src/videos/Copine.tsx`, aucun nouveau rush).
+- Adresse de la carte de fin : une seule source `montage/src/lien.ts` (défaut vide = « Lien en bio 👆 »), ou `LIEN_SITE=… npm run rendre` ; vidéos 1 à 4 re-rendues sans adresse GitHub. Reste : relecture critique `video-design` complète non faite (arrêt anticipé, quota), choix du domaine par Alexandre.
+
 ### Décisions à demander à Alexandre (via le chef)
 - Les textes des vidéos (accroches, « Offre-le à ta moitié », « même à 800 km ») et le choix des morceaux.
 - Garder ou non les bruitages dans la version « sans musique ».

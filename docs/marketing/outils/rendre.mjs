@@ -6,6 +6,8 @@
 //                                                                           TikTok y pose le son tendance)
 //                           docs/marketing/videos/<n>-<id>-musique.mp4    (+ fond musical Tone.js du site)
 //                           docs/marketing/videos/planches/<n>-<id>.png    (une image par seconde, pour relire)
+// Adresse du site sur la carte de fin : montage/src/lien.ts (défaut : aucune, « Lien en bio 👆 »).
+// Pour la forcer le temps d'un rendu : LIEN_SITE=notre-calendrier.fr npm run rendre   (LIEN_SITE= vide = aucune)
 // H.264 CRF 23 « veryfast », ≤ 8 Mo. Les rushes et la musique doivent exister (npm run rushes, npm run musique).
 import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, renameSync, statSync } from "node:fs";
@@ -23,7 +25,11 @@ const VIDEOS_TIKTOK = {
   monde: ["2", "musique-monde"],
   jeux: ["3", "musique-jeux"],
   demain: ["4", "musique-jeux"],
+  copine: ["5", "musique-surprise"],
 };
+// LIEN_SITE défini (même vide) → passé aux compositions, prioritaire sur src/lien.ts
+const PROPS = process.env.LIEN_SITE !== undefined ? [`--props=${JSON.stringify({ lien: process.env.LIEN_SITE })}`] : [];
+if (PROPS.length) console.log(`Adresse sur la carte de fin : ${process.env.LIEN_SITE || "(aucune, « Lien en bio »)"}`);
 const choisies = opt.seulement ? String(opt.seulement).split(",") : Object.keys(VIDEOS_TIKTOK);
 mkdirSync(path.join(VIDEOS, "planches"), { recursive: true });
 mkdirSync(path.join(MONTAGE, "out"), { recursive: true });
@@ -38,7 +44,7 @@ for (const id of choisies) {
   console.log(`\n● ${base}`);
   // 1. rendu Remotion (image + bruitages), directement aux réglages de livraison
   const brut = path.join(MONTAGE, "out", `${base}.mp4`), part = brut.replace(/\.mp4$/, ".part.mp4");
-  lancer("npx", ["remotion", "render", id, part, "--codec=h264", "--crf=23", "--x264-preset=veryfast", "--audio-bitrate=160k", "--concurrency=2"], MONTAGE);
+  lancer("npx", ["remotion", "render", id, part, "--codec=h264", "--crf=23", "--x264-preset=veryfast", "--audio-bitrate=160k", "--concurrency=2", ...PROPS], MONTAGE);
   renameSync(part, brut);
   copyFileSync(brut, path.join(VIDEOS, `${base}.mp4`));
   // 2. version avec musique : on ajoute le morceau sous les bruitages, sans réencoder l'image
