@@ -76,7 +76,7 @@ async function creerSamEtCamille() {
     return { coat, hat, pompom, hair, longHair };
   };
   const cree = await backend.salons!.creerSalon({
-    motDePasse: "flocon",
+    motDePasse: "flocons!",
     config: { joueurs: { alexandre: { prenom: "Sam", couleurs: c("alexandre") }, flavie: { prenom: "Camille", couleurs: c("flavie") } }, contenu: {} },
   });
   return cree;
