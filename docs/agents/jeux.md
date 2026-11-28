@@ -20,7 +20,7 @@
    - Pour un **nouveau** jeu qui a du contenu propre à eux : écris-le dans `prive/contenu-alexandre-flavie.json`
      (dossier ignoré par git, vérifie `git status`) et dis à Alexandre d'envoyer le fichier au chef, qui le charge dans Supabase.
 2. ~~#129 cibles tactiles~~ (PR #131, fusionnée).
-3. ~~Jour 19~~ fait (PR #132). **Jour 23 « activité synchronisée » : repris par toi** (27 nov, le Monde est occupé par la carte) — règles proposées à Alexandre avant de coder ; contenu générique par défaut, schéma pour l'éditeur, `ctx.prenoms`, pas d'accord de genre ; contenu perso éventuel dans `prive/` (voir point 1).
+3. ~~Jour 19~~ fait (PR #132). ~~**Jour 23**~~ fait le 28 nov (branche `jeux/film-jour23`). **Jour 23 « activité synchronisée » : repris par toi** (27 nov, le Monde est occupé par la carte) — règles proposées à Alexandre avant de coder ; contenu générique par défaut, schéma pour l'éditeur, `ctx.prenoms`, pas d'accord de genre ; contenu perso éventuel dans `prive/` (voir point 1).
 4. Ensuite : corrections remontées par la Qualité ; fermer #56 et #109 quand la Qualité confirme.
 
 **🆕 Contenu d'Alexandre & Flavie séparé du contenu générique (décision d'Alexandre, 25 nov — PRIORITÉ 1)** :
@@ -63,6 +63,30 @@ Avant de poser une question, relire les issues ouvertes (y compris celles des au
 du chef y annoncent souvent des changements de contrat qui nous concernent).
 
 ## Journal
+
+### 28 novembre 2026 — jour 23, ciné de Noël à distance (branche `jeux/film-jour23`)
+
+**Décisions prises avec Alexandre (28 nov) :**
+- **Vote à deux** : 8 films génériques (modifiables dans l'éditeur), chaque personne coche ceux qui lui plaisent
+  et peut en ajouter un. Film coché des deux côtés → il gagne ; égalité → tirage ; aucun commun → tirage parmi tous les cochés.
+- **Pendant le film** : 3-2-1 commun pour appuyer sur lecture, chrono commun, pause commune (la reprise refait un 3-2-1),
+  réactions emojis (🍿😂😭❤️…) qui s'envolent chez l'autre.
+- **Fin** : note 1 à 5 étoiles + une phrase ; celle de l'autre se découvre après la sienne. Sans l'autre :
+  « Choisir sans attendre », on regarde et on note, l'autre verra plus tard.
+
+**Décisions techniques prises seul :**
+- La case ne pilote pas Netflix : c'est une **télécommande commune**. Journal de coups : `vote:<qui>`, `film`, `note:<qui>`.
+  Lecture = état `joinLive` `{ pos, depart (horloge commune), par }` → les deux chronos tombent pareil. Réactions =
+  `live.emit` éphémère, jamais sauvegardées (journal minuscule, cf. SEC-02).
+- Tirage déterministe (hachage des titres + heures des votes) : le même film des deux côtés, sans meneur.
+- En pause : −10 s / +10 s et « ⏮ Début » pour recaler (et pour qui arrive plus tard sur un chrono entamé).
+- Schéma `SCHEMA_FILM_JOUR23` (intro, films, réactions), `facultatif: true`. Pas de contenu perso A & F.
+
+**Vérifié :** atelier à deux onglets (vote, révélation, 3-2-1 vu des deux côtés, chronos identiques, réaction reçue,
+pause de l'autre, notes, rechargement → retrouve la fin), solo sur ordinateur avec prénoms Sam/Camille (« Choisir
+sans attendre », film ajouté), `npm run capture -- --jour=23 --heure=21:00 --case=23 --prenoms=Sam,Camille` : 0 erreur.
+
+**Prochaine étape :** corrections remontées par la Qualité ; fermer #56 et #109 quand la Qualité confirme.
 
 ### 27 novembre 2026 — textes des jeux sans accord de genre (branche `jeux/textes-neutres`, règle 7 de `docs/salons.md`)
 
