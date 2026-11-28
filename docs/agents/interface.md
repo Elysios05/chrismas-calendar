@@ -30,7 +30,7 @@ et Pingou (répliques + 5 expressions).
    contenu générique par défaut, schéma pour l'éditeur, `ctx.prenoms`, pas d'accord de genre.
 2. **Vérification en vrai sur Supabase** (site en ligne branché depuis le 26 nov) : création de salon, invitation, première
    connexion, messages d'erreur de #75, abonnement aux notifications ; Alexandre te fournit l'accès si tu as besoin d'un `.env.local`.
-3. **Ouverture au public, gratuite avec dons** (décision d'Alexandre, 27 nov) — textes validés par Alexandre avant de coder :
+3. ✅ **Fait le 28 nov** (branche `interface/ouverture-public`, voir Journal). ~~**Ouverture au public, gratuite avec dons** (décision d'Alexandre, 27 nov) — textes validés par Alexandre avant de coder :
    - un bouton discret **« Soutenir le projet ☕ »** (Réglages + écran final + accueil), lien vers la page de dons
      d'Alexandre (constante ou `import.meta.env.VITE_LIEN_DON` ; bouton caché si vide — le chef te donnera le lien) ;
    - une page **« Confidentialité & mentions »** (données stockées : prénoms, textes, photos ; où : Supabase UE ; durée ;
@@ -38,7 +38,7 @@ et Pingou (répliques + 5 expressions).
    - dans Réglages › Notre calendrier, **« Supprimer notre calendrier »** (double confirmation, efface salon, textes, photos ;
      appel fourni par le Backend dans sa PR de correctifs de sécurité) (SEC-07, #143) ;
    - l'écran **« Complet pour cette année »** quand la création renvoie `LIMITE_CREATION` avec un message commençant par
-     « Complet » (plafond de 50 salons, migration 0005).
+     « Complet » (plafond de 50 salons, migration 0005).~~
 Dimanche 29 : tests et corrections seulement. Lundi 30 : rien de nouveau.
 
 Méthode : prends le **premier point non fait** de cette liste, une branche et une PR par point, `npm run build`,
@@ -64,6 +64,30 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
    - **D** (prochaine tâche) : jour 19 (défi photo, proche du jeu photo du jour 3) — **Alexandre a dit oui (26 nov)**, annoncé dans #116. À faire après B ; attendre que le chef confirme dans #116 les fichiers de `src/games/` qu'il me confie.
 
 ## Journal
+
+### 📍 Où j'en suis — 28 novembre 2026 : ouverture au public (point 3 du plan final)
+Branche `interface/ouverture-public`, PR vers `main`. **Choix d'Alexandre (27 nov)** :
+- Écran **« Complet »** : Pingou désolé, « Oh non… tous mes calendriers sont déjà distribués ! » + « C'est complet pour
+  cette année : les 50 calendriers ont trouvé leur couple. Reviens l'an prochain 🎄 » + « Revenir à l'accueil ».
+  Déclenché par `LIMITE_CREATION` dont le message commence par « Complet ». Maquette : `maquettes.html?vue=creer-complet`.
+- **Dons** : pas encore de lien → `src/ui/Soutenir.tsx` lit `VITE_LIEN_DON` ; bouton caché tant qu'il est vide.
+  Placé : accueil (petit lien), Réglages (bouton au-dessus de « Se déconnecter »), écran du 24 (lien sous les boutons).
+- **Confidentialité** (`src/ui/Confidentialite.tsx`) : données gardées **au plus tard le 31 janvier 2027** ; contact =
+  **adresse perso d'Alexandre**, lue depuis `VITE_CONTACT` (jamais écrite dans le dépôt) ; Supabase eu-west-1 (Irlande).
+  Lien en bas de l'accueil + ligne dans Réglages.
+- **Suppression** : seul le créateur (place `alexandre`), **deux écrans** (liste rouge de ce qui disparaît, puis
+  « Oui, tout effacer pour toujours » / « Non, on garde tout »), Pingou triste. Appelle `backend.salons.supprimerSalon()`
+  (PR #146 du Backend) ; **bouton caché tant que #146 n'est pas fusionnée** (test `saitSupprimer`, à retirer ensuite).
+  Après suppression : `Settings` appelle `onSignedOut`.
+- **Mot de passe : 8 caractères** (`MDP_MIN` dans `EcranPingou.tsx`), maquettes passées à 8.
+- Répliques **à faire valider** : `PINGOU_SALON.supprimer` et `supprimerSouci`.
+- Captures faites avec un Playwright jetable sur une copie fusionnée avec #146 (hors dépôt) : la suppression vide
+  bien session et données en démo, aucune erreur console.
+- **Reste chez les autres** (issue au chef) : `VITE_LIEN_DON` / `VITE_CONTACT` dans `deploy.yml` (Backend) ; ménage
+  automatique au 31 janvier 2027 (Backend) ; Google Fonts encore chargées (index.html du chef, Caveat dans mon
+  index.css) — la page le dit honnêtement, à mettre à jour si on auto-héberge ; widget anti-robot de
+  `creerSalonAvecCaptcha` pas branché côté Interface.
+- **Prochaine étape** : suivre la PR, retirer `saitSupprimer` après la fusion de #146. Dimanche 29 : corrections seulement.
 
 ### 📍 Où j'en suis — 26 novembre 2026 (soir, après #116)
 
