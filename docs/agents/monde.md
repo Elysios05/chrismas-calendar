@@ -613,4 +613,7 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - Essayé puis écarté : reculer le pied de la montagne dans la grotte (on voyait le sol bleu de la grotte après le panneau).
   - Le terrain et les tirages `R()` ne changent pas (tout se fait au dessin) : le reste du monde est identique.
   - Vérifié : build, oxlint, `npm run capture` jours 16, 19, 21 (jour et 21:00), mobile et ordinateur, 0 erreur.
-  - **Prochaine étape** : avis d'Alexandre sur la PR (largeur de la bande libre, à ajuster par `PIED_LIBRE`).
+  - PR #151 fusionnée. Alexandre a encore vu un conflit (échoppe et braseros au pied des pics, à gauche de la case 16) :
+    `PIED_LIBRE` passe de 150 à 230 px (branche `monde/pied-marche`). Quelques échoppes de plus disparaissent aussi
+    à droite du chemin, vers la case 15. Vérifié : build, captures jour 16 mobile et ordinateur, 0 erreur.
+  - **Prochaine étape** : options B (relecture) ou C (performance téléphone) de #29.
