@@ -34,6 +34,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || vars.VITE_SUPABASE_ANON_KEY || 'sb_publishable_OWfucaz2x0nO5TUi_Hm5Zw_GCmKDe2Q' }}
           VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY || vars.VITE_VAPID_PUBLIC_KEY || 'BDqHsPKRJgs9fVpARgKVwa1sUyEgY_6lx1ns7PoUjK5ig8q4ru6VZNu6ydfG3L1vRXrktt89uHkUu_pn7-UuQGo' }}
+          VITE_LIEN_DON: ${{ secrets.VITE_LIEN_DON || vars.VITE_LIEN_DON }}
+          VITE_CONTACT: ${{ secrets.VITE_CONTACT || vars.VITE_CONTACT }}
       # Version démo publique, sans backend, dans le sous-dossier /demo/
       - name: Build version démo
         run: npx vite build --outDir dist/demo --emptyOutDir
