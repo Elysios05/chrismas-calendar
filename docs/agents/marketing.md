@@ -36,6 +36,7 @@ Besoin d'une option du site ou de `npm run capture` → le noter ci-dessous (le 
   - Son : bruitages du site sur les coupes ; version `-musique` avec un morceau du site (cosy / marché / action).
 - Vidéos (`docs/marketing/videos/`) : `1-surprise` (POV : un secret dans la case 4 → lettre → billet),
   `2-monde` (les six mondes, la nuit, le traîneau qui s'envole), `3-jeux` (luge, Pingou et les flocons, quiz).
+  Puis `4-demain` (S3 « J-1 : le 1er décembre, c'est demain », à poster le 30 nov ; aucun nouveau rush).
   Chacune en version sans musique (pour le son tendance de TikTok) et `-musique`, + planche dans `videos/planches/`.
 - Relecture (critique `video-design`, planches-contact) : corrigé les titres à contour illisibles (→ étiquettes),
   les bandes vides après recadrage, les plans où le sujet sortait du cadre, la carte de fin figée (Pingou bouge,
@@ -48,7 +49,10 @@ Besoin d'une option du site ou de `npm run capture` → le noter ci-dessous (le 
 - Garder ou non les bruitages dans la version « sans musique ».
 
 ### Reste à faire
-- Vidéos 4 à 6 (scripts S3 « J-1 », S6/S7 making-of) si le temps le permet ; le plan `makingof` existe déjà.
+- Vidéos 5 et 6 : making-of S6/S7 (le plan `makingof` de filmer.mjs existe, à porter en Remotion ; vérifier
+  qu'aucune page GitHub filmée ne montre de vrai prénom), ou une version « assistant de création » (S3) si
+  l'on filme l'assistant avec le salon fictif.
+- PR brouillon : #156.
 - Le jeu de luge filmé est un peu vide (piste blanche) : un pilote qui ramasse des cadeaux rendrait mieux.
 - Option utile côté Qualité : `npm run capture` n'a pas de mode « jeu ouvert » ni de pilote automatique
   (contourné dans `filmer.mjs`).

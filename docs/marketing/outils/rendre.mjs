@@ -22,6 +22,7 @@ const VIDEOS_TIKTOK = {
   surprise: ["1", "musique-surprise"],
   monde: ["2", "musique-monde"],
   jeux: ["3", "musique-jeux"],
+  demain: ["4", "musique-jeux"],
 };
 const choisies = opt.seulement ? String(opt.seulement).split(",") : Object.keys(VIDEOS_TIKTOK);
 mkdirSync(path.join(VIDEOS, "planches"), { recursive: true });

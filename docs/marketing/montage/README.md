@@ -33,7 +33,7 @@ les cadrages (`zoom`, `origine`, `glisse` des `<Plan>`) dans `src/videos/*.tsx` 
 
 ## Fichiers
 - `src/commun.tsx` : briques (Plan filmé + caméra, Titre, Pastille, Bruit, carte de Fin), charte.
-- `src/videos/Surprise.tsx`, `Monde.tsx`, `Jeux.tsx` : les trois vidéos.
+- `src/videos/Surprise.tsx`, `Monde.tsx`, `Jeux.tsx`, `Demain.tsx` : les vidéos 1 à 4.
 - `public/fonts/` : Fredoka (licence OFL), `public/pingou.svg` : icône de l'appli.
 - `../outils/filmer.mjs` (plans), `../outils/rushes.mjs`, `../outils/musique.mjs`, `../outils/rendre.mjs`.
 
