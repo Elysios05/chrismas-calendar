@@ -72,7 +72,7 @@ const EMPRISE: Partial<Record<PropKind, number>> = {
 /** largeur (pixels du monde) de la bande sans décor laissée au marché devant la montagne de la grotte */
 type BandeGrotte = { u: (gx: number, gy: number) => number; uMax: number; route: { x: number; y: number }[];
   bats: { x: number; y: number; r: number }[] };
-const PIED_LIBRE = 150;
+const PIED_LIBRE = 230;
 const TRANCHE_MS = 8;
 
 /** Issue #14 : on prépare d'avance ce qui est à moins d'un demi-écran, on détruit ce qui est à plus d'un écran */
