@@ -644,5 +644,6 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
   - Sons : uniquement les `Sfx` existants (pas de changement de contrat).
   - Vérifié : build, oxlint, `npm run capture` jours 2, 6, 10, 14, 18, 22 (jour, et 21:00 pour 6, 14, 22),
     mobile et ordinateur, 0 erreur console ; sonde des espèces visibles jour par jour.
+  - PR #157 ouverte (brouillon).
   - **Prochaine étape** : retours d'Alexandre sur les captures (densité, placement du carrousel), puis options B
     (relecture) ou C (performance téléphone) de #29 — surveiller la perf avec les ~60 habitants de plus.
