@@ -42,6 +42,23 @@ jobs:
         env:
           VITE_SUPABASE_URL: ""
           VITE_SUPABASE_ANON_KEY: ""
+      # Copie sur Cloudflare Pages (adresse <projet>.pages.dev), seulement si les secrets Cloudflare existent.
+      # Secrets : CLOUDFLARE_API_TOKEN (modèle « Edit Cloudflare Workers ») et CLOUDFLARE_ACCOUNT_ID.
+      # Nom du projet : variable CLOUDFLARE_PROJET (sinon « pingou-noel »). GitHub Pages reste en ligne en parallèle.
+      - name: Secrets Cloudflare présents ?
+        id: cf
+        env:
+          T: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: if [ -n "$T" ]; then echo "ok=1" >> "$GITHUB_OUTPUT"; fi
+      - name: Déploiement Cloudflare Pages
+        if: steps.cf.outputs.ok == '1'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+          PROJET: ${{ vars.CLOUDFLARE_PROJET || 'pingou-noel' }}
+        run: |
+          npx --yes wrangler@4 pages project create "$PROJET" --production-branch=main || true
+          npx --yes wrangler@4 pages deploy dist --project-name="$PROJET" --branch=main --commit-dirty=true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
