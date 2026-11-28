@@ -3,6 +3,7 @@
 import { Audio, Video } from "@remotion/media";
 import { loadFont } from "@remotion/fonts";
 import type { CSSProperties, ReactNode } from "react";
+import { lienSite } from "./lien";
 import { AbsoluteFill, Easing, Img, interpolate, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 
 /* ------------------------------------------------------------------ charte */
@@ -158,12 +159,15 @@ const Grille = ({ allumees, libres }: { allumees: number; libres: number[] }) =>
   );
 };
 
-/** Carte de fin : appel à l'action + adresse du site. `accroche` : 1 ou 2 lignes au-dessus du bouton. */
+/** Carte de fin : appel à l'action + adresse du site (src/lien.ts) ou « Lien en bio ». `accroche` : 1 ou 2 lignes au-dessus du bouton. */
 export const Fin = ({ accroche = ["Crée le vôtre", "pour ta moitié."] }: { accroche?: string[] }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const icone = spring({ frame, fps, config: { damping: 12, stiffness: 160 } });
   const bouton = spring({ frame: frame - 12, fps, config: { damping: 10, stiffness: 200, mass: 0.6 } });
+  // adresse du site : une seule source, src/lien.ts ("" = seulement « Lien en bio »)
+  const lien = lienSite();
+  const coupe = lien.indexOf("/");
   const pouls = 1 + 0.035 * Math.max(0, Math.sin((frame - 30) / 6)) * (frame > 30 ? 1 : 0);
   return (
     <AbsoluteFill style={{ backgroundColor: ENCRE }}>
@@ -181,9 +185,15 @@ export const Fin = ({ accroche = ["Crée le vôtre", "pour ta moitié."] }: { ac
       </div>
 
       <div style={{ position: "absolute", left: BORD, top: 1135, opacity: interpolate(frame, [18, 26], [0, 1], clamp) }}>
-        <div style={{ ...styleTexte(T.note, CREME, false), fontWeight: 600, opacity: 0.8 }}>elysios05.github.io/</div>
-        <div style={{ ...styleTexte(T.etiquette, CREME, false), marginTop: 6 }}>chrismas-calendar</div>
-        <div style={{ ...styleTexte(T.mini, CREME, false), fontWeight: 600, opacity: 0.7, marginTop: 22 }}>(lien en bio)</div>
+        {lien ? (
+          <>
+            {coupe > 0 && <div style={{ ...styleTexte(T.note, CREME, false), fontWeight: 600, opacity: 0.8 }}>{lien.slice(0, coupe + 1)}</div>}
+            <div style={{ ...styleTexte(T.etiquette, CREME, false), marginTop: 6 }}>{coupe > 0 ? lien.slice(coupe + 1) : lien}</div>
+            <div style={{ ...styleTexte(T.mini, CREME, false), fontWeight: 600, opacity: 0.7, marginTop: 22 }}>(lien en bio)</div>
+          </>
+        ) : (
+          <div style={{ ...styleTexte(T.etiquette, CREME, false) }}>Lien en bio 👆</div>
+        )}
       </div>
     </AbsoluteFill>
   );
