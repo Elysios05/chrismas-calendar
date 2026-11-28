@@ -33,6 +33,7 @@ import { BISCUITS_JOUR14, SCHEMA_BISCUITS_JOUR14 } from "../data/games/biscuits-
 import { TRI_CADEAUX_JOUR22 } from "../data/games/tri-cadeaux-jour22";
 import { SAPIN_JOUR21 } from "../data/games/sapin-jour21";
 import { BOULES_JOUR18 } from "../data/games/boules-jour18";
+import { FILM_JOUR23, SCHEMA_FILM_JOUR23 } from "../data/games/film-jour23";
 
 type Chargeur = () => Promise<GameModule>;
 
@@ -54,6 +55,7 @@ const JEUX: Partial<Record<DayNumber, Chargeur>> = {
   19: () => import("./photo/index").then((m) => m.defiPhotoJour19),
   21: () => import("./sapin/index").then((m) => m.sapinJour21),
   22: () => import("./tri-cadeaux/index").then((m) => m.triCadeauxJour22),
+  23: () => import("./film/index").then((m) => m.filmJour23),
   // les autres jours : à venir (défis photo, en direct, pendu, mots croisés…)
 };
 
@@ -76,6 +78,7 @@ const CONTENU: Partial<Record<DayNumber, unknown>> = {
   19: PHOTO_JOUR19,
   21: SAPIN_JOUR21,
   22: TRI_CADEAUX_JOUR22,
+  23: FILM_JOUR23,
 };
 
 /** Ce qu'un couple peut personnaliser, par jour. Absent = rien à personnaliser (jeux d'adresse : 2, 6, 10, 13, 18). */
@@ -90,6 +93,7 @@ const SCHEMAS: Partial<Record<DayNumber, SchemaContenu>> = {
   15: SCHEMA_PENDU_JOUR15,
   17: SCHEMA_MOTSCROISES_JOUR17,
   19: SCHEMA_PHOTO_JOUR19,
+  23: SCHEMA_FILM_JOUR23,
 };
 
 export const schemaDuJour = (jour: DayNumber): SchemaContenu | null => SCHEMAS[jour] ?? null;
