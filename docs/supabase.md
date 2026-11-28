@@ -26,10 +26,14 @@ tourne en **mode démo** (tout marche, mais les données restent dans le navigat
 1. Menu de gauche → **SQL Editor** → **New query**.
 2. Ouvre le fichier [`supabase/migrations/0001_init.sql`](../supabase/migrations/0001_init.sql) du dépôt, copie **tout**, colle-le.
 3. **Run**. Tu dois voir « Success. No rows returned ».
-4. **Même chose, dans l'ordre**, avec les trois fichiers suivants (une nouvelle requête pour chacun) :
+4. **Même chose, dans l'ordre**, avec les fichiers suivants (une nouvelle requête pour chacun) :
    [`0002_rappels.sql`](../supabase/migrations/0002_rappels.sql),
    [`0003_relance.sql`](../supabase/migrations/0003_relance.sql),
-   [`0004_salons.sql`](../supabase/migrations/0004_salons.sql).
+   [`0004_salons.sql`](../supabase/migrations/0004_salons.sql),
+   [`0005_plafond_salons.sql`](../supabase/migrations/0005_plafond_salons.sql) (50 calendriers au plus),
+   [`0006_securite.sql`](../supabase/migrations/0006_securite.sql) (limites, quotas, ménage nocturne des salons jamais utilisés).
+   Exception par salon possible ensuite (photos plus grandes) : colonnes `photo_dimension`, `photo_octets_max`,
+   `photo_max` de la table `salons`.
 
 Tous les fichiers peuvent être relancés sans risque. Ça crée : les salons (`salons`, jetons d'invitation,
 journal des créations), les tables de données (`profiles`, `progress`, `prepared_content`, `game_state`,
