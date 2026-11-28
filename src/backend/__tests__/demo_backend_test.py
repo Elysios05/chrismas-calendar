@@ -261,11 +261,11 @@ def main():
             e = err(s0, "backend.salons.creerSalon({ config: " + cfg + ", motDePasse: '123' })")
             check(e and e[0] == "MOT_DE_PASSE_FAIBLE", f"mot de passe trop court refusé ({e})")
             bad = cfg.replace("' Léo '", "'  '")
-            e = err(s0, "backend.salons.creerSalon({ config: " + bad + ", motDePasse: 'secret1' })")
+            e = err(s0, "backend.salons.creerSalon({ config: " + bad + ", motDePasse: 'secret-01' })")
             check(e and e[0] == "CONFIG_INVALIDE", f"prénom vide refusé ({e})")
-            e = err(s0, "backend.salons.creerSalon({ config: " + cfg.replace("'1':", "'25':") + ", motDePasse: 'secret1' })")
+            e = err(s0, "backend.salons.creerSalon({ config: " + cfg.replace("'1':", "'25':") + ", motDePasse: 'secret-01' })")
             check(e and e[0] == "CONFIG_INVALIDE", f"jour de contenu invalide refusé ({e})")
-            cree = s0.evaluate("backend.salons.creerSalon({ config: " + cfg + ", motDePasse: 'secret1' })")
+            cree = s0.evaluate("backend.salons.creerSalon({ config: " + cfg + ", motDePasse: 'secret-01' })")
             sid = cree["salon"]["id"]
             check(sid != "demo" and not cree["salon"]["inviteArrive"], "salon créé, invité·e pas encore arrivé·e")
             check(cree["salon"]["config"]["joueurs"]["alexandre"]["prenom"] == "Léo", "prénom rogné")
@@ -322,7 +322,7 @@ def main():
             check(ln.evaluate("backend.salons.getSalon()")["config"]["contenu"] == {}, "contenu caché si non connecté")
             e = err(ln, "backend.signIn('alexandre', 'mauvais')")
             check(e and "incorrect" in e[1], "mauvais mot de passe refusé")
-            ln.evaluate("backend.signIn('alexandre', 'secret1')")
+            ln.evaluate("backend.signIn('alexandre', 'secret-01')")
             check(ln.evaluate("backend.me()") == "alexandre", "bon mot de passe accepté")
 
             # retour au salon démo : inchangé, et isolé du nouveau salon
@@ -340,8 +340,8 @@ def main():
 
             # limite de création par heure
             for _ in range(4):
-                s0.evaluate("backend.salons.creerSalon({ config: " + cfg + ", motDePasse: 'secret1' })")
-            e = err(s0, "backend.salons.creerSalon({ config: " + cfg + ", motDePasse: 'secret1' })")
+                s0.evaluate("backend.salons.creerSalon({ config: " + cfg + ", motDePasse: 'secret-01' })")
+            e = err(s0, "backend.salons.creerSalon({ config: " + cfg + ", motDePasse: 'secret-01' })")
             check(e and e[0] == "LIMITE_CREATION", "6e salon dans l'heure refusé")
             for p_ in (s0, inv, ln):
                 p_.close()

@@ -5,7 +5,9 @@ create role authenticated nologin;
 create role service_role nologin bypassrls;
 
 create schema auth;
-create table auth.users (id uuid primary key, email text unique);
+create table auth.users (id uuid primary key, email text unique, last_sign_in_at timestamptz);
+create table auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid references auth.users (id) on delete cascade,
+  created_at timestamptz default now(), updated_at timestamptz default now(), refreshed_at timestamp);
 create function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
 $$;
@@ -15,7 +17,7 @@ create schema storage;
 create table storage.buckets (
   id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]
 );
-create table storage.objects (id serial primary key, bucket_id text, name text);
+create table storage.objects (id serial primary key, bucket_id text, name text, metadata jsonb);
 alter table storage.objects enable row level security;
 grant usage on schema storage to anon, authenticated;
 grant select, insert, update, delete on storage.objects to anon, authenticated;

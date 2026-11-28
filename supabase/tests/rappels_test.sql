@@ -7,20 +7,20 @@ grant execute on function t.ok(boolean, text) to service_role;
 -- ---------- Abonnements ----------
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000f', false);
-select public.save_push_subscription('https://push.example/flavie-tel', 'cle', 'auth', 'iPhone');
-select public.save_push_subscription('https://push.example/partage', 'cle', 'auth', 'tablette');
+select public.save_push_subscription('https://fcm.googleapis.com/fcm/send/flavie-tel', 'cle', 'auth', 'iPhone');
+select public.save_push_subscription('https://fcm.googleapis.com/fcm/send/partage', 'cle', 'auth', 'tablette');
 select t.ok((select count(*) from public.push_subscriptions) = 2, 'Flavie enregistre ses appareils');
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false);
 select t.ok((select count(*) from public.push_subscriptions) = 0, 'Alexandre ne voit pas les appareils de Flavie');
 do $$ begin
-  insert into public.push_subscriptions (endpoint, who, p256dh, auth) values ('https://push.example/x', 'flavie', 'k', 'a');
+  insert into public.push_subscriptions (endpoint, who, p256dh, auth) values ('https://fcm.googleapis.com/fcm/send/x', 'flavie', 'k', 'a');
   raise exception 'ÉCHEC : insertion directe au nom de Flavie';
 exception when insufficient_privilege then null; end $$;
 select t.ok(true, 'pas d''insertion directe dans push_subscriptions');
-select public.save_push_subscription('https://push.example/alex-tel', 'cle', 'auth', 'Android');
-select public.save_push_subscription('https://push.example/partage', 'cle2', 'auth2', 'tablette');
+select public.save_push_subscription('https://fcm.googleapis.com/fcm/send/alex-tel', 'cle', 'auth', 'Android');
+select public.save_push_subscription('https://fcm.googleapis.com/fcm/send/partage', 'cle2', 'auth2', 'tablette');
 select t.ok((select count(*) from public.push_subscriptions) = 2, 'appareil partagé ré-attribué à Alexandre');
-select public.delete_push_subscription('https://push.example/flavie-tel');  -- pas à lui : sans effet
+select public.delete_push_subscription('https://fcm.googleapis.com/fcm/send/flavie-tel');  -- pas à lui : sans effet
 do $$ begin
   perform * from public.reminder_targets(12);
   raise exception 'ÉCHEC : reminder_targets appelable depuis le site';
@@ -30,7 +30,7 @@ reset role;
 select t.ok((select count(*) from public.push_subscriptions where who = 'flavie') = 1, 'delete_push_subscription ne touche pas aux appareils de l''autre');
 set role anon;
 do $$ begin
-  perform public.save_push_subscription('https://push.example/pirate', 'k', 'a', null);
+  perform public.save_push_subscription('https://fcm.googleapis.com/fcm/send/pirate', 'k', 'a', null);
   raise exception 'ÉCHEC : un anonyme s''abonne';
 exception when insufficient_privilege then null; end $$;
 select t.ok(true, 'anonyme : abonnement refusé');

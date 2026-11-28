@@ -481,6 +481,24 @@ export class DemoBackend implements BackendApi, PasswordRecovery {
       this.emitSalon();
     },
 
+    creerSalonAvecCaptcha: async (input) => this.salons.creerSalon(input),   // pas d'anti-robot en démo
+
+    /**
+     * Supprime le salon courant (créateur seulement) : données, réglages, sessions. Le salon démo, lui, revient à
+     * son état de départ (il existe toujours : après, c'est lui le salon courant).
+     */
+    supprimerSalon: async () => {
+      const id = this.salonId();
+      if (this.current() !== "alexandre") throw salonError("NON_AUTORISE");
+      const all = loadSalons();
+      delete all[id];
+      saveSalons(all);
+      safe.del(dataKey(id));
+      for (const k of [sessionKey(id), CURRENT_SALON_KEY]) { safe.sset(k, null); safe.del(k); }
+      this.emitAuth(null);
+      this.emitSalon();
+    },
+
     ouvrirSalon: async (id) => {
       if (!salonRecord(id)) throw salonError("SALON_INCONNU");
       this.switchTo(id);

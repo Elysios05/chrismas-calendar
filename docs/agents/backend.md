@@ -204,3 +204,64 @@ Décision d'Alexandre (#59) : **option A**, l'invité·e choisit obligatoirement
 - **Non vérifiable sans vrai projet** : acceptation des adresses techniques par Supabase Auth (repli prévu), Edge Function sous Deno,
   postgres_changes sur `salons`, IP vue par la fonction (`x-forwarded-for`).
 - Prochaine étape : relire les retours de la PR ; l'Interface branche ses écrans sur `salons` (rien à changer côté contrat).
+
+### 27 novembre 2026 — correctifs de l'audit de sécurité (branche `backend/correctifs-securite`, #137–#141, #144)
+Source : `docs/securite/audit-2026-11-27.md`. Tout est dans **`supabase/migrations/0006_securite.sql`** (ré-exécutable),
+testé par `supabase/tests/securite_test.sql` (lancé par `run_sql_tests.sh`, 212 vérifications au total ; la base « d'avant
+les salons » passe maintenant aussi par 0005 et 0006). **Pas appliqué sur le vrai Supabase** : c'est le chef qui l'applique.
+Seuils réglables dans `app_settings` (valeurs par défaut entre parenthèses).
+- **SEC-01** : 1 création par IP et par heure (`salon_creations_par_heure`, 5 → 1 seulement si la valeur n'avait pas été
+  changée), 2 par jour (`salon_creations_par_ip_jour`) ; ne comptent que les salons qui existent encore (une création
+  ratée, supprimée par l'Edge Function, ne compte pas) ; essais bornés (`salon_essais_par_heure` 10) pour qu'on ne boucle
+  pas sur des échecs ; verrou (`pg_advisory_xact_lock`) contre les créations simultanées.
+  Purge : `salons_inactifs()` (aperçu) / `purge_salons_inactifs()` ; supprimé seulement si rien du tout (progress,
+  cases préparées, game_state, photo, appareil push), réglages jamais modifiés après 10 min, aucune activité (création,
+  `last_sign_in_at`, `auth.sessions` rafraîchie) depuis 48 h (`salon_inactif_heures`, jamais < 24 h) ; un salon
+  **rejoint** est en plus protégé jusqu'au 1er déc. 7 h + 48 h (avant décembre, rien à jouer). Lancée chaque nuit par
+  pg_cron (`menage-salons`, 3 h 17 UTC → `menage_quotidien()`, qui efface aussi le journal des créations > 30 jours et
+  les essais > 2 jours). Si une colonne Auth manque, la purge échoue sans rien supprimer.
+  Turnstile : secret facultatif `TURNSTILE_SECRET` de l'Edge Function ; champ `captcha` envoyé par
+  `creerSalonAvecCaptcha(input, jeton)` (interface `SalonSecurite`, hors contrat, `src/backend/index.ts`).
+- **SEC-02** : contrainte `game_state_value_size` (512 Ko) + déclencheur `game_state_quota` (1000 lignes, 5 Mo par salon,
+  `salon_game_rows_max` / `salon_game_octets_max`) ; l'upsert d'une clé existante reste permis au quota. Erreur `QUOTA_JEUX`.
+- **SEC-03** : bucket 5 Mo par fichier ; quota en octets : 40 Mo par salon (`salon_photo_octets_max`) et 900 Mo pour le
+  site (`photos_octets_total_max`), en plus des 150 photos.
+- **SEC-04** : `push_endpoint_ok` (FCM, Mozilla, Apple, Windows, https seulement), 5 appareils par personne
+  (`push_appareils_max`) : au-delà, SON plus ancien est remplacé. `rappel-veille` : lots de 10 en parallèle, délai 5 s,
+  journal écrit après chaque lot, services inconnus ignorés.
+- **SEC-05** : `salon_connexion_info(salon, place)` → `{ existe, email }` avec `email` = adresse TECHNIQUE seulement ;
+  `salon_login_email` (anciens sites) ne renvoie plus jamais une adresse réelle ; `salon_login_email_serveur` réservée au
+  serveur. Compte à adresse réelle : Edge Function action `connexion` (signInWithPassword côté serveur, renvoie la session,
+  le site fait `setSession`) ; « mot de passe oublié » : action `oubli`. Choix : pas de connexion serveur pour les
+  adresses techniques, car les limites d'Auth sont par IP et la fonction partagerait la sienne entre tous.
+- **SEC-07** (demande du chef sur #143) : action `supprimer` (photos du dossier + `supprimer_salon`) et
+  `supprimerSalon()` dans les deux backends, **hors contrat** (`SalonSecurite`) : je n'ai pas le droit d'écrire dans
+  `src/core/contracts.ts` → au chef de l'ajouter à `SalonApi` s'il le souhaite.
+- **SEC-08** : `VITE_EMAIL_*` retirées du workflow et de `config.ts` (`ACCOUNT_EMAILS`, `emailOf`) ; sans salon courant,
+  la connexion demande d'ouvrir le lien du calendrier.
+- Faibles : SEC-10 (contrainte `prepared_photos_du_salon`, `photo_frozen` limité au salon), SEC-11 (droits anon,
+  TRUNCATE, déclencheurs, pg_net, search_path), SEC-12 (même message pour toute adresse refusée, essais limités sur
+  `accepter`), SEC-14 (messages génériques), SEC-15 (photo toujours ré-encodée, HEIC non décodable refusé),
+  SEC-16 (invitation valable 30 jours, `salon_invitation_jours`), SEC-17 (supabase-js épinglé 2.119.0 dans les fonctions).
+  Non traités : SEC-09 (accepté), SEC-13 (8 caractères : choix d'Alexandre + textes Interface), Dependabot / épinglage
+  des actions (réglages du dépôt).
+- Tests navigateur : `supabase_salons_test.py` 38 (connexion par l'Edge Function avec une vraie adresse, suppression),
+  `demo_backend_test.py` 97.
+- **Ordre de mise en ligne** : 1) migration 0006 ; 2) redéployer `salons` et `rappel-veille` ; 3) fusionner le site.
+  Entre 1 et 3, un ancien site ne peut plus se connecter à un compte à adresse réelle (les adresses techniques marchent).
+- Questions posées sur #59 : quota photos par salon ; qui peut supprimer un calendrier.
+
+**Décisions d'Alexandre (27 nov, transmises par le chef), intégrées dans la même PR #146 :**
+- **Mot de passe : 8 caractères minimum** (SEC-13) : `MOT_DE_PASSE_MIN = 8` (`config.ts`, Edge Function `salons`,
+  `updatePassword`, contrat). Écrans de l'Interface (`minLength={6}`, `mdp.length < 6`, « 6 caractères au moins ») :
+  issue ouverte pour l'Interface.
+- **Seul le créateur (place `alexandre`) supprime le calendrier** : `salon_du_createur(user)` côté serveur, et vérif. dans
+  les deux backends.
+- **Photos : le plus de couples possible sur 1 Go** : 1280 px, JPEG 0,8 (`PHOTO_MAX_DIMENSION`, `PHOTO_QUALITE`), 15 Mo
+  par salon (`salon_photo_octets_max`), 900 Mo pour le site. **Exceptions par salon** : colonnes `salons.photo_dimension`,
+  `photo_octets_max`, `photo_max` (null = réglage du site), lues par `salon_photo_quota_ok` et par le site
+  (`salon_public` → `photoDimension`). Seul le serveur les modifie. Le chef pose l'exception du salon d'Alexandre
+  et Flavie (2000 px, 150 Mo) après l'application ; leur identifiant n'est jamais écrit dans le dépôt.
+- **Contrat** (confié par le chef) : `SalonApi.creerSalonAvecCaptcha(input, captcha)` et `SalonApi.supprimerSalon()` ;
+  l'interface hors contrat `SalonSecurite` est retirée.
+- Tests : SQL 220, `supabase_salons_test.py` 40, `demo_backend_test.py` 97.

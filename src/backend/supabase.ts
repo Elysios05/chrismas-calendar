@@ -11,7 +11,7 @@ import type {
 import { browserStatus, currentSubscription, subscribe, subscriptionKeys } from "./push";
 import type { PasswordRecovery } from "./index";
 import {
-  FROZEN_MESSAGE, PHOTO_MAX_DIMENSION, emailOf, PREPARED_DAYS, READ_URL_TTL_SECONDS, UPLOAD_URL_TTL_SECONDS,
+  FROZEN_MESSAGE, MOT_DE_PASSE_MIN, PHOTO_MAX_DIMENSION, PHOTO_QUALITE, PREPARED_DAYS, READ_URL_TTL_SECONDS, UPLOAD_URL_TTL_SECONDS,
   checkMotDePasse, checkPhotoSize, checkSalonConfig, compressImage, isWho, lienInvitationUrl, lienSalonUrl, partnerOf,
   salonError, siteBaseUrl,
 } from "./config";
@@ -79,6 +79,7 @@ type PreparedRow = { day: number; from_who: Who; to_who: Who; message: string; p
 /** Traduit les erreurs Postgres/RLS utiles en messages français. */
 function friendly(message: string): string {
   if (message.includes("CASE_FIGEE")) return FROZEN_MESSAGE;
+  if (message.includes("QUOTA_JEUX")) return "Ce calendrier a atteint sa place maximale pour les jeux : rien n'a été enregistré.";
   if (message.includes("row-level security")) return "Action refusée par le serveur.";
   return message;
 }
@@ -165,9 +166,19 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
 
   async signIn(who: Who, password: string, options?: { rester?: boolean }) {
     this.storage.persist = options?.rester !== false; // à régler AVANT que Supabase n'écrive la session
-    const email = await this.loginEmail(who);
-    const { error } = await this.sb.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message === "Invalid login credentials" ? "Mot de passe incorrect." : error.message);
+    const info = await this.connexionInfo(who);
+    if (info.email) {
+      // Adresse technique (rien de personnel) : connexion directe
+      const { error } = await this.sb.auth.signInWithPassword({ email: info.email, password });
+      if (error) throw new Error(error.message === "Invalid login credentials" ? "Mot de passe incorrect." : error.message);
+    } else {
+      // Adresse réelle : elle ne quitte jamais le serveur, c'est l'Edge Function qui connecte (SEC-05)
+      const r = await this.callSalons<{ session: { access_token: string; refresh_token: string } }>({
+        action: "connexion", salonId: this.salonId, place: who, motDePasse: password,
+      });
+      const { error } = await this.sb.auth.setSession(r.session);
+      if (error) throw new Error("Connexion impossible pour le moment. Réessaie dans un instant.");
+    }
     this.whoReady = this.loadWho();
     const got = await this.whoReady;
     if (got !== who) {
@@ -181,22 +192,21 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
     this.emitSalon();
   }
 
-  /** Adresse de connexion d'une place du salon courant (réelle, ou technique si aucune n'a été donnée). */
-  private async loginEmail(who: Who): Promise<string> {
-    if (!this.salonId) return emailOf(who);   // pas de salon : anciens comptes (VITE_EMAIL_*)
-    const { data, error } = await this.sb.rpc("salon_login_email", { p_salon: this.salonId, p_place: who });
-    if (error) throw new Error("Connexion impossible : " + error.message);
-    if (!data) {
+  /**
+   * Comment se connecter à une place du salon courant : `email` = adresse technique <salon>-<place>@… (connexion
+   * directe), ou null si le compte a une adresse réelle (connexion par l'Edge Function, l'adresse reste secrète).
+   */
+  private async connexionInfo(who: Who): Promise<{ email: string | null }> {
+    if (!this.salonId) throw new Error("Ouvre le lien de connexion de ton calendrier pour te connecter.");
+    const { data, error } = await this.sb.rpc("salon_connexion_info", { p_salon: this.salonId, p_place: who });
+    if (error) throw new Error("Connexion impossible pour le moment. Réessaie dans un instant.");
+    const d = data as { existe?: boolean; email?: string | null } | null;
+    if (!d?.existe) {
       throw new Error(who === "flavie"
         ? "Cette personne n'a pas encore rejoint le calendrier : envoie-lui le lien d'invitation."
         : "Ce calendrier n'existe pas (ou plus).");
     }
-    return String(data);
-  }
-
-  /** Adresse technique (aucun e-mail possible) : <salon>-<place>@… */
-  private isTechnicalEmail(email: string, who: Who) {
-    return !!this.salonId && email.startsWith(`${this.salonId}-${who}@`);
+    return { email: d.email ?? null };
   }
 
   async signOut() {
@@ -214,24 +224,27 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
     this.emitSalon();   // le contenu n'est plus lisible
   }
 
+  /** Jeton anti-robot de la création en cours (creerSalonAvecCaptcha). */
+  private captcha: string | undefined;
+
   /* ----- mot de passe oublié (méthodes en plus du contrat) ----- */
 
   async resetPassword(who: Who) {
-    const email = await this.loginEmail(who);
-    if (this.isTechnicalEmail(email, who)) {
+    const info = await this.connexionInfo(who);
+    if (info.email) {
       throw new Error("Aucune adresse e-mail n'a été donnée pour ce compte : le mot de passe ne peut pas être "
         + "réinitialisé par e-mail.");
     }
     const back = typeof location !== "undefined"
       ? siteBaseUrl() + (this.salonId ? `?salon=${encodeURIComponent(this.salonId)}` : "") : undefined;
-    const { error } = await this.sb.auth.resetPasswordForEmail(email, { redirectTo: back });
-    if (error) throw new Error("Envoi de l'e-mail impossible : " + error.message);
+    // L'adresse réelle n'est connue que du serveur : c'est lui qui demande l'e-mail (SEC-05)
+    await this.callSalons({ action: "oubli", salonId: this.salonId, place: who, redirectTo: back });
   }
 
   inPasswordRecovery() { return this.recovery; }
 
   async updatePassword(newPassword: string) {
-    if (newPassword.length < 6) throw new Error("Mot de passe trop court (6 caractères minimum).");
+    if (newPassword.length < MOT_DE_PASSE_MIN) throw new Error(`Mot de passe trop court (${MOT_DE_PASSE_MIN} caractères minimum).`);
     const { error } = await this.sb.auth.updateUser({ password: newPassword });
     if (error) throw new Error(error.message);
     this.recovery = false;
@@ -307,11 +320,25 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
     if (error) throw new Error(friendly(error.message));
   }
 
+  /** Taille des photos de ce salon (réglage du serveur : 1280 px en général), lue une fois. */
+  private photoDimension: { salon: string; px: number } | null = null;
+  private async dimensionPhotos(salon: string): Promise<number> {
+    if (this.photoDimension?.salon === salon) return this.photoDimension.px;
+    let px = PHOTO_MAX_DIMENSION;
+    try {
+      const { data } = await this.sb.rpc("salon_public", { p_salon: salon });
+      const v = Number((data as { photoDimension?: unknown } | null)?.photoDimension);
+      if (Number.isFinite(v) && v >= 320 && v <= 4000) px = Math.round(v);
+    } catch { /* réglage par défaut */ }
+    this.photoDimension = { salon, px };
+    return px;
+  }
+
   /** Envoie une photo dans <salon>/<moi>/<uuid>.jpg et renvoie une URL signée valable 60 jours. */
   async uploadPhoto(file: Blob): Promise<string> {
     const me = await this.requireMe();
     const salon = this.profil!.salonId;
-    const small = await compressImage(file, PHOTO_MAX_DIMENSION);
+    const small = await compressImage(file, await this.dimensionPhotos(salon), PHOTO_QUALITE);
     checkPhotoSize(small);
     const ext = small.type === "image/png" ? "png" : small.type === "image/webp" ? "webp" : "jpg";
     const path = `${salon}/${me}/${crypto.randomUUID()}.${ext}`;
@@ -319,7 +346,7 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
     if (up.error) {
       // La règle d'accès refuse aussi quand le quota de photos du salon est atteint
       if (/row-level security|violates/i.test(up.error.message)) {
-        throw new Error("Envoi de la photo refusé : le calendrier a peut-être atteint son nombre maximal de photos.");
+        throw new Error("Envoi de la photo refusé : le calendrier a peut-être atteint sa place maximale pour les photos.");
       }
       throw new Error("Envoi de la photo impossible : " + up.error.message);
     }
@@ -338,7 +365,7 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
     await this.requireMe();
     const { error } = await this.sb.from("game_state")
       .upsert({ day, key, value: value as unknown }, { onConflict: "salon_id,day,key" });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(friendly(error.message));
   }
 
   joinRoom(roomId: string): RealtimeRoom {
@@ -469,6 +496,7 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
       checkMotDePasse(input.motDePasse);
       const r = await this.callSalons<{ salonId: string; jeton: string; email: string }>({
         action: "creer", config, motDePasse: input.motDePasse, email: input.email?.trim() || undefined,
+        captcha: this.captcha || undefined,
       });
       await this.enterSalon(r.salonId, r.email, input.motDePasse, input.rester);
       const salon = await this.fetchSalon();
@@ -520,6 +548,28 @@ export class SupabaseBackend implements BackendApi, PasswordRecovery {
         action: "accepter", jeton, motDePasse, email: options?.email?.trim() || undefined,
       });
       await this.enterSalon(r.salonId, r.email, motDePasse, options?.rester);
+    },
+
+    creerSalonAvecCaptcha: async (input, captcha) => {
+      this.captcha = captcha;
+      try { return await this.salons.creerSalon(input); } finally { this.captcha = undefined; }
+    },
+
+    supprimerSalon: async () => {
+      // Réservé au créateur (le serveur le vérifie aussi)
+      if ((await this.me()) !== "alexandre" || !this.salonId) throw salonError("NON_AUTORISE");
+      // L'Edge Function lit le compte dans la session envoyée avec la requête
+      await this.callSalons({ action: "supprimer" });
+      try { const sub = await currentSubscription(); if (sub) await sub.unsubscribe(); } catch { /* sans gravité */ }
+      try { await this.sb.auth.signOut({ scope: "local" }); } catch { /* comptes déjà supprimés */ }
+      this.who = null;
+      this.profil = null;
+      this.whoReady = Promise.resolve(null);
+      this.photoDimension = null;
+      this.setSalonId(null);
+      this.watchSalon();
+      this.emitAuth(null);
+      this.emitSalon();
     },
 
     ouvrirSalon: async (id) => {

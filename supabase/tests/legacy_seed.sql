@@ -9,6 +9,6 @@ insert into public.profiles values
 insert into public.progress (who, day) values ('alexandre', 1), ('flavie', 1);
 insert into public.prepared_content (day, from_who, to_who, message, photos) values (4, 'flavie', 'alexandre', 'avant', array['flavie/p.jpg']);
 insert into public.game_state (day, key, value, updated_by) values (2, 'score:flavie', '7', 'flavie');
-insert into public.push_subscriptions (endpoint, who, p256dh, auth) values ('https://push.example/vieux', 'flavie', 'k', 'a');
+insert into public.push_subscriptions (endpoint, who, p256dh, auth) values ('https://fcm.googleapis.com/fcm/send/vieux', 'flavie', 'k', 'a');
 insert into public.reminder_log (day, who, kind) values (4, 'flavie', 'rappel');
 insert into storage.objects (bucket_id, name) values ('photos', 'flavie/p.jpg');
