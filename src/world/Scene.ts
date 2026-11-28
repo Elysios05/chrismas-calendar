@@ -8,6 +8,7 @@ import { weatherAt } from "./weather";
 import { Aurora } from "./aurora";
 import { PLAYERS, Person, Penguin, type Who } from "./actors";
 import { makeGround, poke, spawnLife, updateCritter, type Critter, type LifeEnv } from "./life";
+import { vivant } from "./noel";
 import type { CouleursJoueur, JoueurSalon, SoundApi, ZoneId } from "../core/contracts";
 import { Inclinaison } from "./inclinaison";
 import { Survol, ZOOM_SURVOL, marquerPresente, mondesPresentes, oublierPresentations } from "./presentation";
@@ -636,7 +637,14 @@ export class Scene {
     b.objects.addChild(b.penguin);
     yield;
     // les habitants : recréés à chaque reconstruction (leur dessin suit la palette jour / nuit)
-    b.life = spawnLife(this.terrain, pal);
+    // au pied de la montagne de la grotte, le marché laisse une bande libre : personne ne s'y installe
+    b.life = spawnLife(this.terrain, pal, (x, y) => {
+      const cell = this.terrain.cells.get(key(Math.floor(x), Math.floor(y)));
+      if (!cell) return false;
+      // ni dans la bande libre du marché, ni sur les pentes de la montagne de la grotte vue de dehors
+      return this.devantMontagne({ kind: "visitor", x: x - 0.5, y: y - 0.5, z: 0, zone: cell.zone, seed: 0, drop: 0 })
+        || (cell.zone !== this.caveZ && this.sousMontagne(x, y));
+    });
     yield;
     for (const cr of b.life) {
       cr.on("pointertap", (e) => {
@@ -744,6 +752,8 @@ export class Scene {
         // le 24 ouvert, l'attelage est parti avec le traîneau
         if (p.attelage && flying) continue;
         if (this.devantMontagne(p)) continue;
+        // promeneurs et rennes : ce sont des habitants qui bougent (life.ts, noel.ts)
+        if (vivant(p)) continue;
         const o = drawProp(p.kind, p.x, p.y, pal, p.seed, { zone: ZONES[p.zone].id, drop: p.drop, alongX: p.alongX, flying: p.kind === "sleigh" && flying });
         if (o.anim) anims.push(...o.anim);
         o.y = -p.z * ZH;
@@ -830,7 +840,70 @@ export class Scene {
     face([A, B, C]);
     face([A, C, D]);
     if (!sur && cell.sol) this.dessinerSol(g, cell, pal);
+    else if (!sur && !lac && this.pave(cell)) this.paverCase(g, cell, pal);
     if (lac && (x + y) % 3 === 0) poly(g, [P(x + 0.2, y + 0.3, 0), P(x + 0.6, y + 0.1, 0), P(x + 0.65, y + 0.18, 0), P(x + 0.25, y + 0.38, 0)], c(0xeaf8fd));
+  }
+
+  /** Le village de Saint-Nicolas est pavé tout entier, rue, place et ruelles (demande d'Alexandre, issue #155).
+   *  Le pavage s'arrête avant les pentes fortes et s'effiloche vers les autres mondes. */
+  private paveCache = new Map<string, boolean>();
+  private villagePi?: [number, number];
+  pave(cell: Cell): boolean {
+    const k = key(cell.x, cell.y);
+    const v = this.paveCache.get(k);
+    if (v !== undefined) return v;
+    let r = false;
+    const z = ZONES[cell.zone];
+    if (z.id === "saint-nicolas" && !cell.road && !cell.lake) {
+      if (!this.villagePi) {
+        const pis = this.terrain.path.map((p, i) => (p.zone === cell.zone ? i : -1)).filter((i) => i >= 0);
+        this.villagePi = [Math.min(...pis), Math.max(...pis)];
+      }
+      const [p0, p1] = this.villagePi;
+      const bout = Math.min(cell.pi - p0, p1 - cell.pi);
+      // un bord irrégulier, comme un pavage qui finit dans la neige
+      const n = Math.sin(cell.x * 0.9 + cell.y * 0.4) + Math.sin(cell.x * 0.3 - cell.y * 1.1);
+      const limite = Math.min(5.2 + n * 0.7, bout * 0.55);
+      const V = this.terrain.V;
+      const hs = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => V.get(key(cell.x + dx, cell.y + dy)) ?? 0);
+      r = cell.d < limite && Math.max(...hs) - Math.min(...hs) < 0.45;
+    }
+    this.paveCache.set(k, r);
+    return r;
+  }
+  paverCase(g: Graphics, cell: Cell, pal: Palette) {
+    const c = pal.c, T = this.terrain, { x, y } = cell;
+    const H = (a: number, b: number) => heightAt(T, a, b) + 0.01;
+    const rect = (x0: number, x1: number, y0: number, y1: number, col: number, alpha = 1) =>
+      poly(g, [P(x0, y0, H(x0, y0)), P(x1, y0, H(x1, y0)), P(x1, y1, H(x1, y1)), P(x0, y1, H(x0, y1))], c(col), alpha);
+    // pavés un peu plus clairs et plus chauds que ceux de la rue : la chaussée reste lisible
+    const JOINT = 0xcdc3b6, COBBLE = [0xb5aca2, 0xbdb4aa, 0xaea59b, 0xc3bab0, 0xb9a99a];
+    const hash = (i: number, j: number) => { const v = Math.sin(i * 41.7 + j * 93.3) * 43758.5453; return v - Math.floor(v); };
+    rect(x, x + 1, y, y + 1, JOINT);
+    const n = 3, m = 0.02;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      // rangs décalés d'un demi-pavé, comme une vraie chaussée
+      const off = j % 2 ? 0.5 / n : 0;
+      const a0 = Math.max(x, x + (i / n) + off) + m, a1 = Math.min(x + 1, x + (i + 1) / n + off) - m;
+      const b0 = y + j / n + m, b1 = y + (j + 1) / n - m;
+      if (a1 > a0) rect(a0, a1, b0, b1, COBBLE[Math.floor(hash(x * 3 + i, y * 3 + j) * COBBLE.length)]);
+      if (off && i === 0) rect(x + m, x + off - m, b0, b1, COBBLE[Math.floor(hash(x * 3 + 7, y * 3 + j) * COBBLE.length)]);
+    }
+    // un peu de neige tassée là où le pavage s'arrête
+    const voisin = (dx: number, dy: number) => {
+      const o = T.cells.get(key(x + dx, y + dy));
+      return !o || o.road || this.pave(o);
+    };
+    const NEIGE = 0xf4eee6;
+    if (!voisin(-1, 0)) rect(x, x + 0.12, y, y + 1, NEIGE, 0.9);
+    if (!voisin(1, 0)) rect(x + 0.88, x + 1, y, y + 1, NEIGE, 0.9);
+    if (!voisin(0, -1)) rect(x, x + 1, y, y + 0.12, NEIGE, 0.9);
+    if (!voisin(0, 1)) rect(x, x + 1, y + 0.88, y + 1, NEIGE, 0.9);
+    // quelques plaques de neige sur les pavés
+    if (hash(x, y) < 0.18) {
+      const q = P(x + 0.3 + hash(y, x) * 0.4, y + 0.3 + hash(x + 1, y) * 0.4, H(x + 0.5, y + 0.5));
+      g.ellipse(q.x, q.y, 9, 4).fill({ color: c(0xfbf6ef), alpha: 0.85 });
+    }
   }
 
   /** Place du pôle Nord (dalles de glace) et piste d'envol (neige damée balisée), posées sur la case */

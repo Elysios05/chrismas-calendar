@@ -331,6 +331,8 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
   // parties animées éventuelles : la scène les anime, le reste est dessiné une fois pour toutes
   const anim: AnimPart[] = [];
   const extra = new Container();
+  /** ce qui est derrière le dessin principal (le marchand derrière son comptoir) */
+  const back = new Container();
 
   switch (kind) {
     case "tree":
@@ -392,7 +394,27 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       const x0 = cx - W / 2, y0 = cy - D / 2;
       const model = rnd(30) < 0.5 ? 0 : rnd(31) < 0.55 ? 1 : 2;
       socle(g, x0, y0, W, D, drop, pal, rnd);
+      // le marchand, derrière son comptoir : il se dandine en attendant le client (issue #155)
+      const vendor = () => {
+        if (rnd(35) > 0.75) return;
+        const p = P(cx + (rnd(36) - 0.5) * 0.3, y0 + 0.12, 0);
+        const coat = [0xd9354b, 0x2fa37a, 0x3f7fb5, 0x8e4fb5, 0xe0a63a][Math.floor(rnd(37) * 5)];
+        const hat = [0xd9354b, 0xffffff, 0x2b2f45, 0x2fa37a][Math.floor(rnd(38) * 4)];
+        const v = new Container();
+        v.position.set(p.x, p.y);
+        v.addChild(new Graphics()
+          .roundRect(-8, -32, 16, 22, 6).fill(c(coat))
+          .roundRect(-6, -26, 12, 16, 3).fill(c(0xf2e6d2)) // tablier
+          .rect(-8, -34, 16, 5).fill(c(0xf2e6d2))
+          .circle(0, -39, 6.5).fill(c(0xf2c9a6))
+          .circle(-2.2, -39.5, 0.9).fill(c(0x2b2f45)).circle(2.6, -39.5, 0.9).fill(c(0x2b2f45))
+          .ellipse(0.2, -36, 2, 1).fill(c(0xc8463b))
+          .circle(0, -43, 6.5).fill(c(hat)).circle(0, -49, 2.6).fill(c(0xffffff)));
+        back.addChild(v);
+        anim.push({ kind: "bob", node: v, phase: rnd(39) * 6, y0: p.y });
+      };
       const counter = () => {
+        vendor();
         box(g, x0, y0, 0, W, D, 0.5, { top: c(0xc8a06a), left: c(0xb5763f), right: c(0x8f5a2e) });
         onLeft(g, y0 + D, x0 + 0.08, x0 + W - 0.08, 0.3, 0.5, c(0xf2d7a8));
       };
@@ -965,9 +987,9 @@ export function drawProp(kind: PropKind, x: number, y: number, pal: Palette, see
       break;
     }
   }
-  if (!anim.length && !extra.children.length) return g;
+  if (!anim.length && !extra.children.length && !back.children.length) return g;
   const node: PropNode = new Container();
-  node.addChild(g, extra);
+  node.addChild(back, g, extra);
   node.anim = anim;
   return node;
 }

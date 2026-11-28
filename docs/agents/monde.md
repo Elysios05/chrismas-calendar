@@ -617,3 +617,33 @@ Style des montagnes, palette de chaque monde, densité du décor, look de Pingou
     `PIED_LIBRE` passe de 150 à 230 px (branche `monde/pied-marche`). Quelques échoppes de plus disparaissent aussi
     à droite du chemin, vers la case 15. Vérifié : build, captures jour 16 mobile et ordinateur, 0 erreur.
   - **Prochaine étape** : options B (relecture) ou C (performance téléphone) de #29.
+
+- 28 nov — **chaque monde devient un lieu de vie de Noël** (issue #155, branche `monde/scenes-vivantes`), demande
+  directe d'Alexandre : « que chaque personnage et chaque animal bouge et réagisse, plus d'animaux, paver le village ».
+  Il a pris **toutes** les idées proposées (4 questions à choix multiples) :
+  - **Nouveau module `noel.ts`** (dessin, gestes, réactions au toucher, placement) appelé par `life.ts` ; les
+    nouveaux habitants sont semés **à la fin** de `spawnLife` : ceux d'avant gardent leur place.
+  - **Promeneurs et rennes du décor prennent vie** (`vivant(p)`) : ils ne sont plus dessinés comme décor
+    (`Scene.dessinerLot`), ils flânent (`wander`). Les rennes de l'attelage restent attelés.
+  - **Badauds** : les passants de la rue s'arrêtent de temps en temps, tournés vers une maison ou un étal.
+  - **Montagnes** : chamois (3), enfants en luge (2, mouvement `sled` : descente puis remontée en tirant la luge),
+    bouvreuils dans les sapins.
+  - **Village** : tout pavé (`Scene.pave` / `paverCase` : pavés plus clairs que la rue, rangs décalés, bord
+    irrégulier, liseré de neige, plaques de neige ; s'arrête sur les pentes et vers les autres mondes) ;
+    Saint-Nicolas et son âne chargé de cadeaux (toute la rue), chorale de 3 près du grand sapin, marchand de marrons
+    (fumée, braises), enfant qui roule une boule de neige qui grossit, 2 chiens, bouvreuils.
+  - **Forêt et lac** : pêcheur au bord de la glace (touché : il sort un poisson), feu de camp avec deux promeneurs
+    (touché : la flamme monte), bouvreuils. **Bug corrigé** : les chouettes n'apparaissaient jamais (les sapins sont
+    décalés au hasard, leur case doit être arrondie) ; même correction pour les bouvreuils.
+  - **Marché** : marchand derrière le comptoir de 3 échoppes sur 4 (`props.ts`, calque `back`, il se dandine),
+    carrousel de chevaux de bois (touché : il accélère), placé au cœur du marché avec recherche élargie si serré.
+  - **Grotte** : pingouins (ils glissent sur le ventre quand on les touche), lucioles de glace qui flottent.
+  - **Pôle Nord** : le Père Noël devant sa maison (touché : « Oh oh oh ! » dans une bulle), pingouins.
+  - **Immobiles qui s'animent** : la chouette tourne la tête, étincelles sous le marteau du lutin forgeron.
+  - Rien n'est posé dans la bande libre du marché ni sur les pentes de la montagne de la grotte (`cache` passé par la scène).
+  - Sons : uniquement les `Sfx` existants (pas de changement de contrat).
+  - Vérifié : build, oxlint, `npm run capture` jours 2, 6, 10, 14, 18, 22 (jour, et 21:00 pour 6, 14, 22),
+    mobile et ordinateur, 0 erreur console ; sonde des espèces visibles jour par jour.
+  - PR #157 ouverte (brouillon).
+  - **Prochaine étape** : retours d'Alexandre sur les captures (densité, placement du carrousel), puis options B
+    (relecture) ou C (performance téléphone) de #29 — surveiller la perf avec les ~60 habitants de plus.
