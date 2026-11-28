@@ -20,6 +20,7 @@ type Vue =
   | { etape: "accueil" }
   | { etape: "jeux" }
   | { etape: "case"; jour: number }
+  | { etape: "supprimer" }
   | { etape: "prenom" | "manteau"; qui: Who; prenom: string; couleurs: CouleursJoueur };
 
 /** Lien dans son enveloppe + bouton Copier (sélection du texte si le presse-papiers est refusé). */
@@ -55,7 +56,17 @@ function BlocLien({ id, titre, lien, note, onCopie }: {
   );
 }
 
-export function ReglagesSalon({ backend, me, onFermer }: { backend: BackendApi; me: Who; onFermer: () => void }) {
+/** Suppression du salon (PR #146 du Backend, hors contrat pour l'instant) : présente si le backend la sait faire. */
+type AvecSuppression = { supprimerSalon(): Promise<void> };
+const saitSupprimer = (b: BackendApi): b is BackendApi & AvecSuppression =>
+  typeof (b as Partial<AvecSuppression>).supprimerSalon === "function";
+
+/**
+ * `onSupprime` : le salon vient d'être effacé (le backend a déjà fermé la session) → retour à l'accueil.
+ */
+export function ReglagesSalon({ backend, me, onFermer, onSupprime }: {
+  backend: BackendApi; me: Who; onFermer: () => void; onSupprime?: () => void;
+}) {
   const salon = useSalon(backend);
   const [vue, setVue] = useState<Vue>({ etape: "accueil" });
   const [ligne, setLigne] = useState<PingouLine>(PINGOU_SALON.reglages());
@@ -73,7 +84,7 @@ export function ReglagesSalon({ backend, me, onFermer }: { backend: BackendApi; 
     if (busy) return;
     setErreur(null);
     if (vue.etape === "case") retourCase.current();
-    else if (vue.etape === "jeux") { setVue({ etape: "accueil" }); setLigne(PINGOU_SALON.reglages()); }
+    else if (vue.etape === "jeux" || vue.etape === "supprimer") { setVue({ etape: "accueil" }); setLigne(PINGOU_SALON.reglages()); }
     else if (vue.etape === "manteau") setVue({ ...vue, etape: "prenom" });
     else if (vue.etape === "prenom") { setVue({ etape: "accueil" }); setLigne(PINGOU_SALON.reglages()); }
     else onFermer();
@@ -83,6 +94,8 @@ export function ReglagesSalon({ backend, me, onFermer }: { backend: BackendApi; 
 
   const api = backend.salons;
   const inviter = me === "alexandre" && !!salon && !salon.inviteArrive && !salon.demo;
+  // Seul le créateur (place 1) peut tout effacer (décision d'Alexandre, 27 nov).
+  const peutSupprimer = me === "alexandre" && !!salon && !salon.demo && saitSupprimer(backend);
 
   useEffect(() => {
     if (!api) return;
@@ -141,8 +154,41 @@ export function ReglagesSalon({ backend, me, onFermer }: { backend: BackendApi; 
     }
   };
 
+  const supprimer = async () => {
+    if (busy || !saitSupprimer(backend)) return;
+    setBusy(true);
+    setErreur(null);
+    try {
+      await backend.supprimerSalon();
+      onSupprime?.();
+    } catch (e) {
+      setErreur(messageErreur(e));
+      setBusy(false);
+    }
+  };
+
   let ecran;
-  if (vue.etape === "jeux") {
+  if (vue.etape === "supprimer") {
+    ecran = (
+      <EcranPingou ligne={erreur ? PINGOU_SALON.supprimerSouci() : PINGOU_SALON.supprimer(joueurs[autre].prenom)}
+        onRetour={busy ? undefined : () => retour.current()} libelleRetour="Revenir à notre calendrier">
+        <div className="salon-danger" role="group" aria-labelledby="supp-titre">
+          <p className="salon-etiq" id="supp-titre">Tout sera effacé, pour toujours :</p>
+          <ul>
+            <li>les 24 cases et votre avancée ;</li>
+            <li>les lettres, les réponses et les questions des jeux ;</li>
+            <li>toutes les photos ;</li>
+            <li>vos deux comptes : ni toi ni {joueurs[autre].prenom} ne pourrez plus entrer.</li>
+          </ul>
+        </div>
+        {erreur && <p className="login-erreur salon-erreur" role="alert">{erreur}</p>}
+        <button className="btn salon-btn salon-btn-danger" disabled={busy} onClick={supprimer}>
+          {busy ? "J'efface…" : "Oui, tout effacer pour toujours"}
+        </button>
+        <button className="btn ghost salon-btn" disabled={busy} onClick={() => retour.current()}>Non, on garde tout</button>
+      </EcranPingou>
+    );
+  } else if (vue.etape === "jeux") {
     ecran = <ListeCasesContenu salon={salon} ligne={ligneJeux} onRetour={() => retour.current()}
       onChoisir={(jour) => setVue({ etape: "case", jour })} />;
   } else if (vue.etape === "case") {
@@ -233,6 +279,11 @@ export function ReglagesSalon({ backend, me, onFermer }: { backend: BackendApi; 
         )}
         {erreur && <p className="login-erreur salon-erreur" role="alert">{erreur}</p>}
         <button className="btn ghost salon-btn" onClick={onFermer}>Fermer</button>
+        {peutSupprimer && (
+          <button className="salon-lien salon-lien-danger" onClick={() => { setErreur(null); setVue({ etape: "supprimer" }); }}>
+            Supprimer notre calendrier
+          </button>
+        )}
       </EcranPingou>
     );
   }

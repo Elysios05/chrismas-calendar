@@ -10,9 +10,11 @@ import { useRef, useState } from "react";
 import type { BackendApi, CouleursJoueur, SalonConfig } from "../../core/contracts";
 import { PLAYERS } from "../../world/actors";
 import { PINGOU_SALON } from "../pingou/lines";
-import { ChampMotDePasse, ChoixCouleurs, EcranPingou, codeErreur, messageErreur } from "./EcranPingou";
+import { Confidentialite } from "../Confidentialite";
+import { BoutonSoutenir } from "../Soutenir";
+import { ChampMotDePasse, ChoixCouleurs, EcranPingou, MDP_MIN, codeErreur, messageErreur } from "./EcranPingou";
 
-type Etape = "accueil" | "deja" | "monPrenom" | "monManteau" | "sonPrenom" | "sonManteau" | "contenu" | "motDePasse" | "lien";
+type Etape = "accueil" | "deja" | "complet" | "monPrenom" | "monManteau" | "sonPrenom" | "sonManteau" | "contenu" | "motDePasse" | "lien";
 /** Ordre de l'assistant (pour la barre et le bouton retour). */
 const ASSISTANT: Etape[] = ["monPrenom", "monManteau", "sonPrenom", "sonManteau", "contenu", "motDePasse"];
 
@@ -38,6 +40,7 @@ export function CreerSalon({ backend, onOuvrir, onDemo }: {
   const [lien, setLien] = useState("");
   const [copie, setCopie] = useState(false);
   const champLien = useRef<HTMLInputElement>(null);
+  const [confOuverte, setConfOuverte] = useState(false);
 
   const aller = (e: Etape) => { setEtape(e); setErreur(null); setPlus(false); };
   const i = ASSISTANT.indexOf(etape);
@@ -64,6 +67,11 @@ export function CreerSalon({ backend, onOuvrir, onDemo }: {
       setLien(cree.lienInvitation);
       aller("lien");
     } catch (e) {
+      // Plafond de salons atteint (migration 0005) : écran dédié plutôt qu'une erreur sous le champ.
+      if (codeErreur(e) === "LIMITE_CREATION" && e instanceof Error && e.message.startsWith("Complet")) {
+        aller("complet");
+        return;
+      }
       setErreur(messageErreur(e));
       if (codeErreur(e) === "CONFIG_INVALIDE") setEtape("monPrenom");
     } finally {
@@ -92,6 +100,21 @@ export function CreerSalon({ backend, onOuvrir, onDemo }: {
         <button className="btn salon-btn" onClick={() => aller("monPrenom")}>Oui, créons notre calendrier</button>
         <button className="btn ghost salon-btn" onClick={() => aller("deja")}>J'ai déjà un calendrier</button>
         {onDemo && <button className="salon-lien" onClick={onDemo}>Voir la démo</button>}
+        <p className="salon-pied">
+          <button className="salon-lien" onClick={() => setConfOuverte(true)}>Confidentialité &amp; mentions</button>
+          <BoutonSoutenir className="salon-lien" />
+        </p>
+        {confOuverte && <Confidentialite onFermer={() => setConfOuverte(false)} />}
+      </EcranPingou>
+    );
+  }
+
+  if (etape === "complet") {
+    return (
+      <EcranPingou ligne={PINGOU_SALON.complet()}>
+        <p className="salon-note">C'est complet pour cette année : les 50 calendriers ont trouvé leur couple.
+          Reviens l'an prochain 🎄</p>
+        <button className="btn salon-btn" onClick={() => aller("accueil")}>Revenir à l'accueil</button>
       </EcranPingou>
     );
   }
@@ -176,7 +199,7 @@ export function CreerSalon({ backend, onOuvrir, onDemo }: {
           <input type="checkbox" checked={rester} onChange={(e) => setRester(e.target.checked)} />
           Se souvenir de moi sur cet appareil
         </label>
-        <button className="btn salon-btn" type="submit" disabled={busy || mdp.length < 6}>
+        <button className="btn salon-btn" type="submit" disabled={busy || mdp.length < MDP_MIN}>
           {busy ? "Un instant…" : "Créer notre calendrier"}
         </button>
       </form>
