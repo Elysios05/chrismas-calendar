@@ -5,11 +5,15 @@ import type { Sfx } from "../core/contracts";
 import { P, ZH, box, shade, type Palette } from "./iso";
 import { heightAt, key, type Terrain } from "./terrain";
 import { ZONES } from "./zones";
+import { NOEL_CRIS, NOEL_HAUTEUR, NOEL_PERCHES, NOEL_VITESSE, SANS_PATTES, drawNoel, gesteNoel, pokeNoel, reactNoel, spawnNoel } from "./noel";
 
 export type Species =
   | "fox" | "hare" | "owl" | "squirrel" | "reindeer" | "seal" | "bear"
   | "villager" | "child" | "musician" | "skater" | "skier" | "elf" | "elfHammer"
-  | "chair" | "pylon" | "elfCart" | "elfWrap";
+  | "chair" | "pylon" | "elfCart" | "elfWrap"
+  // issue #155 (noel.ts)
+  | "dog" | "bird" | "penguin" | "chamois" | "nicolas" | "singer" | "chestnut" | "sledder"
+  | "fisher" | "campfire" | "roller" | "carousel" | "santa" | "firefly";
 
 type Pt2 = { x: number; y: number };
 
@@ -28,6 +32,8 @@ type Mover =
   | { kind: "loop"; cx: number; cy: number; rx: number; ry: number; a: number; v: number }
   | { kind: "still" }
   | { kind: "slope"; a: Pt2; b: Pt2; t: number }
+  /** luge : t de 0 à 1 à la descente (vite), de 1 à 2 à la remontée à pied (lentement) */
+  | { kind: "sled"; a: Pt2; b: Pt2; t: number }
   /** siège de télésiège : t de 0 à 1 à la montée (câble de droite), de 1 à 2 à la descente (câble de gauche) */
   | { kind: "lift"; lift: Lift; t: number };
 
@@ -47,11 +53,12 @@ const CRIS: Partial<Record<Species, Sfx>> = {
   fox: "fox", hare: "hare", owl: "owl", squirrel: "squirrel", reindeer: "reindeer", seal: "seal", bear: "bear",
   elf: "elf-laugh", elfHammer: "elf-hammer", child: "snowball", skater: "skate", skier: "ski",
   chair: "lift", elfCart: "elf-hop", elfWrap: "elf-laugh",
+  ...NOEL_CRIS,
 };
 
 /** Animaux qui détalent quand on les touche, puis reviennent */
-const FUYARDS = new Set<Species>(["fox", "hare", "squirrel", "reindeer"]);
-const ANIMAUX = new Set<Species>(["fox", "hare", "owl", "squirrel", "reindeer", "seal", "bear"]);
+const FUYARDS = new Set<Species>(["fox", "hare", "squirrel", "reindeer", "chamois", "penguin", "firefly"]);
+const ANIMAUX = new Set<Species>(["fox", "hare", "owl", "squirrel", "reindeer", "seal", "bear", "dog", "bird", "penguin", "chamois"]);
 
 export class Critter extends Container {
   species: Species;
@@ -80,14 +87,21 @@ export class Critter extends Container {
   speed: number;
   /** atelier d'emballage (premier lutin de la paire seulement) */
   wrap: Wrap | null = null;
+  /** parties animées des habitants de noel.ts (queue, flamme, chevaux…) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  parts: Record<string, any> = {};
+  /** étincelles, bouffées */
+  fx: Graphics[] = [];
+  /** état libre propre à l'espèce (taille de la boule, angle du manège…) */
+  etat = 0;
 
   constructor(species: Species, x: number, y: number, mover: Mover, pal: Palette, seed: number) {
     super();
     this.species = species;
     this.gx = x; this.gy = y;
     this.mover = mover;
-    this.speed = { fox: 0.016, hare: 0.02, squirrel: 0.018, reindeer: 0.012, seal: 0.006, bear: 0.008, owl: 0, villager: 0.009, child: 0, musician: 0, skater: 0.004, skier: 0.006, elf: 0.012, elfHammer: 0,
-      chair: 0.0016, pylon: 0, elfCart: 0.009, elfWrap: 0 }[species];
+    this.speed = ({ fox: 0.016, hare: 0.02, squirrel: 0.018, reindeer: 0.012, seal: 0.006, bear: 0.008, owl: 0, villager: 0.009, child: 0, musician: 0, skater: 0.004, skier: 0.006, elf: 0.012, elfHammer: 0,
+      chair: 0.0016, pylon: 0, elfCart: 0.009, elfWrap: 0, ...NOEL_VITESSE } as Record<Species, number>)[species] ?? 0;
     drawCritter(this, pal, seed);
     this.addChild(this.inner);
     this.inner.addChild(this.body);
@@ -98,9 +112,12 @@ export class Critter extends Container {
     this.eventMode = "static";
     this.cursor = "pointer";
     // une cible généreuse : un doigt est bien plus gros qu'un lièvre
-    const h = HAUTEUR[species];
+    const h = HAUTEUR[species] ?? NOEL_HAUTEUR[species] ?? 30;
     this.hitArea = new Circle(0, -h * 0.5, Math.max(20, h * 0.6));
   }
+
+  /** une note de musique qui s'envole */
+  chanter() { note(this); }
 
   face(dx: number, dy: number) {
     const sx = dx - dy; // vers la droite de l'écran quand x augmente ou y diminue
@@ -122,7 +139,7 @@ export class Critter extends Container {
 type Wrap = { box: Container; paper: Graphics; ribbon: Graphics; pile: Graphics[]; n: number; ph: number; cols: number[] };
 
 /** Hauteur à l'écran, pour la zone de toucher */
-const HAUTEUR: Record<Species, number> = {
+const HAUTEUR: Partial<Record<Species, number>> = {
   fox: 22, hare: 22, owl: 22, squirrel: 18, reindeer: 50, seal: 20, bear: 34,
   villager: 46, child: 34, musician: 46, skater: 44, skier: 44, elf: 30, elfHammer: 30,
   chair: 40, pylon: 0, elfCart: 30, elfWrap: 30,
@@ -388,6 +405,8 @@ function drawCritter(cr: Critter, pal: Palette, seed: number) {
         cr.body.addChild(bench);
       }
       break;
+    default:
+      drawNoel(cr, { c, rnd, g, shadow, sh, leg, person, coat, hat, coats, night: pal.night });
   }
   cr.addChild(shadow);
 }
@@ -501,7 +520,8 @@ export function makeGround(t: Terrain) {
   return { ok, clear, blocked };
 }
 
-export function spawnLife(t: Terrain, pal: Palette): Critter[] {
+/** `cache` : ce point est caché (pied de la montagne de la grotte), les nouveaux habitants n'y vont pas */
+export function spawnLife(t: Terrain, pal: Palette, cache: (x: number, y: number) => boolean = () => false): Critter[] {
   let seed = 7331;
   const R = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   const G = makeGround(t);
@@ -644,7 +664,8 @@ export function spawnLife(t: Terrain, pal: Palette): Critter[] {
   {
     // chouettes : perchées au sommet d'un sapin, assez près de la route pour qu'on les remarque
     const z = zoneIdx("lac");
-    const trees = t.props.filter((p) => p.kind === "tree" && p.zone === z && (t.cells.get(key(p.x, p.y))?.d ?? 99) < 4.5);
+    // les sapins sont décalés au hasard (terrain.ts) : leur case est la plus proche, pas un calcul exact
+    const trees = t.props.filter((p) => p.kind === "tree" && p.zone === z && (t.cells.get(key(Math.round(p.x), Math.round(p.y)))?.d ?? 99) < 4.5);
     for (let i = 0; i < 2 && trees.length; i++) {
       const p = trees.splice(Math.floor(R() * trees.length), 1)[0];
       const o = add("owl", p.x + 0.5, p.y + 0.5, { kind: "still" });
@@ -706,6 +727,8 @@ export function spawnLife(t: Terrain, pal: Palette): Critter[] {
   wanderers("pole-nord", "reindeer", 2, 2, 6, 2.4);
   wanderers("pole-nord", "bear", 1, 3, 7, 2);
   wanderers("pole-nord", "seal", 1, 1.6, 4, 1.2);
+  // issue #155 : à la fin, pour que les habitants d'avant restent à leur place
+  spawnNoel({ t, G, R, add, cache });
   return out;
 }
 
@@ -808,12 +831,31 @@ export function updateCritter(cr: Critter, dt: number, G: ReturnType<typeof make
     cr.gx = a.x + (b.x - a.x) * f; cr.gy = a.y + (b.y - a.y) * f;
     cr.face((b.x - a.x) * m.dir, (b.y - a.y) * m.dir);
     moving = true;
+    // les badauds s'arrêtent devant une maison ou un étal, regardent, puis repartent
+    if ((cr.species === "villager" || cr.species === "nicolas") && Math.random() < 0.0012 * dt) {
+      cr.wait = 120 + Math.random() * 180;
+      const k = Math.random() < 0.5 ? 1 : -1;
+      cr.face(-(b.y - a.y) * k, (b.x - a.x) * k);
+    }
   } else if (m.kind === "loop") {
     m.a += m.v * dt;
     const nx = m.cx + Math.cos(m.a) * m.rx, ny = m.cy + Math.sin(m.a) * m.ry;
     cr.face(nx - cr.gx, ny - cr.gy);
     cr.gx = nx; cr.gy = ny;
     cr.inner.rotation = Math.sin(cr.t * 0.05) * 0.1;
+  } else if (m.kind === "sled") {
+    // descente en luge, puis on remonte à pied en la tirant
+    const dx = m.b.x - m.a.x, dy = m.b.y - m.a.y, L = Math.hypot(dx, dy) || 1;
+    const down = m.t < 1;
+    m.t += (cr.speed * (down ? 2.4 : 0.55) * dt) / L;
+    if (m.t >= 2) m.t = 0;
+    const u = down ? m.t : 2 - m.t;
+    const e = down ? u * u : u; // elle prend de la vitesse
+    const nx = m.a.x + dx * e, ny = m.a.y + dy * e;
+    cr.face(down ? dx : -dx, down ? dy : -dy);
+    cr.gx = nx; cr.gy = ny;
+    cr.inner.rotation = down ? Math.sin(cr.t * 0.4) * 0.05 : 0;
+    moving = !down;
   } else if (m.kind === "slope") {
     // la descente : godille de part et d'autre de la ligne de pente, puis on réapparaît en haut
     const dx = m.b.x - m.a.x, dy = m.b.y - m.a.y, L = Math.hypot(dx, dy);
@@ -857,13 +899,14 @@ export function updateCritter(cr: Critter, dt: number, G: ReturnType<typeof make
   }
   // pattes, sautillements
   cr.walking = moving;
-  animateLegs(cr, moving, dt);
+  if (!SANS_PATTES.has(s)) animateLegs(cr, moving, dt);
+  gesteNoel(cr, dt, moving);
 
   // position à l'écran et profondeur
   const z = heightAt(t, cr.gx, cr.gy) + cr.zoff;
   const p = P(cr.gx, cr.gy, z);
   cr.position.set(p.x, p.y);
-  cr.zIndex = cr.gx + cr.gy + (s === "owl" ? 0.9 : 0.3);
+  cr.zIndex = cr.gx + cr.gy + (s === "owl" || NOEL_PERCHES.has(s) ? 0.9 : 0.3);
 }
 
 function animateLegs(cr: Critter, moving: boolean, _dt: number) {
@@ -963,6 +1006,7 @@ export function poke(cr: Critter, env: LifeEnv, G: ReturnType<typeof makeGround>
   else if (s === "skier") cr.react = { k: "jump", t: 0 };
   else if (s === "chair") cr.react = { k: "swing", t: 0 };
   else if (s === "elfCart" || s === "elfWrap") cr.react = { k: "hop", t: 0 };
+  else if (pokeNoel(cr)) { /* noel.ts */ }
   else {
     cr.react = { k: "wave", t: 0 };
     if (s === "musician") for (let i = 0; i < 4; i++) note(cr);
@@ -975,6 +1019,8 @@ function reactStep(cr: Critter, dt: number): boolean {
   const r = cr.react!;
   r.t += dt;
   const end = () => { cr.react = null; cr.body.rotation = 0; cr.body.scale.y = 1; cr.inner.rotation = 0; cr.body.y = 0; };
+  const noel = reactNoel(cr, dt, end);
+  if (noel !== null) return noel;
   switch (r.k) {
     case "flee": {
       // fuite rapide, petite pause, retour au pas
@@ -989,6 +1035,7 @@ function reactStep(cr: Critter, dt: number): boolean {
       return true;
     }
     case "back": {
+      cr.body.rotation = 0; // le pingouin se relève
       if (r.t < 90) return false;
       if (cr.step(r.from!, cr.speed, dt)) end();
       return true;
