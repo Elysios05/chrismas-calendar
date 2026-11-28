@@ -9,8 +9,12 @@
 // Salon fictif « Sam & Camille » obligatoire : le script échoue si « Alexandre », « Flavie » ou « Ljubljana »
 // apparaît dans le texte visible.
 //
-// Les plans (voir PLANS plus bas) : monde, case, surprise. Images écrites dans /tmp/film/<plan>-<heure>/.
-// Le montage (textes, fondus, encodage) : docs/marketing/outils/monter.sh
+// Les plans (voir PLANS plus bas) : monde, zones, case, surprise, makingof. Images écrites dans /tmp/film/<plan>-<heure>/.
+//
+// --propre : « rushes » sans aucun texte incrusté (les textes, zooms et coupes sont faits au montage, dans
+// docs/marketing/montage/ avec Remotion). Le script écrit alors aussi <sortie>/marques.json : le numéro des
+// images clés (toucher du cadeau, fenêtre, début du jeu, lettre…), pour que le montage coupe au bon endroit
+// même si la durée d'une animation du site change. Tout refaire : `npm run videos` dans docs/marketing/montage/.
 import { mkdirSync, rmSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { execSync } from "node:child_process";
 import path from "node:path";
@@ -24,6 +28,10 @@ const INTERDITS = /Alexandre|Flavie|Ljubljana/;
 const heure = String(opt.heure ?? "12:00");
 const de = Number(opt.de ?? 0), a = opt.a !== undefined ? Number(opt.a) : Infinity;
 const sortie = path.resolve(String(opt.sortie ?? `/tmp/film/${plan}-${heure.replace(":", "h")}`));
+const PROPRE = Boolean(opt.propre);
+/** Images clés du rush (numéro de la prochaine image photographiée), écrites dans marques.json */
+const marques = {};
+const marquer = (nom, valeur) => { marques[nom] = valeur ?? numero; };
 
 const VUE = { viewport: { width: 540, height: 960 }, deviceScaleFactor: Number(process.env.ECHELLE ?? 2), isMobile: true, hasTouch: true };
 
@@ -125,6 +133,7 @@ const fenetre = (k, a, b) => Math.max(0, Math.min(1, (k - a) / 8, (b - k) / 8));
  * Zones sûres TikTok : rien dans les 15 % du bas ni contre le bord droit.
  */
 async function poserCalque(page) {
+  if (PROPRE) { await page.evaluate(() => { globalThis.__ecrire = () => {}; }); return; }
   await page.addStyleTag({ content: `
     #film{position:fixed;inset:0;pointer-events:none;z-index:99999;font-family:Fredoka,sans-serif}
     #film>div{position:absolute;left:7%;right:14%;opacity:0;color:#fff;font-weight:700;line-height:1.1;
@@ -315,19 +324,24 @@ const PLANS = {
       { id: "voile", html: "", o: fenetre(i, -99, 2.6 * FPS) }];
     await film(1 * FPS, accroche);
     const p = await C.positionCadeau(page, 4);
+    marquer("tap");
     await page.touchscreen.tap(p.x, p.y);
     await film(1.6 * FPS, (i) => accroche(i + FPS));
     for (let i = 0; i < 90 && !(await page.locator(".sheet-cta").count()); i++) await avancer(page); // coupe
+    marquer("fenetre");
     await film(0.9 * FPS, () => [{ id: "haut", html: "", o: 0 }, { id: "voile", html: "", o: 0 }]);
     await page.locator(".sheet-cta").click();
     for (let i = 0; i < 60 && !(await page.locator(".prep-enveloppe").count()); i++) await avancer(page);
+    marquer("enveloppe");
     await film(1.4 * FPS);
+    marquer("ouverture");
     await page.locator(".prep-enveloppe").click();
     // la lettre : on s'en approche doucement pendant qu'on la lit
     const LECTURE = Number(opt.duree ?? 9) * FPS;
     for (let i = 0; i < LECTURE; i++) {
       await avancer(page);
-      const z = 1 + 0.07 * tresDoux(Math.min(1, i / LECTURE));
+      if (i === Math.round(1.2 * FPS)) marquer("lettre");
+      const z = PROPRE ? 1 : 1 + 0.07 * tresDoux(Math.min(1, i / LECTURE));
       await page.evaluate((z) => { const s = document.querySelector(".sheet-panel"); if (s) { s.style.transformOrigin = "50% 30%"; s.style.scale = String(z); } }, z);
       await ecrire([{ id: "bas", html: "Tag la personne<br>qui te manque.", o: fenetre(i, LECTURE - 3 * FPS, Infinity) },
         { id: "voile-bas", html: "", o: fenetre(i, LECTURE - 3 * FPS, Infinity) }]);
@@ -362,20 +376,37 @@ const PLANS = {
     // 1) le monde, le cadeau du jour qui attend
     await film(0.8 * FPS, accroche);
     const p = await C.positionCadeau(page, J);
+    marquer("tap");
     await page.touchscreen.tap(p.x, p.y);
     // 2) ouverture : zoom, couvercle, confettis, puis la fenêtre de la case
     await film(1.6 * FPS, (i) => accroche(i + 0.8 * FPS));
     for (let i = 0; i < 90 && !(await page.locator(".sheet-cta").count()); i++) await avancer(page); // coupe
+    marquer("fenetre");
     await film(0.5 * FPS, () => [{ id: "haut", html: "", o: 0 }, { id: "voile", html: "", o: 0 }]);
     await page.locator(".sheet-cta").click();
     for (let i = 0; i < 60 && !(await page.locator(".jeu-btn").count()); i++) await avancer(page);
+    marquer("regles");
     await film(0.6 * FPS);
     await page.locator(".jeu-btn").last().click();
-    // 3) la partie : pilote automatique qui louvoie entre les sapins (flèches du clavier)
+    marquer("jeu");
+    // 3) la partie : pilote automatique qui louvoie entre les sapins (flèches du clavier) ;
+    //    pour un quiz, il touche une réponse toutes les 1,3 s
+    const quiz = (await page.locator(".quiz-options, .quiz-q").count()) > 0 || J === 1 || J === 11;
     const touches = ["ArrowLeft", "ArrowRight"];
     let appui = null;
     const DUREE = Number(opt.duree ?? 11) * FPS;
     for (let i = 0; i < DUREE; i++) {
+      if (quiz) {
+        if (i % 39 === 20) {
+          const b = page.locator(".quiz-options button:not([disabled])");
+          const n = await b.count();
+          if (n) { if (!marques.reponse) marquer("reponse"); await b.nth((i * 7) % n).click().catch(() => {}); }
+          else await page.locator(".jeu-btn").last().click({ timeout: 500 }).catch(() => {});
+        }
+        await avancer(page);
+        await photo(page, dansPlage());
+        continue;
+      }
       const voulu = Math.sin(i / 17) + 0.6 * Math.sin(i / 7.3) > 0.35 ? 1 : Math.sin(i / 17) + 0.6 * Math.sin(i / 7.3) < -0.35 ? 0 : null;
       if (voulu !== appui) {
         if (appui !== null) await page.keyboard.up(touches[appui]);
@@ -387,6 +418,54 @@ const PLANS = {
       ]);
       await photo(page, dansPlage());
       if (i % 60 === 0) console.log(`  partie ${i} / ${DUREE}`);
+    }
+    await ctx.close();
+  },
+
+  /**
+   * « Les zones » : un plan court par monde (montagnes, village, lac, marché, grotte, pôle Nord), caméra qui
+   * s'approche doucement (zoom 1,1 → 1,5) en glissant de côté ; plus la nuit qui tombe sur le marché.
+   * Chaque plan dure --duree secondes (2 par défaut) ; marques.json donne l'image de début de chacun.
+   */
+  async zones(navigateur) {
+    const tous = Array.from({ length: 24 }, (_, i) => i + 1);
+    const { page, ctx } = await ouvrir(navigateur, { jour: 24, ouverts: tous });
+    await page.addStyleTag({ content: ".stage-host ~ *{visibility:hidden!important}" });
+    await prendreLaMain(page);
+    await controler(page);
+    const N = Math.round(Number(opt.duree ?? 2) * FPS);
+    // jour : case du jour visée ; lumiere : [début, fin] (0 = jour, 1 = nuit) ; dx : glissement latéral (px monde)
+    const ZONES = [
+      { nom: "montagnes", jour: 1, lumiere: [0, 0], dx: 40 },
+      { nom: "village", jour: 6, lumiere: [0, 0], dx: -40 },
+      { nom: "lac", jour: 11, lumiere: [0, 0], dx: 40 },
+      { nom: "marche", jour: 15, lumiere: [0, 0], dx: -40 },
+      { nom: "crepuscule", jour: 16, lumiere: [0, 1], dx: 30 },
+      { nom: "grotte", jour: 19, lumiere: [1, 1], dx: -30 },
+      { nom: "pole", jour: 23, lumiere: [1, 1], dx: 30 },
+    ].filter((z) => !opt.seulement || String(opt.seulement).split(",").includes(z.nom));
+    for (const z of ZONES) {
+      const y = await page.evaluate((d) => __calendrier.scrollForDay(d), z.jour);
+      // la caméra et les décors se posent (sans rendu : rapide)
+      const c = await page.evaluate(async ([y, l]) => {
+        __scene.focus = null; __scene.setLight(l);
+        await __pas(y, 75, false);
+        const w = __scene.world, sc = w.scale.x;
+        return { x: (innerWidth / 2 - w.x) / sc, y: (innerHeight * 0.44 - w.y) / sc };
+      }, [y, z.lumiere[0]]);
+      marquer(z.nom);
+      for (let k = 0; k < N; k++) {
+        const u = k / Math.max(1, N - 1);
+        const e = 1 - Math.pow(1 - u, 2); // part vite (on arrive après une coupe), freine en fin de plan
+        const l = z.lumiere[0] + (z.lumiere[1] - z.lumiere[0]) * doux(u);
+        await page.evaluate(([c, e, dx, l]) => {
+          __scene.setLight(l);
+          __scene.focus = { x: c.x + dx * e, y: c.y, zoom: 1.1 + 0.4 * e };
+          return __pas(null, 1, true);
+        }, [c, e, z.dx, l]);
+        await photo(page, dansPlage());
+      }
+      console.log(`  ${z.nom} ✓`);
     }
     await ctx.close();
   },
@@ -433,13 +512,15 @@ const PLANS = {
       if (!decolle) await page.evaluate(() => __decoller());
       // à l'arrivée : on s'approche du traîneau, caméra fixe, et il s'envole dans le cadre
       const pv = k >= DUREE ? Math.min(1, (k - DUREE) / (1.8 * FPS)) : null;
+      if (k === DUREE) marquer("arrivee", k);
+      if (k === Math.round(DUREE + 1.2 * FPS)) marquer("envol", k);
       if (k === DUREE) await page.evaluate(() => { const t = __traineau(); globalThis.__cibleFin = { x: t.x + 50, y: t.y - 62 }; });
       const z = await page.evaluate(([y, l, g, pv]) => {
         __scene.setLight(l);
         if (pv !== null) __viser(pv, 2.4, () => globalThis.__cibleFin);
         return __pas(y, 1, g);
       }, [y, lumiere, garder, pv]);
-      if (z !== zone && z >= 0) { zone = z; zoneDepuis = k; }
+      if (z !== zone && z >= 0) { zone = z; zoneDepuis = k; marquer(`zone${z}`, k); }
       // textes : accroche, nom du monde traversé, chute
       const textes = [];
       textes.push({ id: "haut", html: "24 jours.<br>Un monde entier<br>à traverser à deux.", o: fenetre(k, -99, 2.6 * FPS) });
@@ -465,4 +546,6 @@ const navigateur = await C.lancerChrome();
 const t0 = Date.now();
 try { await PLANS[plan](navigateur); }
 finally { await navigateur.close(); srv.stop(); }
+marquer("fin");
+writeFileSync(path.join(sortie, "marques.json"), JSON.stringify(marques, null, 1));
 console.log(`✓ ${plan} : images dans ${sortie} (${Math.round((Date.now() - t0) / 1000)} s)`);

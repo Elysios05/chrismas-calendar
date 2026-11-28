@@ -1,0 +1,26 @@
+{
+  "name": "chrismas-calendar-montage",
+  "private": true,
+  "type": "module",
+  "description": "Montage des vidéos TikTok (Remotion) à partir des rushes filmés sur le vrai site",
+  "scripts": {
+    "studio": "remotion studio",
+    "rushes": "node ../outils/rushes.mjs",
+    "musique": "node ../outils/musique.mjs",
+    "rendre": "node ../outils/rendre.mjs",
+    "videos": "npm run rushes && npm run musique && npm run rendre"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.547",
+    "@remotion/fonts": "4.0.547",
+    "@remotion/media": "4.0.547",
+    "@remotion/transitions": "4.0.547",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.547"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "typescript": "^5.9.0"
+  }
+}
