@@ -66,7 +66,7 @@ Méthode : prends le **premier point non fait** de cette liste, une branche et u
 ## Journal
 
 ### 📍 Où j'en suis — 28 novembre 2026 : ouverture au public (point 3 du plan final)
-Branche `interface/ouverture-public`, PR vers `main`. **Choix d'Alexandre (27 nov)** :
+Branche `interface/ouverture-public`, **PR #149** ; besoins hors dossier dans **#150**. **Choix d'Alexandre (27 nov)** :
 - Écran **« Complet »** : Pingou désolé, « Oh non… tous mes calendriers sont déjà distribués ! » + « C'est complet pour
   cette année : les 50 calendriers ont trouvé leur couple. Reviens l'an prochain 🎄 » + « Revenir à l'accueil ».
   Déclenché par `LIMITE_CREATION` dont le message commence par « Complet ». Maquette : `maquettes.html?vue=creer-complet`.
@@ -83,7 +83,7 @@ Branche `interface/ouverture-public`, PR vers `main`. **Choix d'Alexandre (27 no
 - Répliques **à faire valider** : `PINGOU_SALON.supprimer` et `supprimerSouci`.
 - Captures faites avec un Playwright jetable sur une copie fusionnée avec #146 (hors dépôt) : la suppression vide
   bien session et données en démo, aucune erreur console.
-- **Reste chez les autres** (issue au chef) : `VITE_LIEN_DON` / `VITE_CONTACT` dans `deploy.yml` (Backend) ; ménage
+- **Reste chez les autres** (issue #150) : `VITE_LIEN_DON` / `VITE_CONTACT` dans `deploy.yml` (Backend) ; ménage
   automatique au 31 janvier 2027 (Backend) ; Google Fonts encore chargées (index.html du chef, Caveat dans mon
   index.css) — la page le dit honnêtement, à mettre à jour si on auto-héberge ; widget anti-robot de
   `creerSalonAvecCaptcha` pas branché côté Interface.
