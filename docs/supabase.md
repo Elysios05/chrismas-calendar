@@ -31,7 +31,8 @@ tourne en **mode démo** (tout marche, mais les données restent dans le navigat
    [`0003_relance.sql`](../supabase/migrations/0003_relance.sql),
    [`0004_salons.sql`](../supabase/migrations/0004_salons.sql),
    [`0005_plafond_salons.sql`](../supabase/migrations/0005_plafond_salons.sql) (50 calendriers au plus),
-   [`0006_securite.sql`](../supabase/migrations/0006_securite.sql) (limites, quotas, ménage nocturne des salons jamais utilisés).
+   [`0006_securite.sql`](../supabase/migrations/0006_securite.sql) (limites, quotas, ménage nocturne des salons jamais utilisés),
+   [`0007_menage_31_janvier.sql`](../supabase/migrations/0007_menage_31_janvier.sql) (effacement de fin de saison le 31 janvier, sauf salons marqués `garder`).
    Exception par salon possible ensuite (photos plus grandes) : colonnes `photo_dimension`, `photo_octets_max`,
    `photo_max` de la table `salons`.
 
